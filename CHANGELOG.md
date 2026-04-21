@@ -9,3 +9,4 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 ### Added
 
 - Git workflow rules for branch discipline, merge readiness, commit rhythm, merge strategy, and conventional commit messages
+- Docstring rules for documenting functions, types, constants, callbacks, and non-trivial code

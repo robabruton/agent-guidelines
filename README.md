@@ -9,3 +9,4 @@ This repository is a starting point for collecting rules, skills, and setup conv
 Rules live in `rules/` as Markdown files.
 
 - `git-workflow.md` defines branch, commit, merge, and commit message expectations.
+- `docstrings.md` defines documentation comment expectations for code changes.
