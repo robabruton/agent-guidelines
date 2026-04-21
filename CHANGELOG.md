@@ -16,7 +16,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
   clear grouped output, and smoke test coverage.
 - Reusable project rules for git workflow, docstrings, attribution,
   changelogs, versioning, testing, documentation, configuration,
-  scripts, dependencies, and backward compatibility.
+  scripts, dependencies, backward compatibility, and changelog entry
+  quality.
 - Target-repository setup workflow, including the `project-setup` skill,
   `project-setup.sh`, project rule assembly, local hook installation,
   initial repository commits, rerun behavior, rule profiles, changelog
