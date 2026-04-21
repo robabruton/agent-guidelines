@@ -12,3 +12,4 @@ Rules live in `rules/` as Markdown files.
 - `docstrings.md` defines documentation comment expectations for code changes.
 - `development-attribution.md` defines attribution boundaries for committed project files.
 - `changelog.md` defines changelog format, initial setup, and update workflow.
+- `versioning.md` defines semantic versioning and release expectations.

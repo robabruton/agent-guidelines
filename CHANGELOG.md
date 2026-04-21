@@ -12,3 +12,4 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 - Docstring rules for documenting functions, types, constants, callbacks, and non-trivial code
 - Development attribution rules for keeping tool-generated attribution out of committed files
 - Changelog rules for initial setup, section formats, and update workflow
+- Versioning rules for semantic version levels, release timing, release checks, tags, and version metadata
