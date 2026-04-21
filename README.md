@@ -13,3 +13,4 @@ Rules live in `rules/` as Markdown files.
 - `development-attribution.md` defines attribution boundaries for committed project files.
 - `changelog.md` defines changelog format, initial setup, and update workflow.
 - `versioning.md` defines semantic versioning and release expectations.
+- `testing.md` defines verification expectations before merging branch work.
