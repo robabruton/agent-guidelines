@@ -14,3 +14,4 @@ Rules live in `rules/` as Markdown files.
 - `changelog.md` defines changelog format, initial setup, and update workflow.
 - `versioning.md` defines semantic versioning and release expectations.
 - `testing.md` defines verification expectations before merging branch work.
+- `documentation.md` defines accuracy and example expectations for project docs.
