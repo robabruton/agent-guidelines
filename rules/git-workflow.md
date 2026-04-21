@@ -62,6 +62,28 @@ Follow the [Conventional Commits](https://www.conventionalcommits.org/en/v1.0.0/
 - Include a commit body for anything with non-obvious intent, policy changes, workflow changes, cross-file edits, or user-visible behavior changes
 - When in doubt, include a short body; two or three lines of useful rationale is better than a subject line that leaves future readers guessing
 
+### Merge commit messages
+
+- Merge commits use Git's explicit branch-grouping subject:
+  `Merge branch '<branch-name>'`
+- Include a body that summarizes the completed branch as one unit of
+  work; write it for humans reviewing project history, not as a dump of
+  every commit on the branch
+- Keep the body as one paragraph unless there is a clear need for
+  multiple paragraphs
+- Wrap body lines at 72 characters
+- Write merge commit messages with `git commit -F <message-file>` so
+  wrapped body lines stay in one paragraph; do not use repeated `-m`
+  flags for continuation lines
+- Example:
+
+  ```text
+  Merge branch 'feat/local-tool-setup'
+
+  Merge the completed local tool setup command, managed tool links,
+  backup handling, documentation, and smoke tests.
+  ```
+
 ## Merge Readiness
 
 - A branch must not be merged if it breaks behavior that already exists on `main`
