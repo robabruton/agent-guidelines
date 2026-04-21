@@ -70,6 +70,7 @@ git init --initial-branch=main
 ## Commit Template
 
 - Create `.gittemplate` if it does not already exist
+- Use `assets/gittemplate` as the template source
 - Configure the repository to use it:
 
 ```bash
@@ -83,20 +84,8 @@ git config --local commit.template .gittemplate
 ## Gitignore
 
 - Create `.gitignore` if it does not already exist
-- For an empty or unrecognized project, start with common OS/editor
-  patterns:
-
-```gitignore
-# macOS
-.DS_Store
-
-# Windows
-Thumbs.db
-
-# Editor swap/backup files
-*.swp
-*~
-```
+- For an empty or unrecognized project, use `assets/gitignore-minimal`
+  as the starting content
 
 - If `.gitignore` already exists, leave it unchanged
 
@@ -114,19 +103,29 @@ Thumbs.db
 Only when changelog maintenance is enabled:
 
 - Create `CHANGELOG.md` if it does not already exist
-- The initial changelog should contain only:
-
-```markdown
-# Changelog
-
-All notable changes to this project will be documented in this file.
-
-The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
-```
+- Use `assets/changelog-base.md` as the initial changelog content
 
 - Do not add an empty `[Unreleased]` section or an empty dated section
   during initial setup
 - If `CHANGELOG.md` already exists, leave it unchanged
+
+## Git Hooks
+
+- Install or update local hooks only in the target repository's
+  `.git/hooks` directory
+- Create hook files when they do not exist
+- Preserve existing hook content
+- Insert managed snippets from `assets/hooks/` by marker block:
+  - `pre-commit-main-branch`
+  - `pre-commit-attribution`
+  - `commit-msg-attribution`
+  - `commit-msg-conventional`
+  - `pre-push-branch-name`
+- Add each snippet only when its exact marker block is missing
+- Replace an existing managed marker block only when the corresponding
+  asset content changed
+- Ensure updated hook files are executable
+- Do not install hooks globally or into other repositories
 
 ## Output Summary
 

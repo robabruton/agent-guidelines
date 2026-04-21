@@ -1,0 +1,8 @@
+# BEGIN agent-guidelines commit attribution guard
+commit_msg_file="$1"
+
+if grep -Ei '((co-)?authored-by:|generated-by:|written-by:|reviewed-by:|planned-by:|(generated|written|reviewed|planned|implemented|authored|co-authored) (by|with|using) .*(ai|llm|assistant|agent|bot|automation|code assistant|coding agent|coding tool))' "$commit_msg_file" >/dev/null; then
+  echo "Development-tool attribution is not allowed in commit messages." >&2
+  exit 1
+fi
+# END agent-guidelines commit attribution guard

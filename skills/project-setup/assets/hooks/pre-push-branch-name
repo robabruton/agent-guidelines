@@ -1,0 +1,13 @@
+# BEGIN agent-guidelines branch-name guard
+current_branch="$(git symbolic-ref --quiet --short HEAD 2>/dev/null || true)"
+
+case "$current_branch" in
+  main|feat/*|fix/*|chore/*|docs/*|refactor/*|test/*|build/*|ci/*|perf/*|style/*)
+    ;;
+  *)
+    echo "Branch names must use main or a Conventional Commit type prefix." >&2
+    echo "Examples: feat/setup-skill, fix/hook-install" >&2
+    exit 1
+    ;;
+esac
+# END agent-guidelines branch-name guard
