@@ -18,6 +18,7 @@ SECOND_OUT="${TMP_ROOT}/second.out"
 REMOVE_OUT="${TMP_ROOT}/remove.out"
 FORCE_REPO_HOME="${TMP_ROOT}/force-home"
 FORCE_OUT="${TMP_ROOT}/force.out"
+CUSTOM_BACKUP_PATH="${TMP_ROOT}/custom-backups"
 
 "${ROOT_DIR}/setup.sh" --status --no-color > "$STATUS_OUT"
 grep -Eq "action:[[:space:]]+status" "$STATUS_OUT"
@@ -49,12 +50,13 @@ export HOME="$FORCE_REPO_HOME"
 mkdir -p "${HOME}/.claude/rules"
 printf 'local file\n' > "${HOME}/.claude/rules/git-workflow.md"
 
-"${ROOT_DIR}/setup.sh" --force --no-color > "$FORCE_OUT"
+"${ROOT_DIR}/setup.sh" --force --backup-path "$CUSTOM_BACKUP_PATH" --no-color > "$FORCE_OUT"
 grep -Eq "backups:[[:space:]]+1" "$FORCE_OUT"
 grep -Eq "forced:[[:space:]]+true" "$FORCE_OUT"
+grep -Eq "backup path:[[:space:]]+${CUSTOM_BACKUP_PATH}" "$FORCE_OUT"
 grep -Eq "warnings:[[:space:]]+0" "$FORCE_OUT"
 test -L "${HOME}/.claude/rules/git-workflow.md"
-backup_file="$(find "${HOME}/.agent-guidelines/backups" -path "*/.claude/rules/git-workflow.md" -type f -print -quit)"
+backup_file="$(find "$CUSTOM_BACKUP_PATH" -path "*/.claude/rules/git-workflow.md" -type f -print -quit)"
 test -n "$backup_file"
 
 printf 'setup smoke tests passed\n'

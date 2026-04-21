@@ -11,7 +11,7 @@ ACTION="install"
 DRY_RUN=false
 FORCE=false
 COLOR_MODE="auto"
-BACKUP_ROOT="${HOME}/.agent-guidelines/backups/$(date +%Y%m%d-%H%M%S)"
+BACKUP_PATH="${HOME}/.agent-guidelines/backups/$(date +%Y%m%d-%H%M%S)"
 
 CREATED=0
 CURRENT=0
@@ -51,6 +51,7 @@ Options:
   --status        Report link state without changing files
   --dry-run       Preview install or remove actions without changing files
   --force         Back up conflicting files before replacing them
+  --backup-path   Path for forced replacement backups
   --no-color      Disable colored output
   -h, --help      Show this help
 
@@ -58,7 +59,7 @@ Examples:
   ./setup.sh --status
   ./setup.sh --dry-run
   ./setup.sh --install
-  ./setup.sh --force
+  ./setup.sh --force --backup-path /tmp/agent-guidelines-backups
   ./setup.sh --remove --dry-run
 EOF
 }
@@ -137,6 +138,16 @@ parse_args() {
         ;;
       --force)
         FORCE=true
+        shift
+        ;;
+      --backup-path)
+        [ "$#" -gt 1 ] || die "--backup-path requires a path"
+        BACKUP_PATH="$2"
+        shift 2
+        ;;
+      --backup-path=*)
+        BACKUP_PATH="${1#*=}"
+        [ -n "$BACKUP_PATH" ] || die "--backup-path requires a path"
         shift
         ;;
       --no-color)
@@ -247,7 +258,7 @@ backup_conflict() {
   local link_path="$1"
   local backup_path
 
-  backup_path="${BACKUP_ROOT}${link_path}"
+  backup_path="${BACKUP_PATH}${link_path}"
 
   if [ "$DRY_RUN" = true ]; then
     entry "$CYAN" "?" "would back up" "$link_path" "to backup directory"
@@ -388,6 +399,7 @@ print_summary() {
     install)
       printf '  %-10s %s\n' "dry run:" "$DRY_RUN"
       printf '  %-10s %s\n' "forced:" "$FORCE"
+      printf '  %-10s %s\n' "backup path:" "$BACKUP_PATH"
       printf '  %-10s %s\n' "created:" "$CREATED"
       printf '  %-10s %s\n' "current:" "$CURRENT"
       printf '  %-10s %s\n' "backups:" "$BACKED_UP"
