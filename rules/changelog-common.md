@@ -20,6 +20,22 @@ project opts into changelog maintenance.
 - Group related commits into a single human-readable bullet when that is
   clearer than one entry per commit
 
+## Entry Quality
+
+Before adding, editing, or removing changelog entries, review the full
+current date or version section. Changelog edits must fit the surrounding
+entries, not just append a new bullet to the end.
+
+- Group related commits into one human-readable outcome when they are
+  part of the same feature, fix, workflow, or documentation change
+- Prefer user-facing or maintainer-meaningful outcomes over
+  implementation details
+- Update an existing entry when the new work extends the same change
+- Add a new entry only when it describes a distinct change
+- If the current section has become noisy or duplicative, consolidate it
+  while making the changelog edit
+- Do not treat the changelog as a commit log
+
 ## Initial Setup
 
 When a project opts into changelog maintenance, create `CHANGELOG.md`
