@@ -67,6 +67,26 @@ git init --initial-branch=main
   branches automatically
 - Report whether the repository was created or already existed
 
+## Local Git Excludes
+
+- Add local-only agent and tool files to `.git/info/exclude`
+- Create `.git/info/exclude` if it does not already exist
+- Append only missing exclude patterns and preserve existing user entries
+- Do not add these patterns to `.gitignore`, because these files are
+  local agent configuration rather than project artifacts
+- Always exclude:
+  - `CLAUDE.md`
+  - `CLAUDE.local.md`
+  - `AGENTS.md`
+  - `.claude/`
+  - `.codex/`
+- Exclude `opencode.json` only when it is private local configuration,
+  not when the project intentionally tracks it as a shared artifact
+- Exclude `.mcp.json` only when it is private local configuration, not
+  when the project intentionally tracks it as a shared artifact
+- If `opencode.json` or `.mcp.json` already exists and is tracked by git,
+  leave it tracked and report that it was skipped
+
 ## Commit Template
 
 - Create `.gittemplate` if it does not already exist
