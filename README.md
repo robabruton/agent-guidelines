@@ -4,6 +4,26 @@ Reusable project guidelines for AI coding agents.
 
 This repository is a starting point for collecting rules, skills, and setup conventions that can be reused across agent-driven development tools.
 
+## Local Tool Setup
+
+Use `setup.sh` to link this repository's rules and skills into local
+tool configuration directories:
+
+```bash
+./setup.sh --status
+./setup.sh --dry-run
+./setup.sh --install
+```
+
+This is distinct from `project-setup.sh`, which applies repository
+standards to a target project.
+
+Run the smoke tests for the local tool setup command with:
+
+```bash
+tests/setup-smoke.sh
+```
+
 ## Rules
 
 Rules live in `rules/` as Markdown files.

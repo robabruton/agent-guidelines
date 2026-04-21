@@ -8,6 +8,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ### Added
 
+- Local tool setup script for linking rules and skills into local tool configuration
 - Git workflow rules for branch discipline, merge readiness, commit rhythm, merge strategy, and conventional commit messages
 - Docstring rules for documenting functions, types, constants, callbacks, and non-trivial code
 - Development attribution rules for keeping tool-generated attribution out of committed files
