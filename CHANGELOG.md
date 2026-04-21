@@ -3,3 +3,19 @@
 All notable changes to this project will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
+
+## 2026-04-21
+
+### Added
+
+- Git workflow rules for branch discipline, merge readiness, commit rhythm, merge strategy, and conventional commit messages
+- Docstring rules for documenting functions, types, constants, callbacks, and non-trivial code
+- Development attribution rules for keeping tool-generated attribution out of committed files
+- Changelog rules for initial setup, section formats, and update workflow
+- Versioning rules for semantic version levels, release timing, release checks, tags, and version metadata
+- Testing rules for selecting checks, verifying behavior, and reporting merge readiness
+- Documentation rules for keeping project docs accurate, current, and verifiable
+- Configuration rules for committed config, local-only files, environment variables, and secrets
+- Script rules for safe execution, help output, preview behavior, idempotency, cleanup, and portability
+- Dependency rules for evaluating additions, managing lockfiles, and removing unused packages or tools
+- Backward compatibility rules for breaking changes, replacements, removals, migrations, and release impact
