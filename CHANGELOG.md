@@ -16,3 +16,4 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 - Testing rules for selecting checks, verifying behavior, and reporting merge readiness
 - Documentation rules for keeping project docs accurate, current, and verifiable
 - Configuration rules for committed config, local-only files, environment variables, and secrets
+- Script rules for safe execution, help output, preview behavior, idempotency, cleanup, and portability
