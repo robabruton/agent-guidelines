@@ -26,3 +26,4 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 - Marker-based local git hook installation behavior in `project-setup`
 - Initial commit behavior for repositories created by `project-setup`
 - Rerun, idempotency, and final summary behavior in `project-setup`
+- Split changelog and versioning rules by common, date-based, and semver-specific behavior

@@ -11,8 +11,10 @@ Rules live in `rules/` as Markdown files.
 - `git-workflow.md` defines branch, commit, merge, and commit message expectations.
 - `docstrings.md` defines documentation comment expectations for code changes.
 - `development-attribution.md` defines attribution boundaries for committed project files.
-- `changelog.md` defines changelog format, initial setup, and update workflow.
-- `versioning.md` defines semantic versioning and release expectations.
+- `changelog-common.md` defines shared changelog format and initial setup expectations.
+- `changelog-date.md` defines date-based changelog section and workflow expectations.
+- `changelog-versioned.md` defines versioned changelog section and release cut expectations.
+- `versioning-semver.md` defines semantic versioning and release expectations.
 - `testing.md` defines verification expectations before merging branch work.
 - `documentation.md` defines accuracy and example expectations for project docs.
 - `configuration.md` defines repository, local, and secret configuration boundaries.

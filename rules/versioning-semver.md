@@ -1,9 +1,7 @@
-# Versioning Rules
+# Semantic Versioning Rules
 
 Use Semantic Versioning (`MAJOR.MINOR.PATCH`) for projects that have
-releases, users, packages, APIs, or other versioned artifacts. Projects
-without releases may omit versioning and use date-based changelog
-sections instead.
+releases, users, packages, APIs, or other versioned artifacts.
 
 ## Version Levels
 
@@ -33,7 +31,9 @@ artifacts, evaluate whether a release is warranted.
 ## Version Recording
 
 - Tag releases with annotated tags, such as `git tag -a v1.0.0 -m "release 1.0.0"`
-- If the project has a version file such as `package.json`, `pyproject.toml`, or `version.h`, update it in the release commit
-- The release commit may mention the version number when it updates versioned project metadata, such as `chore: bump version to 1.2.0`
+- If the project has a version file such as `package.json`,
+  `pyproject.toml`, or `version.h`, update it in the release commit
+- The release commit may mention the version number when it updates
+  versioned project metadata, such as `chore: bump version to 1.2.0`
 - Do not put version numbers in unrelated commit messages
 - Update the changelog as part of the same release branch before merging
