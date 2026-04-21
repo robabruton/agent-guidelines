@@ -15,3 +15,4 @@ Rules live in `rules/` as Markdown files.
 - `versioning.md` defines semantic versioning and release expectations.
 - `testing.md` defines verification expectations before merging branch work.
 - `documentation.md` defines accuracy and example expectations for project docs.
+- `configuration.md` defines repository, local, and secret configuration boundaries.

@@ -15,3 +15,4 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 - Versioning rules for semantic version levels, release timing, release checks, tags, and version metadata
 - Testing rules for selecting checks, verifying behavior, and reporting merge readiness
 - Documentation rules for keeping project docs accurate, current, and verifiable
+- Configuration rules for committed config, local-only files, environment variables, and secrets
