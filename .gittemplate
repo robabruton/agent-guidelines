@@ -1,0 +1,30 @@
+# <type>(<scope>): <description>
+#
+# --- Format ---
+# <type>       required  one of the types below
+# (<scope>)    optional  noun describing the affected section of the codebase
+# !            optional  appended after type/scope to flag a breaking change
+# <description>          imperative, lowercase, no period, ≤50 chars
+#
+# --- Types ---
+# feat:     new feature or user-facing capability         [MINOR in semver]
+# fix:      bug fix — something was broken, now it works  [PATCH in semver]
+# refactor: restructure code without changing behavior
+# perf:     performance improvement — same behavior, faster
+# docs:     documentation only, no runtime behavior change
+# style:    formatting, naming, whitespace — no logic change
+# test:     add or correct tests only, no production code
+# build:    build system, dependencies, or tooling
+# ci:       CI/CD pipeline changes only
+# chore:    maintenance that doesn't fit elsewhere
+# revert:   revert a previous commit (body: This reverts commit <SHA>)
+#
+# --- Body (optional, wrap at 72 chars) ---
+# Explain WHAT and WHY (not HOW). Imperative mood. Don't restate the diff.
+#
+# --- Footer (optional) ---
+# BREAKING CHANGE: <summary>    — breaking API/behavior change [MAJOR in semver]
+# DEPRECATED: <summary>         — mark something as deprecated
+# Fixes #<issue>                — close an issue
+# Refs: <reference>             — link related context
+#
