@@ -170,6 +170,39 @@ Only when changelog maintenance is enabled:
   during initial setup
 - If `CHANGELOG.md` already exists, leave it unchanged
 
+## Initial Commit
+
+Only when the skill initializes a new git repository:
+
+- Create one initial commit after repository files are created and local
+  configuration is applied
+- Stage only project files that were created for the repository:
+  - `.gittemplate`
+  - `.gitignore`
+  - `README.md`
+  - `CHANGELOG.md` when changelog maintenance is selected
+- Do not stage or commit local agent instruction files:
+  - `CLAUDE.md`
+  - `CLAUDE.local.md`
+  - `AGENTS.md`
+  - `.claude/`
+  - `.codex/`
+- Do not stage or commit local git configuration:
+  - `.git/info/exclude`
+  - `.git/hooks/`
+- Do not stage or commit `opencode.json` or `.mcp.json` when they were
+  treated as private local configuration
+- Use this commit message:
+
+```text
+chore: initialize repository
+```
+
+- If there are no project files to commit, skip the initial commit and
+  report why
+- If the target repository already has commits, never create an initial
+  commit
+
 ## Git Hooks
 
 - Install or update local hooks only in the target repository's
