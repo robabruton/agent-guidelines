@@ -8,27 +8,25 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ### Added
 
-- Git workflow rules for branch discipline, merge readiness, commit rhythm, merge strategy, and conventional commit messages
-- Docstring rules for documenting functions, types, constants, callbacks, and non-trivial code
-- Development attribution rules for keeping tool-generated attribution out of committed files
-- Changelog rules for initial setup, section formats, and update workflow
-- Versioning rules for semantic version levels, release timing, release checks, tags, and version metadata
-- Testing rules for selecting checks, verifying behavior, and reporting merge readiness
-- Documentation rules for keeping project docs accurate, current, and verifiable
-- Configuration rules for committed config, local-only files, environment variables, and secrets
-- Script rules for safe execution, help output, preview behavior, idempotency, cleanup, and portability
-- Dependency rules for evaluating additions, managing lockfiles, and removing unused packages or tools
-- Backward compatibility rules for breaking changes, replacements, removals, migrations, and release impact
-- `project-setup` skill scaffold for initializing or updating repositories with project standards
-- Asset templates for project setup files and local git hook snippets
-- Local git exclude behavior for agent configuration files in `project-setup`
-- Project rule assembly behavior for `CLAUDE.md` and `AGENTS.md`
-- Marker-based local git hook installation behavior in `project-setup`
-- Initial commit behavior for repositories created by `project-setup`
-- Rerun, idempotency, and final summary behavior in `project-setup`
-- Split changelog and versioning rules by common, date-based, and semver-specific behavior
-- Rule profile, changelog mode, versioning mode, and symlinked rule source behavior in `project-setup`
-- Initial-commit exception in the main-branch guard hook template
-- `project-setup.sh` command for applying project setup behavior to target repositories
-- Smoke tests for `project-setup.sh` symlink and copy rule source modes
-- Git workflow references to split changelog rule files
+- Local setup tooling for linking this repository's rules and
+  `project-setup` skill into Claude, shared agent, and Codex
+  configuration directories.
+- Safe local setup behavior, including status and dry-run modes,
+  idempotent relinking, forced conflict backups, custom backup paths,
+  clear grouped output, and smoke test coverage.
+- Reusable project rules for git workflow, docstrings, attribution,
+  changelogs, versioning, testing, documentation, configuration,
+  scripts, dependencies, and backward compatibility.
+- Target-repository setup workflow, including the `project-setup` skill,
+  `project-setup.sh`, project rule assembly, local hook installation,
+  initial repository commits, rerun behavior, rule profiles, changelog
+  modes, rule source modes, and smoke test coverage.
+- Local setup documentation that lists every managed path created or
+  updated by `setup.sh`.
+
+### Changed
+
+- Split changelog and versioning guidance into common, date-based, and
+  semver-specific rule files.
+- Clarified the git workflow rules to reference the split changelog rule
+  files and permit the generated initial commit on a new repository.

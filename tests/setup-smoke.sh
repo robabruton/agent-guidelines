@@ -1,0 +1,62 @@
+#!/usr/bin/env bash
+# Verifies the local tool setup command in a temporary HOME.
+
+set -euo pipefail
+
+ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd -P)"
+TMP_ROOT="$(mktemp -d /tmp/agent-guidelines-tool-setup.XXXXXX)"
+
+trap 'rm -rf "$TMP_ROOT"' EXIT
+
+export HOME="${TMP_ROOT}/home"
+mkdir -p "$HOME"
+
+STATUS_OUT="${TMP_ROOT}/status.out"
+DRY_RUN_OUT="${TMP_ROOT}/dry-run.out"
+INSTALL_OUT="${TMP_ROOT}/install.out"
+SECOND_OUT="${TMP_ROOT}/second.out"
+REMOVE_OUT="${TMP_ROOT}/remove.out"
+FORCE_REPO_HOME="${TMP_ROOT}/force-home"
+FORCE_OUT="${TMP_ROOT}/force.out"
+CUSTOM_BACKUP_PATH="${TMP_ROOT}/custom-backups"
+
+"${ROOT_DIR}/setup.sh" --status --no-color > "$STATUS_OUT"
+grep -Eq "action:[[:space:]]+status" "$STATUS_OUT"
+grep -Eq "missing:[[:space:]]+16" "$STATUS_OUT"
+grep -Eq "conflicts:[[:space:]]+0" "$STATUS_OUT"
+
+"${ROOT_DIR}/setup.sh" --dry-run --no-color > "$DRY_RUN_OUT"
+grep -Eq "action:[[:space:]]+install" "$DRY_RUN_OUT"
+grep -Eq "dry run:[[:space:]]+true" "$DRY_RUN_OUT"
+grep -Eq "forced:[[:space:]]+false" "$DRY_RUN_OUT"
+test ! -e "${HOME}/.claude/rules/git-workflow.md"
+
+"${ROOT_DIR}/setup.sh" --install --no-color > "$INSTALL_OUT"
+grep -Eq "created:[[:space:]]+16" "$INSTALL_OUT"
+test -L "${HOME}/.claude/rules/git-workflow.md"
+test -L "${HOME}/.claude/skills/project-setup"
+test -L "${HOME}/.agents/skills/project-setup"
+test -L "${HOME}/.codex/skills/project-setup"
+
+"${ROOT_DIR}/setup.sh" --install --no-color > "$SECOND_OUT"
+grep -Eq "created:[[:space:]]+0" "$SECOND_OUT"
+grep -Eq "current:[[:space:]]+16" "$SECOND_OUT"
+
+"${ROOT_DIR}/setup.sh" --remove --no-color > "$REMOVE_OUT"
+grep -Eq "removed:[[:space:]]+16" "$REMOVE_OUT"
+test ! -e "${HOME}/.claude/rules/git-workflow.md"
+
+export HOME="$FORCE_REPO_HOME"
+mkdir -p "${HOME}/.claude/rules"
+printf 'local file\n' > "${HOME}/.claude/rules/git-workflow.md"
+
+"${ROOT_DIR}/setup.sh" --force --backup-path "$CUSTOM_BACKUP_PATH" --no-color > "$FORCE_OUT"
+grep -Eq "backups:[[:space:]]+1" "$FORCE_OUT"
+grep -Eq "forced:[[:space:]]+true" "$FORCE_OUT"
+grep -Eq "backup path:[[:space:]]+${CUSTOM_BACKUP_PATH}" "$FORCE_OUT"
+grep -Eq "warnings:[[:space:]]+0" "$FORCE_OUT"
+test -L "${HOME}/.claude/rules/git-workflow.md"
+backup_file="$(find "$CUSTOM_BACKUP_PATH" -path "*/.claude/rules/git-workflow.md" -type f -print -quit)"
+test -n "$backup_file"
+
+printf 'setup smoke tests passed\n'
