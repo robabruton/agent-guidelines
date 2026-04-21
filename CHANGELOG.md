@@ -22,3 +22,4 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 - `project-setup` skill scaffold for initializing or updating repositories with project standards
 - Asset templates for project setup files and local git hook snippets
 - Local git exclude behavior for agent configuration files in `project-setup`
+- Project rule assembly behavior for `CLAUDE.md` and `AGENTS.md`

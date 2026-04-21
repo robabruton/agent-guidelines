@@ -87,6 +87,47 @@ git init --initial-branch=main
 - If `opencode.json` or `.mcp.json` already exists and is tracked by git,
   leave it tracked and report that it was skipped
 
+## Project Rule Assembly
+
+- Create or update both `CLAUDE.md` and `AGENTS.md`
+- Treat these files as local agent instruction files unless the target
+  repository already tracks them intentionally
+- Preserve all user-managed content outside managed marker blocks
+- Use this marker block for generated project rules:
+
+```markdown
+<!-- BEGIN agent-guidelines project rules -->
+<!-- END agent-guidelines project rules -->
+```
+
+- If the marker block exists, replace only the content inside the block
+- If the marker block does not exist, append it to the end of the file
+  after one blank line
+- If the file does not exist, create it with only the managed block
+- Read rule files from the first available source:
+  - The target repository's `rules/` directory
+  - The `rules/` directory from this guidelines repository
+  - An installed rules source packaged with the skill
+- If no rules source is available, skip rule assembly and report a
+  warning
+- Always include these rule files when available:
+  - `git-workflow.md`
+  - `docstrings.md`
+  - `development-attribution.md`
+  - `testing.md`
+  - `documentation.md`
+  - `configuration.md`
+  - `scripts.md`
+  - `dependencies.md`
+  - `backward-compatibility.md`
+- Include `changelog.md` only when changelog maintenance is selected
+- Include `versioning.md` only when versioned project mode is selected
+- Keep the assembled rules in the order listed above
+- Use the source file's existing title as the heading for each included
+  rule
+- Do not rewrite, summarize, or otherwise change the rule text
+- Report which rule files were included, skipped, or unavailable
+
 ## Commit Template
 
 - Create `.gittemplate` if it does not already exist
