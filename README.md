@@ -18,6 +18,32 @@ tool configuration directories:
 Output uses aligned status labels and color when supported. Use
 `--no-color` or set `NO_COLOR=1` for plain output.
 
+Use `--backup-path <path>` with `--force` to choose where conflicting
+files, directories, or foreign symlinks are moved before replacement.
+Without an override, backups are written under
+`$HOME/.agent-guidelines/backups/YYYYMMDD-HHMMSS/`.
+
+### Managed Paths
+
+| Kind | Managed path | Source |
+| --- | --- | --- |
+| Rule | `$HOME/.claude/rules/git-workflow.md` | `rules/git-workflow.md` |
+| Rule | `$HOME/.claude/rules/development-attribution.md` | `rules/development-attribution.md` |
+| Rule | `$HOME/.claude/rules/configuration.md` | `rules/configuration.md` |
+| Rule | `$HOME/.claude/rules/testing.md` | `rules/testing.md` |
+| Rule | `$HOME/.claude/rules/documentation.md` | `rules/documentation.md` |
+| Rule | `$HOME/.claude/rules/docstrings.md` | `rules/docstrings.md` |
+| Rule | `$HOME/.claude/rules/scripts.md` | `rules/scripts.md` |
+| Rule | `$HOME/.claude/rules/dependencies.md` | `rules/dependencies.md` |
+| Rule | `$HOME/.claude/rules/changelog-common.md` | `rules/changelog-common.md` |
+| Rule | `$HOME/.claude/rules/changelog-date.md` | `rules/changelog-date.md` |
+| Rule | `$HOME/.claude/rules/changelog-versioned.md` | `rules/changelog-versioned.md` |
+| Rule | `$HOME/.claude/rules/versioning-semver.md` | `rules/versioning-semver.md` |
+| Rule | `$HOME/.claude/rules/backward-compatibility.md` | `rules/backward-compatibility.md` |
+| Skill | `$HOME/.claude/skills/project-setup` | `skills/project-setup` |
+| Skill | `$HOME/.agents/skills/project-setup` | `skills/project-setup` |
+| Skill | `$HOME/.codex/skills/project-setup` | `skills/project-setup` |
+
 This is distinct from `project-setup.sh`, which applies repository
 standards to a target project.
 
