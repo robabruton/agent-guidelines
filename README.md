@@ -19,3 +19,9 @@ Rules live in `rules/` as Markdown files.
 - `scripts.md` defines safety, UI, idempotency, error handling, and portability expectations for scripts.
 - `dependencies.md` defines expectations for adding, updating, and removing dependencies.
 - `backward-compatibility.md` defines replacement, removal, migration, and release-impact expectations.
+
+## Skills
+
+Skills live in `skills/` as reusable agent workflows.
+
+- `project-setup` initializes or updates repositories with project standards.

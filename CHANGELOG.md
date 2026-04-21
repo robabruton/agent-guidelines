@@ -19,3 +19,4 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 - Script rules for safe execution, help output, preview behavior, idempotency, cleanup, and portability
 - Dependency rules for evaluating additions, managing lockfiles, and removing unused packages or tools
 - Backward compatibility rules for breaking changes, replacements, removals, migrations, and release impact
+- `project-setup` skill scaffold for initializing or updating repositories with project standards
