@@ -21,7 +21,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 - Target-repository setup workflow, including the `project-setup` skill,
   `project-setup.sh`, project rule assembly, local hook installation,
   initial repository commits, rerun behavior, rule profiles, changelog
-  modes, rule source modes, and smoke test coverage.
+  modes, rule source modes, and agent file smoke test coverage.
 - Local setup documentation that lists every managed path created or
   updated by `setup.sh`.
 

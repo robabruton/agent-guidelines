@@ -16,6 +16,17 @@ SYMLINK_STATUS_OUT="${TMP_ROOT}/symlink-status.out"
 COPY_OUT="${TMP_ROOT}/copy.out"
 COPY_STATUS_OUT="${TMP_ROOT}/copy-status.out"
 
+assert_agent_rules() {
+  local file="$1"
+  local expected_heading="$2"
+
+  test -f "$file"
+  grep -Fq "<!-- BEGIN agent-guidelines project rules -->" "$file"
+  grep -Fq "# Git Workflow Rules" "$file"
+  grep -Fq "$expected_heading" "$file"
+  grep -Fq "<!-- END agent-guidelines project rules -->" "$file"
+}
+
 "${ROOT_DIR}/project-setup.sh" \
   --profile codebase \
   --changelog date \
@@ -29,11 +40,10 @@ if [ -s "$SYMLINK_STATUS_OUT" ]; then
 fi
 
 test -L "${SYMLINK_REPO}/.agent-guidelines/rules"
-test -f "${SYMLINK_REPO}/CLAUDE.md"
-test -f "${SYMLINK_REPO}/AGENTS.md"
 test -f "${SYMLINK_REPO}/.git/hooks/pre-commit"
 grep -Fq "Changelog mode: date" "$SYMLINK_FIRST_OUT"
-grep -Fq "# Date-Based Changelog Rules" "${SYMLINK_REPO}/CLAUDE.md"
+assert_agent_rules "${SYMLINK_REPO}/CLAUDE.md" "# Date-Based Changelog Rules"
+assert_agent_rules "${SYMLINK_REPO}/AGENTS.md" "# Date-Based Changelog Rules"
 
 "${ROOT_DIR}/project-setup.sh" \
   --profile codebase \
@@ -67,6 +77,7 @@ test -f "${COPY_REPO}/.agent-guidelines/rules/versioning-semver.md"
 git -C "$COPY_REPO" ls-files --error-unmatch \
   .agent-guidelines/rules/versioning-semver.md >/dev/null
 grep -Fq "Versioning mode: semver" "$COPY_OUT"
-grep -Fq "# Semantic Versioning Rules" "${COPY_REPO}/AGENTS.md"
+assert_agent_rules "${COPY_REPO}/CLAUDE.md" "# Semantic Versioning Rules"
+assert_agent_rules "${COPY_REPO}/AGENTS.md" "# Semantic Versioning Rules"
 
 printf 'project-setup smoke tests passed\n'
