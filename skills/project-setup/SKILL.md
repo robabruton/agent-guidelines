@@ -226,6 +226,26 @@ chore: initialize repository
 - Ensure updated hook files are executable
 - Do not install hooks globally or into other repositories
 
+## Rerun and Idempotency
+
+- Before writing any file, compare the intended content or managed block
+  to the existing content
+- Do not rewrite files that are already correct
+- Do not duplicate local exclude patterns, config entries, hook snippets,
+  or project rule blocks
+- Do not replace user-managed content outside explicit marker blocks
+- Treat an already-correct git config value as unchanged
+- Treat an existing user-managed file as skipped when the skill cannot
+  safely determine how to update it
+- When replacing a managed marker block, preserve the surrounding file
+  content and newline style when practical
+- Track each operation as one of:
+  - Created
+  - Updated
+  - Unchanged
+  - Skipped
+  - Warning
+
 ## Output Summary
 
 At the end, print:
@@ -233,7 +253,13 @@ At the end, print:
 - Repository location
 - Current branch
 - Git `user.name` and `user.email`
+- Selected changelog mode:
+  - none
+  - date-based
+  - versioned
 - Whether versioning rules were selected
-- Whether changelog maintenance was selected
-- What was created, updated, skipped, or left unchanged
-- Any warnings or manual follow-up steps
+- Created files, hooks, config values, and commits
+- Updated files, hooks, and config values
+- Unchanged files, hooks, and config values
+- Skipped files and the reason each was skipped
+- Warnings and manual follow-up steps

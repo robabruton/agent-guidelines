@@ -25,3 +25,4 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 - Project rule assembly behavior for `CLAUDE.md` and `AGENTS.md`
 - Marker-based local git hook installation behavior in `project-setup`
 - Initial commit behavior for repositories created by `project-setup`
+- Rerun, idempotency, and final summary behavior in `project-setup`
