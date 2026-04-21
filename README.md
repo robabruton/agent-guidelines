@@ -39,3 +39,9 @@ target repository:
 
 This script is distinct from any future repository setup command for
 developing `agent-guidelines` itself.
+
+Run the smoke tests for the target-repository setup command with:
+
+```bash
+tests/project-setup-smoke.sh
+```
