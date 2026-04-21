@@ -110,12 +110,12 @@ parse_args() {
 real_path() {
   local path="$1"
 
-  if command -v python3 >/dev/null 2>&1; then
-    python3 -c 'import os, sys; print(os.path.realpath(sys.argv[1]))' "$path"
-  elif command -v realpath >/dev/null 2>&1; then
+  if command -v realpath >/dev/null 2>&1; then
     realpath -m "$path" 2>/dev/null || realpath "$path"
-  elif readlink -f "$path" >/dev/null 2>&1; then
+  elif command -v readlink >/dev/null 2>&1 && readlink -f "$path" >/dev/null 2>&1; then
     readlink -f "$path"
+  elif command -v python3 >/dev/null 2>&1; then
+    python3 -c 'import os, sys; print(os.path.realpath(sys.argv[1]))' "$path"
   else
     printf '%s\n' "$path"
   fi
@@ -139,8 +139,14 @@ source_path() {
     realpath "$path"
   elif command -v readlink >/dev/null 2>&1 && readlink -f "$path" >/dev/null 2>&1; then
     readlink -f "$path"
-  else
+  elif command -v python3 >/dev/null 2>&1; then
     python3 -c 'import os, sys; print(os.path.realpath(sys.argv[1]))' "$path"
+  else
+    local dir
+    local base
+    dir="$(dirname "$path")"
+    base="$(basename "$path")"
+    printf '%s/%s\n' "$(cd "$dir" && pwd -P)" "$base"
   fi
 }
 
