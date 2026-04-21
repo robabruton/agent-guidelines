@@ -10,3 +10,4 @@ Rules live in `rules/` as Markdown files.
 
 - `git-workflow.md` defines branch, commit, merge, and commit message expectations.
 - `docstrings.md` defines documentation comment expectations for code changes.
+- `development-attribution.md` defines attribution boundaries for committed project files.
