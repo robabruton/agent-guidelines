@@ -176,15 +176,20 @@ Only when changelog maintenance is enabled:
   `.git/hooks` directory
 - Create hook files when they do not exist
 - Preserve existing hook content
-- Insert managed snippets from `assets/hooks/` by marker block:
-  - `pre-commit-main-branch`
-  - `pre-commit-attribution`
-  - `commit-msg-attribution`
-  - `commit-msg-conventional`
-  - `pre-push-branch-name`
+- Start newly created hook files with `#!/bin/sh`
+- Insert managed snippets from `assets/hooks/` by marker block into
+  these hook files:
+  - `pre-commit`: `pre-commit-main-branch`
+  - `pre-commit`: `pre-commit-attribution`
+  - `commit-msg`: `commit-msg-attribution`
+  - `commit-msg`: `commit-msg-conventional`
+  - `pre-push`: `pre-push-branch-name`
 - Add each snippet only when its exact marker block is missing
 - Replace an existing managed marker block only when the corresponding
   asset content changed
+- Leave unknown or user-managed hook content in place before and after
+  managed marker blocks
+- Preserve the relative order of managed snippets within each hook file
 - Ensure updated hook files are executable
 - Do not install hooks globally or into other repositories
 
