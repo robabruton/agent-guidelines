@@ -17,3 +17,4 @@ Rules live in `rules/` as Markdown files.
 - `documentation.md` defines accuracy and example expectations for project docs.
 - `configuration.md` defines repository, local, and secret configuration boundaries.
 - `scripts.md` defines safety, UI, idempotency, error handling, and portability expectations for scripts.
+- `dependencies.md` defines expectations for adding, updating, and removing dependencies.
