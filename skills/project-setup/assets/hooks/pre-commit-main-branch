@@ -1,0 +1,12 @@
+# BEGIN agent-guidelines main-branch guard
+current_branch="$(git symbolic-ref --quiet --short HEAD 2>/dev/null || true)"
+
+if ! git rev-parse --verify HEAD >/dev/null 2>&1; then
+  exit 0
+fi
+
+if [ "$current_branch" = "main" ]; then
+  echo "Direct commits to main are blocked. Create a feature branch first." >&2
+  exit 1
+fi
+# END agent-guidelines main-branch guard

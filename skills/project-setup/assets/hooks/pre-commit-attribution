@@ -1,0 +1,12 @@
+# BEGIN agent-guidelines staged attribution guard
+git diff --cached --name-only --diff-filter=ACMR | while IFS= read -r staged_file; do
+  if [ ! -f "$staged_file" ]; then
+    continue
+  fi
+
+  if git diff --cached -- "$staged_file" | grep -Ei '^\+.*((co-)?authored-by:|generated-by:|written-by:|reviewed-by:|planned-by:|(generated|written|reviewed|planned|implemented|authored|co-authored) (by|with|using) .*(ai|llm|assistant|agent|bot|automation|code assistant|coding agent|coding tool))' >/dev/null; then
+    echo "Development-tool attribution found in staged content: $staged_file" >&2
+    exit 1
+  fi
+done
+# END agent-guidelines staged attribution guard

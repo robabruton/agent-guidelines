@@ -19,3 +19,16 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 - Script rules for safe execution, help output, preview behavior, idempotency, cleanup, and portability
 - Dependency rules for evaluating additions, managing lockfiles, and removing unused packages or tools
 - Backward compatibility rules for breaking changes, replacements, removals, migrations, and release impact
+- `project-setup` skill scaffold for initializing or updating repositories with project standards
+- Asset templates for project setup files and local git hook snippets
+- Local git exclude behavior for agent configuration files in `project-setup`
+- Project rule assembly behavior for `CLAUDE.md` and `AGENTS.md`
+- Marker-based local git hook installation behavior in `project-setup`
+- Initial commit behavior for repositories created by `project-setup`
+- Rerun, idempotency, and final summary behavior in `project-setup`
+- Split changelog and versioning rules by common, date-based, and semver-specific behavior
+- Rule profile, changelog mode, versioning mode, and symlinked rule source behavior in `project-setup`
+- Initial-commit exception in the main-branch guard hook template
+- `project-setup.sh` command for applying project setup behavior to target repositories
+- Smoke tests for `project-setup.sh` symlink and copy rule source modes
+- Git workflow references to split changelog rule files
