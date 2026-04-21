@@ -16,6 +16,8 @@ DRY_RUN_OUT="${TMP_ROOT}/dry-run.out"
 INSTALL_OUT="${TMP_ROOT}/install.out"
 SECOND_OUT="${TMP_ROOT}/second.out"
 REMOVE_OUT="${TMP_ROOT}/remove.out"
+FORCE_REPO_HOME="${TMP_ROOT}/force-home"
+FORCE_OUT="${TMP_ROOT}/force.out"
 
 "${ROOT_DIR}/setup.sh" --status > "$STATUS_OUT"
 grep -Fq "action: status" "$STATUS_OUT"
@@ -40,5 +42,16 @@ grep -Fq "current: 16" "$SECOND_OUT"
 "${ROOT_DIR}/setup.sh" --remove > "$REMOVE_OUT"
 grep -Fq "removed: 16" "$REMOVE_OUT"
 test ! -e "${HOME}/.claude/rules/git-workflow.md"
+
+export HOME="$FORCE_REPO_HOME"
+mkdir -p "${HOME}/.claude/rules"
+printf 'local file\n' > "${HOME}/.claude/rules/git-workflow.md"
+
+"${ROOT_DIR}/setup.sh" --force > "$FORCE_OUT"
+grep -Fq "backed up: 1" "$FORCE_OUT"
+grep -Fq "warnings: 0" "$FORCE_OUT"
+test -L "${HOME}/.claude/rules/git-workflow.md"
+backup_file="$(find "${HOME}/.agent-guidelines/backups" -path "*/.claude/rules/git-workflow.md" -type f -print -quit)"
+test -n "$backup_file"
 
 printf 'setup smoke tests passed\n'
