@@ -27,3 +27,15 @@ Rules live in `rules/` as Markdown files.
 Skills live in `skills/` as reusable agent workflows.
 
 - `project-setup` initializes or updates repositories with project standards.
+
+## Project Setup Script
+
+Use `project-setup.sh` to apply the `project-setup` workflow to a
+target repository:
+
+```bash
+./project-setup.sh --profile codebase --changelog date /path/to/project
+```
+
+This script is distinct from any future repository setup command for
+developing `agent-guidelines` itself.

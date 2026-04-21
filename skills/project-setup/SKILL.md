@@ -11,6 +11,10 @@ Use this skill for both new repositories and existing repositories that
 need project rules, git configuration, local hooks, or agent instruction
 files refreshed.
 
+The repository command that implements this target-repository workflow is
+`project-setup.sh`. Keep that distinct from any future setup command used
+to configure or develop the `agent-guidelines` repository itself.
+
 ## Target Directory
 
 - Use the directory specified by the user
@@ -97,6 +101,9 @@ git init --initial-branch=main
   - `AGENTS.md`
   - `.claude/`
   - `.codex/`
+  - `.agent-guidelines/config`
+- Exclude `.agent-guidelines/rules` when it is a symlink to a local
+  canonical rules directory
 - Exclude `opencode.json` only when it is private local configuration,
   not when the project intentionally tracks it as a shared artifact
 - Exclude `.mcp.json` only when it is private local configuration, not
@@ -248,6 +255,8 @@ Only when the skill initializes a new git repository:
   - `.gitignore`
   - `README.md`
   - `CHANGELOG.md` when changelog maintenance is selected
+  - `.agent-guidelines/rules/` when copy mode is selected for a
+    portable rule snapshot
 - Do not stage or commit local agent instruction files:
   - `CLAUDE.md`
   - `CLAUDE.local.md`
