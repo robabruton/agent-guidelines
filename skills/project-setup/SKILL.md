@@ -31,25 +31,42 @@ git config --global user.email "you@example.com"
 ```
 
 - Inspect existing project files before asking setup questions
+- Select a project profile:
+  - `minimal` for empty, docs-only, or lightweight repositories
+  - `codebase` for normal software projects with source, scripts,
+    tests, dependency manifests, or build tooling
+  - `released` for projects with users, releases, packages, APIs,
+    plugins, CLIs, deployable services, or compatibility promises
+- Infer `released` when version metadata, version-like tags, package
+  metadata, public API indicators, or an existing versioned changelog
+  are present
+- Infer `codebase` when source files, tests, scripts, dependency
+  manifests, or package managers are present
+- Infer `minimal` for empty repositories, docs-only repositories, or
+  unclear repositories
+- Ask only when the profile cannot be inferred confidently
 - If `CHANGELOG.md` exists:
   - Treat changelog maintenance as enabled
-  - Infer versioned changelog mode if it contains `## [Unreleased]` or
+  - Infer `versioned` changelog mode if it contains `## [Unreleased]` or
     version headings such as `## [1.2.3] - YYYY-MM-DD`
-  - Infer date-based changelog mode if it contains date headings such as
+  - Infer `date` changelog mode if it contains date headings such as
     `## 2026-04-21` and no version headings
   - If the format is mixed or unclear, summarize what was found and ask
     the user which mode to use
 - If `CHANGELOG.md` does not exist:
-  - Ask whether the project should maintain a changelog
-  - If yes, create a base `CHANGELOG.md`
-  - If no, omit changelog rules and do not create `CHANGELOG.md`
+  - Default to `versioned` changelog mode for the `released` profile
+  - Default to `none` changelog mode for `minimal` and `codebase`
+    profiles unless the user selects a changelog
+  - If changelog mode is `date` or `versioned`, create a base
+    `CHANGELOG.md`
+  - If changelog mode is `none`, omit changelog rules and do not create
+    `CHANGELOG.md`
 - Inspect version indicators such as `package.json`, `pyproject.toml`,
   `Cargo.toml`, `go.mod`, `VERSION`, and tags matching `vX.Y.Z`
 - Use version files and version-like tags as evidence that the project
-  may be versioned, but do not create a changelog solely from that
-  evidence without user confirmation
-- Ask whether the project has releases, users, packages, APIs, or other
-  versioned artifacts when versioning cannot be inferred confidently
+  may use semantic versioning
+- Use `versioning mode: semver` when changelog mode is `versioned`
+- Use `versioning mode: none` when changelog mode is `none` or `date`
 - Existing changelog structure takes priority over versioning guesses
 - Print a short summary of the selected options before continuing
 
@@ -104,25 +121,75 @@ git init --initial-branch=main
 - If the marker block does not exist, append it to the end of the file
   after one blank line
 - If the file does not exist, create it with only the managed block
+- Keep rule source files separate from generated agent instruction files
+- Prefer a symlinked rule source so projects can refresh generated
+  instructions from updated central rules
+- Use `.agent-guidelines/rules` in the target repository as the preferred
+  project-local rule source path
+- If `.agent-guidelines/rules` does not exist and symlink mode is
+  selected, create it as a symlink to the canonical `rules/` directory
+- If symlink creation is unavailable or the user selects copy mode, copy
+  rule files into `.agent-guidelines/rules` as a snapshot
+- Treat `.agent-guidelines/config` as local setup state that records the
+  selected profile, changelog mode, versioning mode, included rules, and
+  excluded rules
+- Do not symlink `CLAUDE.md` or `AGENTS.md`; generate their managed
+  blocks from the selected rule source instead
 - Read rule files from the first available source:
+  - The target repository's `.agent-guidelines/rules` path
   - The target repository's `rules/` directory
   - The `rules/` directory from this guidelines repository
   - An installed rules source packaged with the skill
 - If no rules source is available, skip rule assembly and report a
   warning
-- Always include these rule files when available:
+- Supported profiles include these rule files when available:
+  - `minimal`:
+    - `git-workflow.md`
+    - `development-attribution.md`
+    - `configuration.md`
+    - `testing.md`
+    - `documentation.md`
+  - `codebase`:
+    - all `minimal` rules
+    - `docstrings.md`
+    - `dependencies.md`
+    - `scripts.md`
+  - `released`:
+    - all `codebase` rules
+    - `backward-compatibility.md`
+- Include these changelog and versioning rules by selected mode:
+  - `changelog mode: none`: no changelog or versioning rules
+  - `changelog mode: date`: `changelog-common.md`,
+    `changelog-date.md`
+  - `changelog mode: versioned`: `changelog-common.md`,
+    `changelog-versioned.md`, `versioning-semver.md`,
+    `backward-compatibility.md`
+- Allow explicit include and exclude overrides:
+  - `include rule <id>` adds `<id>.md` when available
+  - `exclude rule <id>` removes `<id>.md` unless it is required for the
+    selected changelog or versioning mode
+- Apply rule selection in this order:
+  - Start with the selected profile's rule list
+  - Add changelog and versioning mode rules
+  - Add explicit include-rule overrides
+  - Remove explicit exclude-rule overrides
+  - Keep mode-required rules
+- Canonical rule order:
   - `git-workflow.md`
-  - `docstrings.md`
   - `development-attribution.md`
+  - `configuration.md`
   - `testing.md`
   - `documentation.md`
-  - `configuration.md`
+  - `docstrings.md`
   - `scripts.md`
   - `dependencies.md`
+  - `changelog-common.md`
+  - `changelog-date.md`
+  - `changelog-versioned.md`
+  - `versioning-semver.md`
   - `backward-compatibility.md`
-- Include `changelog.md` only when changelog maintenance is selected
-- Include `versioning.md` only when versioned project mode is selected
-- Keep the assembled rules in the order listed above
+- Include any selected future rule files that are not in the canonical
+  order alphabetically after known rules
 - Use the source file's existing title as the heading for each included
   rule
 - Do not rewrite, summarize, or otherwise change the rule text
@@ -253,11 +320,20 @@ At the end, print:
 - Repository location
 - Current branch
 - Git `user.name` and `user.email`
+- Selected profile:
+  - minimal
+  - codebase
+  - released
 - Selected changelog mode:
   - none
-  - date-based
+  - date
   - versioned
-- Whether versioning rules were selected
+- Selected versioning mode:
+  - none
+  - semver
+- Rule source mode:
+  - symlink
+  - copy
 - Created files, hooks, config values, and commits
 - Updated files, hooks, and config values
 - Unchanged files, hooks, and config values

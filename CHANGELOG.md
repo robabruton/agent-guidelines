@@ -27,3 +27,4 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 - Initial commit behavior for repositories created by `project-setup`
 - Rerun, idempotency, and final summary behavior in `project-setup`
 - Split changelog and versioning rules by common, date-based, and semver-specific behavior
+- Rule profile, changelog mode, versioning mode, and symlinked rule source behavior in `project-setup`
