@@ -15,6 +15,9 @@ tool configuration directories:
 ./setup.sh --install
 ```
 
+Output uses aligned status labels and color when supported. Use
+`--no-color` or set `NO_COLOR=1` for plain output.
+
 This is distinct from `project-setup.sh`, which applies repository
 standards to a target project.
 

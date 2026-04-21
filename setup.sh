@@ -10,6 +10,7 @@ SKILLS_DIR="${REPO_DIR}/skills"
 ACTION="install"
 DRY_RUN=false
 FORCE=false
+COLOR_MODE="auto"
 BACKUP_ROOT="${HOME}/.agent-guidelines/backups/$(date +%Y%m%d-%H%M%S)"
 
 CREATED=0
@@ -18,6 +19,8 @@ REMOVED=0
 BACKED_UP=0
 SKIPPED=0
 WARNINGS=0
+MISSING=0
+CONFLICTS=0
 
 LINKS=(
   "rule|${HOME}/.claude/rules/git-workflow.md|${RULES_DIR}/git-workflow.md"
@@ -48,6 +51,7 @@ Options:
   --status        Report link state without changing files
   --dry-run       Preview install or remove actions without changing files
   --force         Back up conflicting files before replacing them
+  --no-color      Disable colored output
   -h, --help      Show this help
 
 Examples:
@@ -61,6 +65,45 @@ EOF
 
 info() {
   printf '%s\n' "$*"
+}
+
+setup_colors() {
+  if [ "$COLOR_MODE" = "never" ] || [ -n "${NO_COLOR:-}" ] || [ ! -t 1 ]; then
+    BLUE=""
+    GREEN=""
+    YELLOW=""
+    RED=""
+    CYAN=""
+    DIM=""
+    RESET=""
+  else
+    BLUE="$(printf '\033[1;34m')"
+    GREEN="$(printf '\033[0;32m')"
+    YELLOW="$(printf '\033[0;33m')"
+    RED="$(printf '\033[0;31m')"
+    CYAN="$(printf '\033[0;36m')"
+    DIM="$(printf '\033[0;90m')"
+    RESET="$(printf '\033[0m')"
+  fi
+}
+
+section() {
+  printf '\n%s%s%s\n' "$BLUE" "$1" "$RESET"
+}
+
+entry() {
+  local color="$1"
+  local mark="$2"
+  local status="$3"
+  local path="$4"
+  local detail="${5:-}"
+
+  if [ -n "$detail" ]; then
+    printf '  %s%s %-14s%s%s  %s%s%s\n' \
+      "$color" "$mark" "$status" "$RESET" "$path" "$DIM" "$detail" "$RESET"
+  else
+    printf '  %s%s %-14s%s%s\n' "$color" "$mark" "$status" "$RESET" "$path"
+  fi
 }
 
 warn() {
@@ -94,6 +137,10 @@ parse_args() {
         ;;
       --force)
         FORCE=true
+        shift
+        ;;
+      --no-color)
+        COLOR_MODE="never"
         shift
         ;;
       -h|--help)
@@ -203,14 +250,14 @@ backup_conflict() {
   backup_path="${BACKUP_ROOT}${link_path}"
 
   if [ "$DRY_RUN" = true ]; then
-    info "  backup ${link_path} -> ${backup_path}"
+    entry "$CYAN" "?" "would back up" "$link_path" "to backup directory"
     BACKED_UP=$((BACKED_UP + 1))
     return
   fi
 
   mkdir -p "$(dirname "$backup_path")"
   mv "$link_path" "$backup_path"
-  info "  backup ${link_path} -> ${backup_path}"
+  entry "$CYAN" "↳" "backed up" "$link_path" "-> $backup_path"
   BACKED_UP=$((BACKED_UP + 1))
 }
 
@@ -223,16 +270,16 @@ install_link() {
   state="$(classify_path "$link_path" "$source")"
   case "$state" in
     current)
-      info "  current ${kind} ${link_path}"
+      entry "$GREEN" "✓" "current" "$link_path" "already correct"
       CURRENT=$((CURRENT + 1))
       ;;
     missing)
       if [ "$DRY_RUN" = true ]; then
-        info "  create  ${kind} ${link_path} -> ${source}"
+        entry "$CYAN" "?" "would create" "$link_path" "-> $source"
       else
         mkdir -p "$(dirname "$link_path")"
         ln -s "$source" "$link_path"
-        info "  create  ${kind} ${link_path} -> ${source}"
+        entry "$GREEN" "+" "created" "$link_path" "-> $source"
       fi
       CREATED=$((CREATED + 1))
       ;;
@@ -242,11 +289,14 @@ install_link() {
         if [ "$DRY_RUN" = false ]; then
           mkdir -p "$(dirname "$link_path")"
           ln -s "$source" "$link_path"
+          entry "$GREEN" "↻" "replaced" "$link_path" "-> $source"
+        else
+          entry "$CYAN" "?" "would replace" "$link_path" "with $source"
         fi
-        info "  replace ${kind} ${link_path} -> ${source}"
         CREATED=$((CREATED + 1))
       else
-        warn "skip ${link_path} (${state}); use --force to back it up"
+        entry "$YELLOW" "!" "skipped" "$link_path" "$state conflict; use --force"
+        WARNINGS=$((WARNINGS + 1))
         SKIPPED=$((SKIPPED + 1))
       fi
       ;;
@@ -260,16 +310,16 @@ remove_link() {
 
   if target_matches "$link_path" "$source"; then
     if [ "$DRY_RUN" = true ]; then
-      info "  remove  ${kind} ${link_path}"
+      entry "$CYAN" "?" "would remove" "$link_path" "managed link"
     else
       rm "$link_path"
-      info "  remove  ${kind} ${link_path}"
+      entry "$RED" "-" "removed" "$link_path" "managed link removed"
     fi
     REMOVED=$((REMOVED + 1))
   else
     local state
     state="$(classify_path "$link_path" "$source")"
-    info "  skip    ${kind} ${link_path} (${state})"
+    entry "$DIM" "·" "skipped" "$link_path" "$state; not managed by setup.sh"
     SKIPPED=$((SKIPPED + 1))
   fi
 }
@@ -281,11 +331,21 @@ status_link() {
   local state
 
   state="$(classify_path "$link_path" "$source")"
-  info "  ${state} ${kind} ${link_path} -> ${source}"
   case "$state" in
-    current) CURRENT=$((CURRENT + 1)) ;;
-    missing) SKIPPED=$((SKIPPED + 1)) ;;
-    *) WARNINGS=$((WARNINGS + 1)) ;;
+    current)
+      entry "$GREEN" "✓" "current" "$link_path" "linked to expected source"
+      CURRENT=$((CURRENT + 1))
+      ;;
+    missing)
+      entry "$DIM" "·" "missing" "$link_path" "will be created by install"
+      MISSING=$((MISSING + 1))
+      SKIPPED=$((SKIPPED + 1))
+      ;;
+    *)
+      entry "$YELLOW" "!" "$state" "$link_path" "conflict; use --force"
+      CONFLICTS=$((CONFLICTS + 1))
+      WARNINGS=$((WARNINGS + 1))
+      ;;
   esac
 }
 
@@ -301,8 +361,10 @@ process_links() {
 
     if [ "$kind" != "$current_kind" ]; then
       current_kind="$kind"
-      info ""
-      info "${kind}s"
+      case "$kind" in
+        rule) section "Rules" ;;
+        skill) section "Skills" ;;
+      esac
     fi
 
     case "$ACTION" in
@@ -314,20 +376,37 @@ process_links() {
 }
 
 print_summary() {
-  info ""
-  info "Summary"
-  info "  action: ${ACTION}"
-  info "  dry-run: ${DRY_RUN}"
-  info "  created: ${CREATED}"
-  info "  current: ${CURRENT}"
-  info "  removed: ${REMOVED}"
-  info "  backed up: ${BACKED_UP}"
-  info "  skipped: ${SKIPPED}"
-  info "  warnings: ${WARNINGS}"
+  section "Summary"
+  printf '  %-10s %s\n' "action:" "$ACTION"
+
+  case "$ACTION" in
+    status)
+      printf '  %-10s %s\n' "current:" "$CURRENT"
+      printf '  %-10s %s\n' "missing:" "$MISSING"
+      printf '  %-10s %s\n' "conflicts:" "$CONFLICTS"
+      ;;
+    install)
+      printf '  %-10s %s\n' "dry run:" "$DRY_RUN"
+      printf '  %-10s %s\n' "forced:" "$FORCE"
+      printf '  %-10s %s\n' "created:" "$CREATED"
+      printf '  %-10s %s\n' "current:" "$CURRENT"
+      printf '  %-10s %s\n' "backups:" "$BACKED_UP"
+      printf '  %-10s %s\n' "skipped:" "$SKIPPED"
+      printf '  %-10s %s\n' "warnings:" "$WARNINGS"
+      ;;
+    remove)
+      printf '  %-10s %s\n' "dry run:" "$DRY_RUN"
+      printf '  %-10s %s\n' "removed:" "$REMOVED"
+      printf '  %-10s %s\n' "skipped:" "$SKIPPED"
+      ;;
+  esac
+
+  printf '\n'
 }
 
 main() {
   parse_args "$@"
+  setup_colors
   validate_sources
   process_links
   print_summary
