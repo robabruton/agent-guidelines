@@ -47,6 +47,11 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
   `date` and `version`, with `dated`, `dates`, `versioned`, and
   `versions` accepted as aliases.
 
+### Fixed
+
+- Aligned `setup.sh` summary output when labels such as `backup path:`
+  are longer than the default summary label width.
+
 ## 2026-04-21
 
 ### Added
