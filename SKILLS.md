@@ -4,6 +4,22 @@ Skills live in `skills/` as reusable agent workflows. Each skill should
 cover a concrete workflow that benefits from named, repeatable
 instructions rather than restating the project rules.
 
+## Metadata Policy
+
+Skill frontmatter should use portable Agent Skills fields plus a small
+approved subset of Claude Code fields that improve invocation:
+
+- `name`
+- `description`
+- `when_to_use`
+- `argument-hint`
+
+Avoid behavior-changing Claude Code fields such as `model`, `effort`,
+`context`, `agent`, `hooks`, and `shell` unless a future change has a
+specific need for them. Use `allowed-tools` only for low-risk read/search
+tools on audit and review skills; it pre-approves those tools in Claude
+Code but does not deny other tools.
+
 ## Current Skills
 
 ### `firmware-review`

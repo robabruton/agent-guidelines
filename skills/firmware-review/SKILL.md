@@ -1,6 +1,9 @@
 ---
 name: firmware-review
 description: Review embedded firmware, drivers, RTOS code, ISRs, hardware-facing C/C++, and protocol code for correctness, timing, concurrency, and hardware-integration issues.
+when_to_use: Use when reviewing embedded C/C++, drivers, board support packages, RTOS tasks, ISRs, register access, DMA flows, startup/linker code, bootloaders, or device protocols.
+argument-hint: "[file|directory|component|branch|changes]"
+allowed-tools: Read Grep Glob
 ---
 
 Review firmware and hardware-facing code for defects that ordinary code

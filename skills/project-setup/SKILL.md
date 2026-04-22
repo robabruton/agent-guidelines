@@ -1,6 +1,8 @@
 ---
 name: project-setup
 description: Initialize or update a repository with project rules, git hooks, commit standards, and agent configuration
+when_to_use: Use when setting up a new repository or refreshing an existing repository with shared rules, local git hooks, changelog behavior, and agent instruction files.
+argument-hint: "[target-dir] [options]"
 ---
 
 Set up a project repository with reusable development standards. This

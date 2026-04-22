@@ -1,6 +1,9 @@
 ---
 name: script-audit
 description: Audit shell scripts, git hooks, installers, setup workflows, and command automation for safety, correctness, portability, and idempotency.
+when_to_use: Use when reviewing shell scripts, git hooks, setup scripts, installers, migration scripts, Makefile recipes, CI command scripts, or command snippets that modify files or project state.
+argument-hint: "[file|directory|project|changes]"
+allowed-tools: Read Grep Glob
 ---
 
 Audit scripts and automation surfaces for practical failure modes. Use
