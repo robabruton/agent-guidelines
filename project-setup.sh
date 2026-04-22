@@ -52,7 +52,7 @@ CANONICAL_RULE_ORDER=(
   dependencies
   changelog-common
   changelog-date
-  changelog-versioned
+  changelog-version
   versioning-semver
   backward-compatibility
 )
@@ -63,7 +63,8 @@ Usage: ./project-setup.sh [options] [target-dir]
 
 Options:
   --profile minimal|codebase|released
-  --changelog none|date|versioned
+  --changelog none|date|version
+                  aliases: dated, dates, versioned, versions
   --rules-source symlink|copy
   --include-rule <id>
   --exclude-rule <id>
@@ -72,7 +73,7 @@ Options:
 Examples:
   ./project-setup.sh .
   ./project-setup.sh --profile codebase .
-  ./project-setup.sh --profile released --changelog versioned .
+  ./project-setup.sh --profile released --changelog version .
   ./project-setup.sh --profile codebase --changelog date --include-rule docstrings .
 EOF
 }
@@ -138,7 +139,15 @@ parse_args() {
   done
 
   case "$PROFILE" in auto|minimal|codebase|released) ;; *) die "invalid profile: $PROFILE" ;; esac
-  case "$CHANGELOG_MODE" in auto|none|date|versioned) ;; *) die "invalid changelog mode: $CHANGELOG_MODE" ;; esac
+  case "$CHANGELOG_MODE" in
+    dated|dates)
+      CHANGELOG_MODE="date"
+      ;;
+    versioned|versions)
+      CHANGELOG_MODE="version"
+      ;;
+  esac
+  case "$CHANGELOG_MODE" in auto|none|date|version) ;; *) die "invalid changelog mode: $CHANGELOG_MODE" ;; esac
   case "$RULE_SOURCE_MODE" in symlink|copy) ;; *) die "invalid rules source mode: $RULE_SOURCE_MODE" ;; esac
 }
 
@@ -208,19 +217,19 @@ infer_changelog_mode() {
 
   if [ -f "$TARGET_DIR/CHANGELOG.md" ] &&
     grep -Eq '^## \[Unreleased\]|^## \[[0-9]+\.[0-9]+\.[0-9]+\] - [0-9]{4}-[0-9]{2}-[0-9]{2}' "$TARGET_DIR/CHANGELOG.md"; then
-    CHANGELOG_MODE="versioned"
+    CHANGELOG_MODE="version"
   elif [ -f "$TARGET_DIR/CHANGELOG.md" ] &&
     grep -Eq '^## [0-9]{4}-[0-9]{2}-[0-9]{2}$' "$TARGET_DIR/CHANGELOG.md"; then
     CHANGELOG_MODE="date"
   elif [ "$PROFILE" = "released" ]; then
-    CHANGELOG_MODE="versioned"
+    CHANGELOG_MODE="version"
   else
     CHANGELOG_MODE="none"
   fi
 }
 
 versioning_mode() {
-  if [ "$CHANGELOG_MODE" = "versioned" ]; then
+  if [ "$CHANGELOG_MODE" = "version" ]; then
     printf 'semver'
   else
     printf 'none'
@@ -387,8 +396,8 @@ selected_rules_raw() {
     date)
       rules+=("changelog-common" "changelog-date")
       ;;
-    versioned)
-      rules+=("changelog-common" "changelog-versioned" "versioning-semver" "backward-compatibility")
+    version)
+      rules+=("changelog-common" "changelog-version" "versioning-semver" "backward-compatibility")
       ;;
   esac
 
@@ -410,7 +419,7 @@ is_mode_required_rule() {
 
   case "$CHANGELOG_MODE:$rule" in
     date:changelog-common|date:changelog-date) return 0 ;;
-    versioned:changelog-common|versioned:changelog-versioned|versioned:versioning-semver|versioned:backward-compatibility) return 0 ;;
+    version:changelog-common|version:changelog-version|version:versioning-semver|version:backward-compatibility) return 0 ;;
   esac
   return 1
 }
