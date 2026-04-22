@@ -41,6 +41,7 @@ Without an override, backups are written under
 | Rule | `$HOME/.claude/rules/versioning-semver.md` | `rules/versioning-semver.md` |
 | Rule | `$HOME/.claude/rules/backward-compatibility.md` | `rules/backward-compatibility.md` |
 | Skill | `$HOME/.claude/skills/project-setup` | `skills/project-setup` |
+| Skill | `$HOME/.claude/skills/dependency-audit` | `skills/dependency-audit` |
 | Skill | `$HOME/.claude/skills/docstrings` | `skills/docstrings` |
 | Skill | `$HOME/.claude/skills/docs-audit` | `skills/docs-audit` |
 | Skill | `$HOME/.claude/skills/docs-review` | `skills/docs-review` |
@@ -49,6 +50,7 @@ Without an override, backups are written under
 | Skill | `$HOME/.claude/skills/security-audit` | `skills/security-audit` |
 | Skill | `$HOME/.claude/skills/test-audit` | `skills/test-audit` |
 | Skill | `$HOME/.agents/skills/project-setup` | `skills/project-setup` |
+| Skill | `$HOME/.agents/skills/dependency-audit` | `skills/dependency-audit` |
 | Skill | `$HOME/.agents/skills/docstrings` | `skills/docstrings` |
 | Skill | `$HOME/.agents/skills/docs-audit` | `skills/docs-audit` |
 | Skill | `$HOME/.agents/skills/docs-review` | `skills/docs-review` |
@@ -57,6 +59,7 @@ Without an override, backups are written under
 | Skill | `$HOME/.agents/skills/security-audit` | `skills/security-audit` |
 | Skill | `$HOME/.agents/skills/test-audit` | `skills/test-audit` |
 | Skill | `$HOME/.codex/skills/project-setup` | `skills/project-setup` |
+| Skill | `$HOME/.codex/skills/dependency-audit` | `skills/dependency-audit` |
 | Skill | `$HOME/.codex/skills/docstrings` | `skills/docstrings` |
 | Skill | `$HOME/.codex/skills/docs-audit` | `skills/docs-audit` |
 | Skill | `$HOME/.codex/skills/docs-review` | `skills/docs-review` |
