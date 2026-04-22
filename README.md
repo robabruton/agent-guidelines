@@ -47,9 +47,6 @@ Without an override, backups are written under
 | Skill | `$HOME/.codex/skills/project-setup` | `skills/project-setup` |
 | Skill | `$HOME/.codex/skills/script-audit` | `skills/script-audit` |
 
-This is distinct from `project-setup.sh`, which applies repository
-standards to a target project.
-
 Run the smoke tests for the local tool setup command with:
 
 ```bash
@@ -78,9 +75,7 @@ Rules live in `rules/` as Markdown files.
 
 Skills live in `skills/` as reusable agent workflows.
 
-- `project-setup` initializes or updates repositories with project standards.
-- `script-audit` audits scripts, hooks, setup workflows, and command
-  automation for safety, correctness, portability, and idempotency.
+See `SKILLS.md` for the current skill catalog.
 
 ## Project Setup Script
 
@@ -90,9 +85,6 @@ target repository:
 ```bash
 ./project-setup.sh --profile codebase --changelog date /path/to/project
 ```
-
-This script is distinct from any future repository setup command for
-developing `agent-guidelines` itself.
 
 Run the smoke tests for the target-repository setup command with:
 
