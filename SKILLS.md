@@ -32,6 +32,15 @@ Use this skill when verifying README files, setup instructions, CLI
 examples, managed path lists, skill catalogs, rule references, changelog
 guidance, or other docs against repository reality.
 
+### `docs-review`
+
+Reviews documentation as writing for reader clarity, structure, tone,
+grammar, style, completeness, and task flow.
+
+Use this skill when reviewing README files, guides, rules, skill docs,
+setup instructions, or other documentation for reader success rather than
+factual verification against project behavior.
+
 ### `firmware-review`
 
 Reviews embedded firmware, drivers, RTOS code, ISRs,
