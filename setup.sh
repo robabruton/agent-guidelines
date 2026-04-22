@@ -43,6 +43,7 @@ LINKS=(
   "skill|${HOME}/.claude/skills/firmware-review|${SKILLS_DIR}/firmware-review"
   "skill|${HOME}/.claude/skills/script-audit|${SKILLS_DIR}/script-audit"
   "skill|${HOME}/.claude/skills/security-audit|${SKILLS_DIR}/security-audit"
+  "skill|${HOME}/.claude/skills/test-audit|${SKILLS_DIR}/test-audit"
   "skill|${HOME}/.agents/skills/project-setup|${SKILLS_DIR}/project-setup"
   "skill|${HOME}/.agents/skills/docstrings|${SKILLS_DIR}/docstrings"
   "skill|${HOME}/.agents/skills/docs-audit|${SKILLS_DIR}/docs-audit"
@@ -50,6 +51,7 @@ LINKS=(
   "skill|${HOME}/.agents/skills/firmware-review|${SKILLS_DIR}/firmware-review"
   "skill|${HOME}/.agents/skills/script-audit|${SKILLS_DIR}/script-audit"
   "skill|${HOME}/.agents/skills/security-audit|${SKILLS_DIR}/security-audit"
+  "skill|${HOME}/.agents/skills/test-audit|${SKILLS_DIR}/test-audit"
   "skill|${HOME}/.codex/skills/project-setup|${SKILLS_DIR}/project-setup"
   "skill|${HOME}/.codex/skills/docstrings|${SKILLS_DIR}/docstrings"
   "skill|${HOME}/.codex/skills/docs-audit|${SKILLS_DIR}/docs-audit"
@@ -57,6 +59,7 @@ LINKS=(
   "skill|${HOME}/.codex/skills/firmware-review|${SKILLS_DIR}/firmware-review"
   "skill|${HOME}/.codex/skills/script-audit|${SKILLS_DIR}/script-audit"
   "skill|${HOME}/.codex/skills/security-audit|${SKILLS_DIR}/security-audit"
+  "skill|${HOME}/.codex/skills/test-audit|${SKILLS_DIR}/test-audit"
 )
 
 usage() {

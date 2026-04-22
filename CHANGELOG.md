@@ -25,6 +25,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 - Script audit skill for reviewing scripts, hooks, setup workflows, and
   command automation for safety, correctness, portability, and
   idempotency.
+- Test audit skill for reviewing behavioral coverage, assertion quality,
+  brittle tests, and focused opportunities to add missing tests.
 
 ### Changed
 
