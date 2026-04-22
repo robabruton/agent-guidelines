@@ -22,6 +22,15 @@ Code but does not deny other tools.
 
 ## Current Skills
 
+### `dependency-audit`
+
+Audits dependency additions, updates, removals, manifests, and lockfiles
+for necessity, security, maintenance, licensing, and supply-chain risk.
+
+Use this skill when adding, updating, removing, or questioning
+dependencies, package manifests, lockfiles, vendored code, generated
+clients, or third-party assets.
+
 ### `docstrings`
 
 Adds or updates language-appropriate documentation comments for public
