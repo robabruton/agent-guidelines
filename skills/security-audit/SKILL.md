@@ -1,6 +1,9 @@
 ---
 name: security-audit
 description: Audit code, configuration, dependencies, scripts, firmware security surfaces, and system design for exploitable security vulnerabilities based on the actual attack surface.
+when_to_use: Use when reviewing authentication, authorization, secrets, cryptography, input trust boundaries, dependencies, deployment exposure, firmware security, or other exploitable security risks.
+argument-hint: "[file|directory|project|branch|commit|changes]"
+allowed-tools: Read Grep Glob
 ---
 
 Audit a project, file, directory, branch, or change for security

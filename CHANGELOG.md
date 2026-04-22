@@ -18,6 +18,12 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
   command automation for safety, correctness, portability, and
   idempotency.
 
+### Changed
+
+- Added skill metadata policy and invocation-focused frontmatter for
+  current skills, including read/search tool pre-approval for audit and
+  review skills.
+
 ## 2026-04-21
 
 ### Added
