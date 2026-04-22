@@ -8,6 +8,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ### Added
 
+- Code review skill for general correctness, maintainability, edge-case,
+  and integration-risk review when no narrower audit lens fits.
 - Dependency audit skill for reviewing dependency necessity,
   maintenance, security, licensing, lockfile consistency, and
   supply-chain risk.
