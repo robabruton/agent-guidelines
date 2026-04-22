@@ -88,3 +88,13 @@ based on the actual attack surface.
 Use this skill when reviewing authentication, authorization, secrets,
 cryptography, dependency risk, deployment exposure, input trust
 boundaries, or firmware security concerns.
+
+### `test-audit`
+
+Audits tests for meaningful behavioral coverage, weak assertions,
+missing edge cases, brittle test dependencies, and focused opportunities
+to add or improve tests.
+
+Use this skill when reviewing tests, checking whether branch behavior is
+covered, improving coverage, adding regression tests, or deciding which
+tests are missing.
