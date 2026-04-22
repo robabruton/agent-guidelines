@@ -39,12 +39,15 @@ LINKS=(
   "skill|${HOME}/.claude/skills/project-setup|${SKILLS_DIR}/project-setup"
   "skill|${HOME}/.claude/skills/firmware-review|${SKILLS_DIR}/firmware-review"
   "skill|${HOME}/.claude/skills/script-audit|${SKILLS_DIR}/script-audit"
+  "skill|${HOME}/.claude/skills/security-audit|${SKILLS_DIR}/security-audit"
   "skill|${HOME}/.agents/skills/project-setup|${SKILLS_DIR}/project-setup"
   "skill|${HOME}/.agents/skills/firmware-review|${SKILLS_DIR}/firmware-review"
   "skill|${HOME}/.agents/skills/script-audit|${SKILLS_DIR}/script-audit"
+  "skill|${HOME}/.agents/skills/security-audit|${SKILLS_DIR}/security-audit"
   "skill|${HOME}/.codex/skills/project-setup|${SKILLS_DIR}/project-setup"
   "skill|${HOME}/.codex/skills/firmware-review|${SKILLS_DIR}/firmware-review"
   "skill|${HOME}/.codex/skills/script-audit|${SKILLS_DIR}/script-audit"
+  "skill|${HOME}/.codex/skills/security-audit|${SKILLS_DIR}/security-audit"
 )
 
 usage() {

@@ -34,3 +34,13 @@ automation for safety, correctness, portability, and idempotency.
 
 Use this skill when reviewing automation that creates, modifies, links,
 moves, removes, backs up, or reports on files and project state.
+
+### `security-audit`
+
+Audits code, configuration, dependencies, scripts, firmware security
+surfaces, and system design for exploitable security vulnerabilities
+based on the actual attack surface.
+
+Use this skill when reviewing authentication, authorization, secrets,
+cryptography, dependency risk, deployment exposure, input trust
+boundaries, or firmware security concerns.
