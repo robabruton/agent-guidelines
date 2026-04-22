@@ -66,11 +66,14 @@ Follow the [Conventional Commits](https://www.conventionalcommits.org/en/v1.0.0/
 
 - Merge commits use Git's explicit branch-grouping subject:
   `Merge branch '<branch-name>'`
-- Include a body that summarizes the completed branch as one unit of
-  work; write it for humans reviewing project history, not as a dump of
-  every commit on the branch
-- Keep the body as one paragraph unless there is a clear need for
-  multiple paragraphs
+- Use one body paragraph for normal merge commits. Summarize the branch
+  as one completed unit of work; write it for humans reviewing project
+  history, not as a dump of every commit on the branch.
+- Use multiple body paragraphs only when the branch genuinely combines
+  distinct units of work and separating them makes the merge easier to
+  understand.
+- Do not use bullet lists in merge commit bodies unless the branch is
+  unusually broad and a prose summary would hide important context.
 - Wrap body lines at 72 characters
 - Write merge commit messages with `git commit -F <message-file>` so
   wrapped body lines stay in one paragraph; do not use repeated `-m`
