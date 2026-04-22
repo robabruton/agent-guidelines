@@ -23,6 +23,10 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 - Added skill metadata policy and invocation-focused frontmatter for
   current skills, including read/search tool pre-approval for audit and
   review skills.
+- Renamed the versioned changelog rule file to `changelog-version.md`
+  and standardized `project-setup.sh --changelog` canonical values to
+  `date` and `version`, with `dated`, `dates`, `versioned`, and
+  `versions` accepted as aliases.
 
 ## 2026-04-21
 

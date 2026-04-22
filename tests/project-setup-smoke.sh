@@ -29,7 +29,7 @@ assert_agent_rules() {
 
 "${ROOT_DIR}/project-setup.sh" \
   --profile codebase \
-  --changelog date \
+  --changelog dated \
   "${SYMLINK_REPO}" > "$SYMLINK_FIRST_OUT"
 
 git -C "$SYMLINK_REPO" status --short > "$SYMLINK_STATUS_OUT"
@@ -47,7 +47,7 @@ assert_agent_rules "${SYMLINK_REPO}/AGENTS.md" "# Date-Based Changelog Rules"
 
 "${ROOT_DIR}/project-setup.sh" \
   --profile codebase \
-  --changelog date \
+  --changelog dates \
   "${SYMLINK_REPO}" > "$SYMLINK_SECOND_OUT"
 
 git -C "$SYMLINK_REPO" status --short > "$SYMLINK_STATUS_OUT"
@@ -62,7 +62,7 @@ grep -Fq "  none" "$SYMLINK_SECOND_OUT"
 
 "${ROOT_DIR}/project-setup.sh" \
   --profile released \
-  --changelog versioned \
+  --changelog versions \
   --rules-source copy \
   "${COPY_REPO}" > "$COPY_OUT"
 

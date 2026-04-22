@@ -53,17 +53,17 @@ git config --global user.email "you@example.com"
 - Ask only when the profile cannot be inferred confidently
 - If `CHANGELOG.md` exists:
   - Treat changelog maintenance as enabled
-  - Infer `versioned` changelog mode if it contains `## [Unreleased]` or
+  - Infer `version` changelog mode if it contains `## [Unreleased]` or
     version headings such as `## [1.2.3] - YYYY-MM-DD`
   - Infer `date` changelog mode if it contains date headings such as
     `## 2026-04-21` and no version headings
   - If the format is mixed or unclear, summarize what was found and ask
     the user which mode to use
 - If `CHANGELOG.md` does not exist:
-  - Default to `versioned` changelog mode for the `released` profile
+  - Default to `version` changelog mode for the `released` profile
   - Default to `none` changelog mode for `minimal` and `codebase`
     profiles unless the user selects a changelog
-  - If changelog mode is `date` or `versioned`, create a base
+  - If changelog mode is `date` or `version`, create a base
     `CHANGELOG.md`
   - If changelog mode is `none`, omit changelog rules and do not create
     `CHANGELOG.md`
@@ -71,10 +71,14 @@ git config --global user.email "you@example.com"
   `Cargo.toml`, `go.mod`, `VERSION`, and tags matching `vX.Y.Z`
 - Use version files and version-like tags as evidence that the project
   may use semantic versioning
-- Use `versioning mode: semver` when changelog mode is `versioned`
+- Use `versioning mode: semver` when changelog mode is `version`
 - Use `versioning mode: none` when changelog mode is `none` or `date`
 - Existing changelog structure takes priority over versioning guesses
 - Print a short summary of the selected options before continuing
+- Use `date` and `version` as the canonical changelog mode names in
+  output, config, and generated instructions
+- Accept `dated` and `dates` as aliases for `date`
+- Accept `versioned` and `versions` as aliases for `version`
 
 ## Repository Setup
 
@@ -170,8 +174,8 @@ git init --initial-branch=main
   - `changelog mode: none`: no changelog or versioning rules
   - `changelog mode: date`: `changelog-common.md`,
     `changelog-date.md`
-  - `changelog mode: versioned`: `changelog-common.md`,
-    `changelog-versioned.md`, `versioning-semver.md`,
+  - `changelog mode: version`: `changelog-common.md`,
+    `changelog-version.md`, `versioning-semver.md`,
     `backward-compatibility.md`
 - Allow explicit include and exclude overrides:
   - `include rule <id>` adds `<id>.md` when available
@@ -194,7 +198,7 @@ git init --initial-branch=main
   - `dependencies.md`
   - `changelog-common.md`
   - `changelog-date.md`
-  - `changelog-versioned.md`
+  - `changelog-version.md`
   - `versioning-semver.md`
   - `backward-compatibility.md`
 - Include any selected future rule files that are not in the canonical
@@ -338,7 +342,7 @@ At the end, print:
 - Selected changelog mode:
   - none
   - date
-  - versioned
+  - version
 - Selected versioning mode:
   - none
   - semver

@@ -37,7 +37,7 @@ Without an override, backups are written under
 | Rule | `$HOME/.claude/rules/dependencies.md` | `rules/dependencies.md` |
 | Rule | `$HOME/.claude/rules/changelog-common.md` | `rules/changelog-common.md` |
 | Rule | `$HOME/.claude/rules/changelog-date.md` | `rules/changelog-date.md` |
-| Rule | `$HOME/.claude/rules/changelog-versioned.md` | `rules/changelog-versioned.md` |
+| Rule | `$HOME/.claude/rules/changelog-version.md` | `rules/changelog-version.md` |
 | Rule | `$HOME/.claude/rules/versioning-semver.md` | `rules/versioning-semver.md` |
 | Rule | `$HOME/.claude/rules/backward-compatibility.md` | `rules/backward-compatibility.md` |
 | Skill | `$HOME/.claude/skills/project-setup` | `skills/project-setup` |
@@ -68,7 +68,7 @@ Rules live in `rules/` as Markdown files.
 - `development-attribution.md` defines attribution boundaries for committed project files.
 - `changelog-common.md` defines shared changelog format and initial setup expectations.
 - `changelog-date.md` defines date-based changelog section and workflow expectations.
-- `changelog-versioned.md` defines versioned changelog section and release cut expectations.
+- `changelog-version.md` defines versioned changelog section and release cut expectations.
 - `versioning-semver.md` defines semantic versioning and release expectations.
 - `testing.md` defines verification expectations before merging branch work.
 - `documentation.md` defines accuracy and example expectations for project docs.

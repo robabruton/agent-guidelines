@@ -33,7 +33,7 @@ LINKS=(
   "rule|${HOME}/.claude/rules/dependencies.md|${RULES_DIR}/dependencies.md"
   "rule|${HOME}/.claude/rules/changelog-common.md|${RULES_DIR}/changelog-common.md"
   "rule|${HOME}/.claude/rules/changelog-date.md|${RULES_DIR}/changelog-date.md"
-  "rule|${HOME}/.claude/rules/changelog-versioned.md|${RULES_DIR}/changelog-versioned.md"
+  "rule|${HOME}/.claude/rules/changelog-version.md|${RULES_DIR}/changelog-version.md"
   "rule|${HOME}/.claude/rules/versioning-semver.md|${RULES_DIR}/versioning-semver.md"
   "rule|${HOME}/.claude/rules/backward-compatibility.md|${RULES_DIR}/backward-compatibility.md"
   "skill|${HOME}/.claude/skills/project-setup|${SKILLS_DIR}/project-setup"
