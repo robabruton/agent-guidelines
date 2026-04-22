@@ -418,28 +418,32 @@ process_links() {
 
 print_summary() {
   section "Summary"
-  printf '  %-10s %s\n' "action:" "$ACTION"
+  summary_entry() {
+    printf '  %-12s %s\n' "$1" "$2"
+  }
+
+  summary_entry "action:" "$ACTION"
 
   case "$ACTION" in
     status)
-      printf '  %-10s %s\n' "current:" "$CURRENT"
-      printf '  %-10s %s\n' "missing:" "$MISSING"
-      printf '  %-10s %s\n' "conflicts:" "$CONFLICTS"
+      summary_entry "current:" "$CURRENT"
+      summary_entry "missing:" "$MISSING"
+      summary_entry "conflicts:" "$CONFLICTS"
       ;;
     install)
-      printf '  %-10s %s\n' "dry run:" "$DRY_RUN"
-      printf '  %-10s %s\n' "forced:" "$FORCE"
-      printf '  %-10s %s\n' "backup path:" "$BACKUP_PATH"
-      printf '  %-10s %s\n' "created:" "$CREATED"
-      printf '  %-10s %s\n' "current:" "$CURRENT"
-      printf '  %-10s %s\n' "backups:" "$BACKED_UP"
-      printf '  %-10s %s\n' "skipped:" "$SKIPPED"
-      printf '  %-10s %s\n' "warnings:" "$WARNINGS"
+      summary_entry "dry run:" "$DRY_RUN"
+      summary_entry "forced:" "$FORCE"
+      summary_entry "backup path:" "$BACKUP_PATH"
+      summary_entry "created:" "$CREATED"
+      summary_entry "current:" "$CURRENT"
+      summary_entry "backups:" "$BACKED_UP"
+      summary_entry "skipped:" "$SKIPPED"
+      summary_entry "warnings:" "$WARNINGS"
       ;;
     remove)
-      printf '  %-10s %s\n' "dry run:" "$DRY_RUN"
-      printf '  %-10s %s\n' "removed:" "$REMOVED"
-      printf '  %-10s %s\n' "skipped:" "$SKIPPED"
+      summary_entry "dry run:" "$DRY_RUN"
+      summary_entry "removed:" "$REMOVED"
+      summary_entry "skipped:" "$SKIPPED"
       ;;
   esac
 
