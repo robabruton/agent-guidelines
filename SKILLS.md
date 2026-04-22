@@ -22,6 +22,16 @@ Code but does not deny other tools.
 
 ## Current Skills
 
+### `code-review`
+
+Reviews code, local changes, branches, files, functions, classes, or
+small projects for correctness, maintainability, edge cases, and
+integration risk.
+
+Use this skill when the user asks for a general code review, quality
+check, bug hunt, pre-commit review, branch review, or review of local
+software work.
+
 ### `dependency-audit`
 
 Audits dependency additions, updates, removals, manifests, and lockfiles
