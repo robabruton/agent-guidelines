@@ -28,6 +28,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ### Changed
 
+- Clarified that merge commit messages should use one body paragraph by
+  default while allowing multiple paragraphs when they improve clarity.
 - Added skill metadata policy and invocation-focused frontmatter for
   current skills, including read/search tool pre-approval for audit and
   review skills.
