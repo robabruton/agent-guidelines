@@ -22,6 +22,15 @@ Code but does not deny other tools.
 
 ## Current Skills
 
+### `docstrings`
+
+Adds or updates language-appropriate documentation comments for public
+symbols and non-trivial code while preserving accurate existing docs.
+
+Use this skill when adding or updating docstrings for files,
+directories, changed code, public APIs, structs, enums, callbacks,
+macros, or non-trivial source symbols.
+
 ### `docs-audit`
 
 Audits documentation against actual project files, scripts, commands,

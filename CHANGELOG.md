@@ -8,6 +8,9 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ### Added
 
+- Docstrings skill for adding and updating language-appropriate
+  documentation comments for public symbols and non-trivial code while
+  preserving accurate existing docs.
 - Docs audit skill for verifying documentation against actual project
   files, scripts, commands, options, examples, managed paths, and
   generated behavior.
