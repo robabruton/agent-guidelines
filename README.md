@@ -41,8 +41,11 @@ Without an override, backups are written under
 | Rule | `$HOME/.claude/rules/versioning-semver.md` | `rules/versioning-semver.md` |
 | Rule | `$HOME/.claude/rules/backward-compatibility.md` | `rules/backward-compatibility.md` |
 | Skill | `$HOME/.claude/skills/project-setup` | `skills/project-setup` |
+| Skill | `$HOME/.claude/skills/script-audit` | `skills/script-audit` |
 | Skill | `$HOME/.agents/skills/project-setup` | `skills/project-setup` |
+| Skill | `$HOME/.agents/skills/script-audit` | `skills/script-audit` |
 | Skill | `$HOME/.codex/skills/project-setup` | `skills/project-setup` |
+| Skill | `$HOME/.codex/skills/script-audit` | `skills/script-audit` |
 
 This is distinct from `project-setup.sh`, which applies repository
 standards to a target project.
@@ -76,6 +79,8 @@ Rules live in `rules/` as Markdown files.
 Skills live in `skills/` as reusable agent workflows.
 
 - `project-setup` initializes or updates repositories with project standards.
+- `script-audit` audits scripts, hooks, setup workflows, and command
+  automation for safety, correctness, portability, and idempotency.
 
 ## Project Setup Script
 
