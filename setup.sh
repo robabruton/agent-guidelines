@@ -37,10 +37,13 @@ LINKS=(
   "rule|${HOME}/.claude/rules/versioning-semver.md|${RULES_DIR}/versioning-semver.md"
   "rule|${HOME}/.claude/rules/backward-compatibility.md|${RULES_DIR}/backward-compatibility.md"
   "skill|${HOME}/.claude/skills/project-setup|${SKILLS_DIR}/project-setup"
+  "skill|${HOME}/.claude/skills/firmware-review|${SKILLS_DIR}/firmware-review"
   "skill|${HOME}/.claude/skills/script-audit|${SKILLS_DIR}/script-audit"
   "skill|${HOME}/.agents/skills/project-setup|${SKILLS_DIR}/project-setup"
+  "skill|${HOME}/.agents/skills/firmware-review|${SKILLS_DIR}/firmware-review"
   "skill|${HOME}/.agents/skills/script-audit|${SKILLS_DIR}/script-audit"
   "skill|${HOME}/.codex/skills/project-setup|${SKILLS_DIR}/project-setup"
+  "skill|${HOME}/.codex/skills/firmware-review|${SKILLS_DIR}/firmware-review"
   "skill|${HOME}/.codex/skills/script-audit|${SKILLS_DIR}/script-audit"
 )
 

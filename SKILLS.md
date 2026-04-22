@@ -6,6 +6,17 @@ instructions rather than restating the project rules.
 
 ## Current Skills
 
+### `firmware-review`
+
+Reviews embedded firmware, drivers, RTOS code, ISRs,
+hardware-facing C/C++, startup code, linker assumptions, and device
+protocols for correctness, timing, concurrency, and hardware-integration
+issues.
+
+Use this skill when reviewing firmware or hardware-facing code where
+target behavior, interrupts, registers, DMA, cache, timing, RTOS
+interactions, or board configuration may affect correctness.
+
 ### `project-setup`
 
 Initializes or updates a repository with shared project rules, git hooks,
