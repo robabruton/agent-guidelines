@@ -45,6 +45,7 @@ Without an override, backups are written under
 | Skill | `$HOME/.claude/skills/docstrings` | `skills/docstrings` |
 | Skill | `$HOME/.claude/skills/docs-audit` | `skills/docs-audit` |
 | Skill | `$HOME/.claude/skills/docs-review` | `skills/docs-review` |
+| Skill | `$HOME/.claude/skills/explain` | `skills/explain` |
 | Skill | `$HOME/.claude/skills/firmware-review` | `skills/firmware-review` |
 | Skill | `$HOME/.claude/skills/script-audit` | `skills/script-audit` |
 | Skill | `$HOME/.claude/skills/security-audit` | `skills/security-audit` |
@@ -54,6 +55,7 @@ Without an override, backups are written under
 | Skill | `$HOME/.agents/skills/docstrings` | `skills/docstrings` |
 | Skill | `$HOME/.agents/skills/docs-audit` | `skills/docs-audit` |
 | Skill | `$HOME/.agents/skills/docs-review` | `skills/docs-review` |
+| Skill | `$HOME/.agents/skills/explain` | `skills/explain` |
 | Skill | `$HOME/.agents/skills/firmware-review` | `skills/firmware-review` |
 | Skill | `$HOME/.agents/skills/script-audit` | `skills/script-audit` |
 | Skill | `$HOME/.agents/skills/security-audit` | `skills/security-audit` |
@@ -63,6 +65,7 @@ Without an override, backups are written under
 | Skill | `$HOME/.codex/skills/docstrings` | `skills/docstrings` |
 | Skill | `$HOME/.codex/skills/docs-audit` | `skills/docs-audit` |
 | Skill | `$HOME/.codex/skills/docs-review` | `skills/docs-review` |
+| Skill | `$HOME/.codex/skills/explain` | `skills/explain` |
 | Skill | `$HOME/.codex/skills/firmware-review` | `skills/firmware-review` |
 | Skill | `$HOME/.codex/skills/script-audit` | `skills/script-audit` |
 | Skill | `$HOME/.codex/skills/security-audit` | `skills/security-audit` |

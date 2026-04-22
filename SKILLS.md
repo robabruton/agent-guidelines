@@ -59,6 +59,15 @@ Use this skill when reviewing README files, guides, rules, skill docs,
 setup instructions, or other documentation for reader success rather than
 factual verification against project behavior.
 
+### `explain`
+
+Explains code, files, workflows, commands, or project concepts clearly
+without editing files or turning the response into a review.
+
+Use this skill when the user asks to understand a file, function,
+command, workflow, architecture, data flow, branch, error path, or
+project concept.
+
 ### `firmware-review`
 
 Reviews embedded firmware, drivers, RTOS code, ISRs,
