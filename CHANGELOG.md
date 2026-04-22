@@ -8,6 +8,9 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ### Added
 
+- Docs audit skill for verifying documentation against actual project
+  files, scripts, commands, options, examples, managed paths, and
+  generated behavior.
 - Firmware review skill for reviewing embedded firmware, drivers, RTOS
   code, ISRs, hardware-facing C/C++, startup code, linker assumptions,
   and device protocols.
