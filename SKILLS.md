@@ -22,6 +22,16 @@ Code but does not deny other tools.
 
 ## Current Skills
 
+### `docs-audit`
+
+Audits documentation against actual project files, scripts, commands,
+options, examples, managed paths, and generated behavior for factual
+accuracy.
+
+Use this skill when verifying README files, setup instructions, CLI
+examples, managed path lists, skill catalogs, rule references, changelog
+guidance, or other docs against repository reality.
+
 ### `firmware-review`
 
 Reviews embedded firmware, drivers, RTOS code, ISRs,
