@@ -158,6 +158,7 @@ git init --initial-branch=main
 - Supported profiles include these rule files when available:
   - `minimal`:
     - `git-workflow.md`
+    - `git-messages.md`
     - `development-attribution.md`
     - `configuration.md`
     - `testing.md`
@@ -189,6 +190,7 @@ git init --initial-branch=main
   - Keep mode-required rules
 - Canonical rule order:
   - `git-workflow.md`
+  - `git-messages.md`
   - `development-attribution.md`
   - `configuration.md`
   - `testing.md`

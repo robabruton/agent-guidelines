@@ -8,6 +8,11 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ### Changed
 
+- Expanded git workflow guidance for branch name validation, branch
+  scope corrections, hook handling, pre-merge review, post-merge
+  cleanup, push timing, and local-only files.
+- Split commit, merge, amendment, and temporary message file guidance
+  into a dedicated `git-messages.md` rule.
 - Clarified that commit message subjects should target 50 characters
   while allowing slight overages for clarity.
 - Corrected semver tag and release message formatting guidance to avoid

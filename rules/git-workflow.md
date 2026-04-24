@@ -14,12 +14,20 @@ This is bottom-up composition. You don't need to plan every commit in advance �
 
 - NEVER commit directly to the `main` branch — there are NO exceptions, including changelog cuts, version bumps, or other "bookkeeping" commits
 - Create a new branch for every feature, fix, or change
-- Use descriptive branch names: `feat/description`, `fix/description`, `chore/description`
+- Use descriptive slash-prefixed branch names:
+  `feat/description`, `fix/description`, `chore/description`
+- Before creating a branch, choose the branch type from the work being
+  done and verify that the name matches the documented pattern. If the
+  branch name does not fit, stop and choose a better name before running
+  `git checkout -b`.
 - Only merge back to `main` when the work for that branch is fully complete
 - Always merge with `--no-ff` to create an explicit merge commit, even when a fast-forward is possible. This preserves the branch as a visible grouping of related commits in the history and makes it possible to revert an entire feature with a single `git revert`.
 - If the project maintains a `CHANGELOG.md`, keep changelog edits on the branch that made the work — never as a follow-up commit on main. For versioned projects, the `[Unreleased]` to release cut happens on the release branch. For date-based projects, write entries directly into that day's dated section. See `changelog-common.md`, `changelog-date.md`, and `changelog-version.md` for details.
 
 ## Commits
+
+See `git-messages.md` for commit message, amendment, and merge commit
+message formatting rules.
 
 ### Commit rhythm
 
@@ -40,59 +48,9 @@ When in doubt, commit more often rather than less often. Err on the side of too 
 - Do NOT implement an entire source file and commit it all at once — break it into logical groups
 - If you find yourself writing "and" in a commit message subject, it should probably be two commits
 - The revert test: every commit should be independently revertable without undoing unrelated work
-
-### Commit message format
-
-Follow the [Conventional Commits](https://www.conventionalcommits.org/en/v1.0.0/) standard:
-
-```
-<type>(<scope>): <description>
-```
-
-- **type** (required): `feat`, `fix`, `refactor`, `perf`, `docs`, `style`, `test`, `build`, `ci`, `chore`, `revert`
-- **scope** (optional): a noun describing the affected section of the codebase, in parentheses
-- **`!`** (optional): appended after type/scope to flag a breaking change
-- **description**: imperative mood, lowercase, no period, target ≤50
-  characters; a few characters over is acceptable when it improves
-  clarity, but do not treat 72 characters as the normal subject length
-- **body**: optional only for very small, self-evident changes. If a commit changes behavior, policy, workflow, touches multiple files, or would benefit from rationale, include a short body that explains WHAT changed and WHY. Imperative mood, wrap at 72 chars, and do not restate the diff line-by-line
-- **footer** (optional): `BREAKING CHANGE:`, `DEPRECATED:`, `Fixes #<issue>`, `Refs:`
-
-### Commit message body expectations
-
-- A one-line summary-only commit message is acceptable for simple changes that are obvious from the diff, such as a typo fix, a comment correction, or a narrowly scoped mechanical edit
-- Include a commit body for anything with non-obvious intent, policy changes, workflow changes, cross-file edits, or user-visible behavior changes
-- When in doubt, include a short body; two or three lines of useful rationale is better than a subject line that leaves future readers guessing
-- Write multiline commit messages with `git commit -F <message-file>` so
-  wrapped body lines stay in the intended paragraphs; do not use
-  repeated `-m` flags for body paragraphs
-- Delete temporary files, including commit, merge, tag, or release
-  message files, once they are no longer needed
-
-### Merge commit messages
-
-- Merge commits use Git's explicit branch-grouping subject:
-  `Merge branch '<branch-name>'`
-- Use one body paragraph for normal merge commits. Summarize the branch
-  as one completed unit of work; write it for humans reviewing project
-  history, not as a dump of every commit on the branch.
-- Use multiple body paragraphs only when the branch genuinely combines
-  distinct units of work and separating them makes the merge easier to
-  understand.
-- Do not use bullet lists in merge commit bodies unless the branch is
-  unusually broad and a prose summary would hide important context.
-- Wrap body lines at 72 characters
-- Write merge commit messages with `git commit -F <message-file>` so
-  wrapped body lines stay in one paragraph; do not use repeated `-m`
-  flags for continuation lines
-- Example:
-
-  ```text
-  Merge branch 'feat/local-tool-setup'
-
-  Merge the completed local tool setup command, managed tool links,
-  backup handling, documentation, and smoke tests.
-  ```
+- If a new change belongs to a different scope than the current branch,
+  stop and put it on a separate branch unless it is required to complete
+  the current branch safely
 
 ## Merge Readiness
 
@@ -100,6 +58,13 @@ Follow the [Conventional Commits](https://www.conventionalcommits.org/en/v1.0.0/
 - If a branch intentionally replaces existing behavior, it must include the replacement before it is merged
 - Documentation must describe behavior that exists on the branch being merged, not planned future behavior
 - Run the relevant checks for the project before merging; if no automated checks exist yet, review the changed files manually
+- Treat project hooks as part of the workflow. Understand and resolve
+  hook failures before continuing; do not bypass hooks unless the team
+  has agreed that the hook is wrong for the current change.
+- Before merging, review the branch diff against the branch goal.
+  Confirm that the diff is scoped, changelog entries are correct,
+  temporary files are removed, generated files are intentional, and no
+  unrelated changes were included.
 - For versioned projects, check whether the branch warrants a release and either recommend the appropriate version bump or state that no release is needed
 - After each merge, `main` should represent a coherent project state that can be used as the starting point for the next branch
 
@@ -108,3 +73,21 @@ Follow the [Conventional Commits](https://www.conventionalcommits.org/en/v1.0.0/
 - Delete the local feature branch after it has been merged into `main`
 - Use safe deletion (`git branch -d <branch>`) so Git refuses if the branch was not fully merged
 - Do not use force deletion (`git branch -D <branch>`) unless you intentionally want to discard unmerged branch history
+- After merging, verify `git status`, confirm the merged branch was
+  deleted, remove temporary files, and check recent history to ensure
+  the merge commit represents the intended branch
+
+## Publishing
+
+- Push feature branches when work should be backed up, reviewed, or
+  shared
+- Push `main` only after it represents a coherent merged state
+
+## Local and Generated Files
+
+- Local scratch files, generated candidate lists, temporary exports, and
+  machine-specific artifacts must not be committed unless they are part
+  of the project contract
+- Add local-only files to `.git/info/exclude` when the ignore rule is
+  personal to one checkout; add them to a tracked ignore file only when
+  the pattern should apply to everyone

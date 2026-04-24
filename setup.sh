@@ -24,6 +24,7 @@ CONFLICTS=0
 
 LINKS=(
   "rule|${HOME}/.claude/rules/git-workflow.md|${RULES_DIR}/git-workflow.md"
+  "rule|${HOME}/.claude/rules/git-messages.md|${RULES_DIR}/git-messages.md"
   "rule|${HOME}/.claude/rules/development-attribution.md|${RULES_DIR}/development-attribution.md"
   "rule|${HOME}/.claude/rules/configuration.md|${RULES_DIR}/configuration.md"
   "rule|${HOME}/.claude/rules/testing.md|${RULES_DIR}/testing.md"
