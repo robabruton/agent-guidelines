@@ -8,6 +8,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ### Changed
 
+- Standardized rule file Markdown formatting with wrapped prose and
+  bullets for consistent agent readability.
 - Expanded git workflow guidance for branch name validation, branch
   scope corrections, hook handling, pre-merge review, post-merge
   cleanup, push timing, and local-only files.

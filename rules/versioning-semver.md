@@ -5,9 +5,12 @@ releases, users, packages, APIs, or other versioned artifacts.
 
 ## Version Levels
 
-- `PATCH` (`1.0.0` to `1.0.1`): bug fixes, documentation corrections, or other backwards-compatible fixes
-- `MINOR` (`1.0.0` to `1.1.0`): backwards-compatible features, capabilities, or meaningful additions
-- `MAJOR` (`1.0.0` to `2.0.0`): breaking API, interface, behavior, configuration, data, or workflow changes that users must adapt to
+- `PATCH` (`1.0.0` to `1.0.1`): bug fixes, documentation
+  corrections, or other backwards-compatible fixes
+- `MINOR` (`1.0.0` to `1.1.0`): backwards-compatible features,
+  capabilities, or meaningful additions
+- `MAJOR` (`1.0.0` to `2.0.0`): breaking API, interface, behavior,
+  configuration, data, or workflow changes that users must adapt to
 
 ## Release Timing
 
