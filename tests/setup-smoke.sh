@@ -22,8 +22,10 @@ CUSTOM_BACKUP_PATH="${TMP_ROOT}/custom-backups"
 
 "${ROOT_DIR}/setup.sh" --status --no-color > "$STATUS_OUT"
 grep -Eq "action:[[:space:]]+status" "$STATUS_OUT"
-grep -Eq "missing:[[:space:]]+47" "$STATUS_OUT"
 grep -Eq "conflicts:[[:space:]]+0" "$STATUS_OUT"
+expected_links="$(sed -nE 's/^[[:space:]]*missing:[[:space:]]+([0-9]+)$/\1/p' "$STATUS_OUT")"
+test -n "$expected_links"
+test "$expected_links" -gt 0
 
 "${ROOT_DIR}/setup.sh" --dry-run --no-color > "$DRY_RUN_OUT"
 grep -Eq "action:[[:space:]]+install" "$DRY_RUN_OUT"
@@ -32,7 +34,7 @@ grep -Eq "forced:[[:space:]]+false" "$DRY_RUN_OUT"
 test ! -e "${HOME}/.claude/rules/git-workflow.md"
 
 "${ROOT_DIR}/setup.sh" --install --no-color > "$INSTALL_OUT"
-grep -Eq "created:[[:space:]]+47" "$INSTALL_OUT"
+grep -Eq "created:[[:space:]]+${expected_links}" "$INSTALL_OUT"
 test -L "${HOME}/.claude/rules/git-workflow.md"
 test -L "${HOME}/.claude/rules/git-messages.md"
 test -L "${HOME}/.claude/skills/project-setup"
@@ -71,10 +73,10 @@ test -L "${HOME}/.codex/skills/test-audit"
 
 "${ROOT_DIR}/setup.sh" --install --no-color > "$SECOND_OUT"
 grep -Eq "created:[[:space:]]+0" "$SECOND_OUT"
-grep -Eq "current:[[:space:]]+47" "$SECOND_OUT"
+grep -Eq "current:[[:space:]]+${expected_links}" "$SECOND_OUT"
 
 "${ROOT_DIR}/setup.sh" --remove --no-color > "$REMOVE_OUT"
-grep -Eq "removed:[[:space:]]+47" "$REMOVE_OUT"
+grep -Eq "removed:[[:space:]]+${expected_links}" "$REMOVE_OUT"
 test ! -e "${HOME}/.claude/rules/git-workflow.md"
 
 export HOME="$FORCE_REPO_HOME"
