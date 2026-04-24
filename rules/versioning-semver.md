@@ -34,7 +34,7 @@ artifacts, evaluate whether a release is warranted.
 - Use `-m` for a short single-line annotation, such as
   `git tag -a v1.0.0 -m "release 1.0.0"`
 - Use `-F <file>` for multiline tag messages so release prose can be
-  wrapped and edited normally
+  edited as a normal message file
 - If the project has a version file such as `package.json`,
   `pyproject.toml`, or `version.h`, update it in the release commit
 - The release commit may mention the version number when it updates
@@ -55,7 +55,7 @@ git tag -a v1.0.1 -m "release 1.0.1: footer layout fix"
 ```
 
 For releases with meaningful user-facing or maintainer-facing content,
-write a subject plus one or more wrapped body paragraphs:
+write a subject plus one or more body paragraphs:
 
 ```text
 release 1.3.0: XLSX export and CDRL seeding
@@ -68,7 +68,9 @@ spreadsheet setup.
 - Group related changes into human-readable outcomes
 - Use bullet lists only when the release combines distinct areas and
   prose would hide important separation
-- Wrap body lines at 72 characters
+- Do not hard-wrap prose lines in tag or release message files; use
+  deliberate newlines only for paragraph breaks, list items, headings,
+  or other intended structure
 - Draw the content from the changelog entries for the version, condensed
   into a release-level summary
 
