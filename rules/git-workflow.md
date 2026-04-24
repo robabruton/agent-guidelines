@@ -52,7 +52,9 @@ Follow the [Conventional Commits](https://www.conventionalcommits.org/en/v1.0.0/
 - **type** (required): `feat`, `fix`, `refactor`, `perf`, `docs`, `style`, `test`, `build`, `ci`, `chore`, `revert`
 - **scope** (optional): a noun describing the affected section of the codebase, in parentheses
 - **`!`** (optional): appended after type/scope to flag a breaking change
-- **description**: imperative mood, lowercase, no period, ≤50 chars
+- **description**: imperative mood, lowercase, no period, target ≤50
+  characters; a few characters over is acceptable when it improves
+  clarity, but do not treat 72 characters as the normal subject length
 - **body**: optional only for very small, self-evident changes. If a commit changes behavior, policy, workflow, touches multiple files, or would benefit from rationale, include a short body that explains WHAT changed and WHY. Imperative mood, wrap at 72 chars, and do not restate the diff line-by-line
 - **footer** (optional): `BREAKING CHANGE:`, `DEPRECATED:`, `Fixes #<issue>`, `Refs:`
 
