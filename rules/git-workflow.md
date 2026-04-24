@@ -61,6 +61,11 @@ Follow the [Conventional Commits](https://www.conventionalcommits.org/en/v1.0.0/
 - A one-line summary-only commit message is acceptable for simple changes that are obvious from the diff, such as a typo fix, a comment correction, or a narrowly scoped mechanical edit
 - Include a commit body for anything with non-obvious intent, policy changes, workflow changes, cross-file edits, or user-visible behavior changes
 - When in doubt, include a short body; two or three lines of useful rationale is better than a subject line that leaves future readers guessing
+- Write multiline commit messages with `git commit -F <message-file>` so
+  wrapped body lines stay in the intended paragraphs; do not use
+  repeated `-m` flags for body paragraphs
+- Delete temporary files, including commit, merge, tag, or release
+  message files, once they are no longer needed
 
 ### Merge commit messages
 
