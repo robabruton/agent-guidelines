@@ -5,7 +5,9 @@ Use clear, structured Git messages so history remains readable from
 
 ## Commit Message Format
 
-Follow the [Conventional Commits](https://www.conventionalcommits.org/en/v1.0.0/) standard:
+Follow the
+[Conventional Commits](https://www.conventionalcommits.org/en/v1.0.0/)
+standard:
 
 ```
 <type>(<scope>): <description>
