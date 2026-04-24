@@ -4,6 +4,14 @@ All notable changes to this project will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## 2026-04-24
+
+### Changed
+
+- Clarified semver release tag guidance for professional annotated tag
+  messages, including when to use single-line `-m` annotations versus
+  multiline `-F` release summaries.
+
 ## 2026-04-22
 
 ### Added
