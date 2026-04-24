@@ -8,6 +8,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ### Changed
 
+- Clarified that commit message subjects should target 50 characters
+  while allowing slight overages for clarity.
 - Corrected semver tag and release message formatting guidance to avoid
   hard-wrapped prose that renders with unintended line breaks.
 - Clarified git workflow guidance to require `git commit -F` for
