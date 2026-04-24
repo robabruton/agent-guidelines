@@ -8,6 +8,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ### Changed
 
+- Corrected semver tag and release message formatting guidance to avoid
+  hard-wrapped prose that renders with unintended line breaks.
 - Clarified git workflow guidance to require `git commit -F` for
   multiline commit messages and cleanup of temporary commit, merge, tag,
   and release message files.
