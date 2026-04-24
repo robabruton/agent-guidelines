@@ -28,6 +28,7 @@ Without an override, backups are written under
 | Kind | Managed path | Source |
 | --- | --- | --- |
 | Rule | `$HOME/.claude/rules/git-workflow.md` | `rules/git-workflow.md` |
+| Rule | `$HOME/.claude/rules/git-messages.md` | `rules/git-messages.md` |
 | Rule | `$HOME/.claude/rules/development-attribution.md` | `rules/development-attribution.md` |
 | Rule | `$HOME/.claude/rules/configuration.md` | `rules/configuration.md` |
 | Rule | `$HOME/.claude/rules/testing.md` | `rules/testing.md` |
@@ -84,7 +85,8 @@ tests/setup-smoke.sh
 
 Rules live in `rules/` as Markdown files.
 
-- `git-workflow.md` defines branch, commit, merge, and commit message expectations.
+- `git-workflow.md` defines branch, commit rhythm, merge readiness, publishing, and local file expectations.
+- `git-messages.md` defines commit, merge, amendment, and temporary message file expectations.
 - `docstrings.md` defines documentation comment expectations for code changes.
 - `development-attribution.md` defines attribution boundaries for committed project files.
 - `changelog-common.md` defines shared changelog format and initial setup expectations.

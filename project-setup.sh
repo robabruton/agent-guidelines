@@ -25,6 +25,7 @@ MARKER_END="<!-- END agent-guidelines project rules -->"
 
 MINIMAL_RULES=(
   git-workflow
+  git-messages
   development-attribution
   configuration
   testing
@@ -43,6 +44,7 @@ RELEASED_EXTRA_RULES=(
 
 CANONICAL_RULE_ORDER=(
   git-workflow
+  git-messages
   development-attribution
   configuration
   testing
