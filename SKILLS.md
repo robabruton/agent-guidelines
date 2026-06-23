@@ -22,6 +22,20 @@ Code but does not deny other tools.
 
 ## Current Skills
 
+### `agent-memory`
+
+Maintains a durable, file-based memory store across sessions — deciding
+what is worth remembering, writing typed point-in-time entries, keeping a
+lean router index, organizing into hierarchical load tiers that scale
+without bloating context, and recalling the right entries for a task. It
+ships starter templates and a read-only report script.
+
+Use this skill when the user asks you to remember or save something, when
+a decision or correction is settled that would be costly to rediscover, at
+session start to recall what is relevant, at session end to record handoff
+state, or when the memory store has grown large enough to need
+reorganizing.
+
 ### `code-review`
 
 Reviews code, local changes, branches, files, functions, classes, or

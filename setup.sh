@@ -37,6 +37,11 @@ LINKS=(
   "rule|${HOME}/.claude/rules/changelog-version.md|${RULES_DIR}/changelog-version.md"
   "rule|${HOME}/.claude/rules/versioning-semver.md|${RULES_DIR}/versioning-semver.md"
   "rule|${HOME}/.claude/rules/backward-compatibility.md|${RULES_DIR}/backward-compatibility.md"
+  "rule|${HOME}/.claude/rules/agent-conduct.md|${RULES_DIR}/agent-conduct.md"
+  "rule|${HOME}/.claude/rules/no-plans-on-main.md|${RULES_DIR}/no-plans-on-main.md"
+  "rule|${HOME}/.claude/rules/code-quality.md|${RULES_DIR}/code-quality.md"
+  "rule|${HOME}/.claude/rules/engineering-judgment.md|${RULES_DIR}/engineering-judgment.md"
+  "rule|${HOME}/.claude/rules/environment-hygiene.md|${RULES_DIR}/environment-hygiene.md"
   "skill|${HOME}/.claude/skills/project-setup|${SKILLS_DIR}/project-setup"
   "skill|${HOME}/.claude/skills/code-review|${SKILLS_DIR}/code-review"
   "skill|${HOME}/.claude/skills/dependency-audit|${SKILLS_DIR}/dependency-audit"
@@ -48,6 +53,7 @@ LINKS=(
   "skill|${HOME}/.claude/skills/script-audit|${SKILLS_DIR}/script-audit"
   "skill|${HOME}/.claude/skills/security-audit|${SKILLS_DIR}/security-audit"
   "skill|${HOME}/.claude/skills/test-audit|${SKILLS_DIR}/test-audit"
+  "skill|${HOME}/.claude/skills/agent-memory|${SKILLS_DIR}/agent-memory"
   "skill|${HOME}/.agents/skills/project-setup|${SKILLS_DIR}/project-setup"
   "skill|${HOME}/.agents/skills/code-review|${SKILLS_DIR}/code-review"
   "skill|${HOME}/.agents/skills/dependency-audit|${SKILLS_DIR}/dependency-audit"
@@ -59,6 +65,7 @@ LINKS=(
   "skill|${HOME}/.agents/skills/script-audit|${SKILLS_DIR}/script-audit"
   "skill|${HOME}/.agents/skills/security-audit|${SKILLS_DIR}/security-audit"
   "skill|${HOME}/.agents/skills/test-audit|${SKILLS_DIR}/test-audit"
+  "skill|${HOME}/.agents/skills/agent-memory|${SKILLS_DIR}/agent-memory"
   "skill|${HOME}/.codex/skills/project-setup|${SKILLS_DIR}/project-setup"
   "skill|${HOME}/.codex/skills/code-review|${SKILLS_DIR}/code-review"
   "skill|${HOME}/.codex/skills/dependency-audit|${SKILLS_DIR}/dependency-audit"
@@ -70,6 +77,7 @@ LINKS=(
   "skill|${HOME}/.codex/skills/script-audit|${SKILLS_DIR}/script-audit"
   "skill|${HOME}/.codex/skills/security-audit|${SKILLS_DIR}/security-audit"
   "skill|${HOME}/.codex/skills/test-audit|${SKILLS_DIR}/test-audit"
+  "skill|${HOME}/.codex/skills/agent-memory|${SKILLS_DIR}/agent-memory"
 )
 
 usage() {

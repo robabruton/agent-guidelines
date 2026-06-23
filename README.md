@@ -41,6 +41,11 @@ Without an override, backups are written under
 | Rule | `$HOME/.claude/rules/changelog-version.md` | `rules/changelog-version.md` |
 | Rule | `$HOME/.claude/rules/versioning-semver.md` | `rules/versioning-semver.md` |
 | Rule | `$HOME/.claude/rules/backward-compatibility.md` | `rules/backward-compatibility.md` |
+| Rule | `$HOME/.claude/rules/agent-conduct.md` | `rules/agent-conduct.md` |
+| Rule | `$HOME/.claude/rules/no-plans-on-main.md` | `rules/no-plans-on-main.md` |
+| Rule | `$HOME/.claude/rules/code-quality.md` | `rules/code-quality.md` |
+| Rule | `$HOME/.claude/rules/engineering-judgment.md` | `rules/engineering-judgment.md` |
+| Rule | `$HOME/.claude/rules/environment-hygiene.md` | `rules/environment-hygiene.md` |
 | Skill | `$HOME/.claude/skills/project-setup` | `skills/project-setup` |
 | Skill | `$HOME/.claude/skills/code-review` | `skills/code-review` |
 | Skill | `$HOME/.claude/skills/dependency-audit` | `skills/dependency-audit` |
@@ -52,6 +57,7 @@ Without an override, backups are written under
 | Skill | `$HOME/.claude/skills/script-audit` | `skills/script-audit` |
 | Skill | `$HOME/.claude/skills/security-audit` | `skills/security-audit` |
 | Skill | `$HOME/.claude/skills/test-audit` | `skills/test-audit` |
+| Skill | `$HOME/.claude/skills/agent-memory` | `skills/agent-memory` |
 | Skill | `$HOME/.agents/skills/project-setup` | `skills/project-setup` |
 | Skill | `$HOME/.agents/skills/code-review` | `skills/code-review` |
 | Skill | `$HOME/.agents/skills/dependency-audit` | `skills/dependency-audit` |
@@ -63,6 +69,7 @@ Without an override, backups are written under
 | Skill | `$HOME/.agents/skills/script-audit` | `skills/script-audit` |
 | Skill | `$HOME/.agents/skills/security-audit` | `skills/security-audit` |
 | Skill | `$HOME/.agents/skills/test-audit` | `skills/test-audit` |
+| Skill | `$HOME/.agents/skills/agent-memory` | `skills/agent-memory` |
 | Skill | `$HOME/.codex/skills/project-setup` | `skills/project-setup` |
 | Skill | `$HOME/.codex/skills/code-review` | `skills/code-review` |
 | Skill | `$HOME/.codex/skills/dependency-audit` | `skills/dependency-audit` |
@@ -74,6 +81,7 @@ Without an override, backups are written under
 | Skill | `$HOME/.codex/skills/script-audit` | `skills/script-audit` |
 | Skill | `$HOME/.codex/skills/security-audit` | `skills/security-audit` |
 | Skill | `$HOME/.codex/skills/test-audit` | `skills/test-audit` |
+| Skill | `$HOME/.codex/skills/agent-memory` | `skills/agent-memory` |
 
 Run the smoke tests for the local tool setup command with:
 
@@ -93,6 +101,12 @@ tables, and fenced blocks formatted for their own syntax.
   publishing, and local file expectations.
 - `git-messages.md` defines commit, merge, amendment, and temporary
   message file expectations.
+- `agent-conduct.md` defines safe-conduct expectations: backing up before
+  destructive actions, confirming irreversible work, treating sign-off
+  assets as read-only, verifying point-in-time facts, and honest
+  reporting.
+- `no-plans-on-main.md` defines keeping roadmaps and forward-looking
+  phrasing out of permanent history, with a banned-phrase pre-stage check.
 - `docstrings.md` defines documentation comment expectations for code
   changes.
 - `development-attribution.md` defines attribution boundaries for
@@ -108,6 +122,14 @@ tables, and fenced blocks formatted for their own syntax.
 - `configuration.md` defines repository, local, and secret configuration boundaries.
 - `scripts.md` defines safety, UI, idempotency, error handling, and
   portability expectations for scripts.
+- `code-quality.md` defines single-source-of-truth versions, not
+  suppressing diagnostics, consistent terminology, realistic sample data,
+  and aligned inline annotations.
+- `engineering-judgment.md` defines explicit-over-auto choices, not
+  designing against a single instance, single source of truth, and one
+  writer per fact.
+- `environment-hygiene.md` defines dependency install location,
+  regenerating moved environments, and target-platform compatibility.
 - `dependencies.md` defines expectations for adding, updating, and
   removing dependencies.
 - `backward-compatibility.md` defines replacement, removal, migration,

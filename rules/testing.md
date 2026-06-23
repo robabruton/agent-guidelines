@@ -25,6 +25,43 @@ match the risk, scope, and behavior changed by the branch.
 - Installer, migration, and configuration changes are tested in both
   success and failure paths when practical
 
+## Run the Full Check Before Pushing
+
+Run the project's complete check suite before pushing, not a convenient
+subset.
+
+- Run every gate the project's CI runs — formatter check, linter, type
+  check, tests. Passing one is not passing all of them.
+- Do not filter out slow tests in the final pre-push run or in reported
+  test evidence; the slow tests exist to catch real breakage. Report the
+  full count.
+
+## No Hardcoded Dates in Tests
+
+Never hardcode calendar dates in test bodies, fixtures, or test data.
+Compute them relative to the current date with offsets.
+
+- A test that seeds a "recent" date or asserts against a fixed date
+  passes for a while, then silently breaks when the calendar moves past
+  the baked-in assumption.
+- Compute "old" and "recent" values as offsets from today. This applies
+  to filenames, log entries, timestamps in fixtures, and snapshot data.
+- If a date genuinely must be pinned (parsing a known historical format),
+  make the time-independence explicit by injecting a fixed clock, not by
+  assuming the test runs soon enough.
+
+## Test Build and Pipeline Steps Locally First
+
+Before pushing something that triggers an expensive or hard-to-unwind
+remote process — a tag that starts a release build, an image build, a
+deployment — reproduce that step locally first.
+
+- A local build catches most failures (missing files, build errors,
+  misconfiguration) cheaply, before a remote pipeline fails and a
+  published tag or artifact has to be deleted and recreated.
+- A local run cannot catch every environment-specific issue (credentials,
+  remote-only scopes), but it eliminates the common, avoidable failures.
+
 ## Merge Expectations
 
 - Do not merge a branch with known failing tests unless the branch is

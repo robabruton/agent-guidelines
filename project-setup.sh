@@ -24,8 +24,11 @@ MARKER_BEGIN="<!-- BEGIN agent-guidelines project rules -->"
 MARKER_END="<!-- END agent-guidelines project rules -->"
 
 MINIMAL_RULES=(
+  agent-conduct
   git-workflow
   git-messages
+  no-plans-on-main
+  merge-requests
   development-attribution
   configuration
   testing
@@ -36,6 +39,9 @@ CODEBASE_EXTRA_RULES=(
   docstrings
   dependencies
   scripts
+  code-quality
+  engineering-judgment
+  environment-hygiene
 )
 
 RELEASED_EXTRA_RULES=(
@@ -43,14 +49,20 @@ RELEASED_EXTRA_RULES=(
 )
 
 CANONICAL_RULE_ORDER=(
+  agent-conduct
   git-workflow
   git-messages
+  no-plans-on-main
+  merge-requests
   development-attribution
   configuration
   testing
   documentation
   docstrings
   scripts
+  code-quality
+  engineering-judgment
+  environment-hygiene
   dependencies
   changelog-common
   changelog-date

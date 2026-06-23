@@ -44,8 +44,45 @@ standard:
 - Write multiline commit messages with `git commit -F <message-file>` so
   wrapped body lines stay in the intended paragraphs; do not use
   repeated `-m` flags for body paragraphs
-- Delete temporary files, including commit, merge, tag, or release
-  message files, once they are no longer needed
+- Delete temporary commit, merge, tag, or release message files
+  immediately after the command that consumes them succeeds — chain the
+  removal in the same step (e.g. `git commit -F msg.txt && rm -f
+  msg.txt`). Use a unique filename per message so a later command does
+  not pick up a stale one, and sweep for leftovers at the end of the work
+
+## History Describes What Is
+
+Commit bodies and changelog entries are permanent history. They describe
+the state being committed, not the process that produced it. Keep them
+self-contained and free of provenance.
+
+- Do NOT reference absent or reverted work. If an alternative was tried
+  and discarded before committing, write the message as if it was never
+  considered.
+- Do NOT frame an issue as pre-existing. Describe the issue and the fix,
+  not when or how the bug was introduced.
+- Do NOT reference tag moves or rewrites. The result should read as
+  intentional.
+- Do NOT reference other repositories' needs. A commit describes what
+  changed in its own repository's terms; cross-repo justification belongs
+  in the pull/merge request description, not in permanent history.
+- Do NOT narrate before/after comparisons ("the docs said X but the code
+  does Y"). State what the change does and why.
+
+Before writing a body, check whether it references anything the reader
+would not know about — iteration history, a reverted attempt, another
+repository's behavior, what the old text said. If so, remove it and
+describe the present.
+
+## Consistent Level of Detail
+
+When a feature is extended after its first implementation (one option
+added to a set, one field added to a model), do not single out the new
+piece in the commit message, merge message, description, or changelog.
+Describe the feature at a consistent level of abstraction — enumerate all
+the peers or none, never just the latest addition. Singling out the late
+addition reveals that the work was developed iteratively in response to
+feedback, which the permanent record should not carry.
 
 ## Amendments
 

@@ -4,6 +4,51 @@ All notable changes to this project will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## 2026-06-23
+
+### Added
+
+- `agent-conduct.md` rule covering safe conduct on a real codebase:
+  backing up before destructive actions, confirming irreversible or
+  outward-facing actions, treating sign-off assets as read-only, verifying
+  point-in-time facts before asserting them, and reporting outcomes
+  honestly.
+- `no-plans-on-main.md` rule for keeping roadmaps and forward-looking
+  phrasing out of permanent history, with a banned-phrase pre-stage check
+  across commits, descriptions, and merge bodies.
+- `code-quality.md` rule for single-source-of-truth versions, never
+  suppressing diagnostics, consistent terminology, realistic sample data,
+  and aligned inline annotations.
+- `engineering-judgment.md` rule for explicit choices over auto-detection,
+  not designing against a single instance, single source of truth per
+  datum, one writer per fact, and reference-not-porting.
+- `environment-hygiene.md` rule for dependency install location,
+  regenerating moved environments, target-platform compatibility, and
+  preferring platform CLIs.
+- `merge-requests.md` rule for pull/merge request descriptions: required
+  sections, each commit standing on its own, no local-only state, and
+  cross-repository context.
+- `agent-memory` skill for maintaining a durable, file-based memory store
+  across sessions, with starter templates and a read-only report script.
+
+### Changed
+
+- `git-workflow.md` now covers letting commits emerge instead of
+  pre-planning a counted list, naming branches from the work, and the
+  protected-default-branch flow.
+- `git-messages.md` now covers history that describes what is (no
+  reverted-work, pre-existing, tag-move, downstream-consumer, or
+  before/after narration), consistent level of detail, and stronger
+  temporary-message-file cleanup.
+- `testing.md` now covers running the full check before pushing, no
+  hardcoded dates in tests, and testing build and pipeline steps locally
+  first.
+- `documentation.md` now covers consistency of parallel references and
+  terminology.
+- `development-attribution.md` now covers keeping tooling references out
+  of ignore files, configs, and paths via an allowlist, and keeping
+  specific model or vendor names out of source.
+
 ## 2026-04-24
 
 ### Changed
