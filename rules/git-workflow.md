@@ -30,6 +30,11 @@ enough for one commit and stopping to record it before moving on.
   done and verify that the name matches the documented pattern. If the
   branch name does not fit, stop and choose a better name before running
   `git checkout -b`.
+- Name the branch from the work being done, not from where the repository
+  happens to be checked out. Before starting a new piece of work, confirm
+  the current branch's scope actually covers it; if it does not, create a
+  new branch rather than piling distinct work onto a branch named for a
+  different scope.
 - Only merge back to `main` when the work for that branch is fully
   complete
 - Always merge with `--no-ff` to create an explicit merge commit, even
@@ -70,6 +75,13 @@ When in doubt, commit more often rather than less often. Err on the side
 of too many small commits — they can be squashed later, but a monolithic
 commit can't be split after the fact.
 
+Let commits emerge from the work. Do NOT pre-plan a numbered list of
+commits ("commit 1 will be X, commit 2 will be Y, six total") before
+starting — the count falls out of the work naturally. Describing the
+shape of the work (interface first, then implementation groups, then
+tests) is fine; building a counted commit list up front is not, and it
+fights with letting the commit history reflect what actually happened.
+
 ### What NOT to do
 
 - NEVER have more than 3-4 modified files uncommitted at once — if you
@@ -107,6 +119,15 @@ commit can't be split after the fact.
   release is needed
 - After each merge, `main` should represent a coherent project state
   that can be used as the starting point for the next branch
+
+## When the Default Branch Is Protected
+
+If `main` is protected so direct pushes are rejected, never merge locally
+and then try to push. Use the hosting platform's pull/merge request flow:
+push the branch, open the request, wait for required checks to pass, and
+merge through the platform. After merging, verify the result — confirm the
+merge landed with the intended commit body, because a body lost at merge
+time is on permanent, protected history and is costly to correct.
 
 ## After Merge
 

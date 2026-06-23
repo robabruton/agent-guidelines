@@ -24,6 +24,15 @@ document planned behavior as if it already exists.
   documentation unless the placeholder is intentional and explained
 - Keep examples small enough to verify during review
 
+## Consistency
+
+- When listing alternatives side by side (two tools, two options), keep
+  the references parallel — link to the same kind of target page for each
+  (both homepages, or both install pages) and use parallel phrasing.
+  Mismatched references read as careless.
+- Use terminology consistent with the code and the rest of the docs: one
+  term per concept, everywhere.
+
 ## Scope
 
 - Prefer documenting behavior where the project already keeps related documentation
