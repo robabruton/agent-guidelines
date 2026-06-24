@@ -43,6 +43,7 @@ SKILL_HARNESSES=(
 )
 
 CONTEXT_TARGETS=(
+  ".claude/CLAUDE.md"
   ".config/opencode/AGENTS.md"
   ".pi/agent/AGENTS.md"
 )
@@ -105,7 +106,7 @@ test ! -e "${HOME}/.claude/rules/git-workflow.md"
 
 "${ROOT_DIR}/setup.sh" --install --no-color > "$INSTALL_OUT"
 grep -Eq "created:[[:space:]]+${expected_links}" "$INSTALL_OUT"
-grep -Eq "context created:[[:space:]]+2" "$INSTALL_OUT"
+grep -Eq "context created:[[:space:]]+3" "$INSTALL_OUT"
 assert_managed_links
 assert_context_files
 
@@ -121,12 +122,12 @@ test ! -e "${HOME}/.claude/rules/code-quality.md"
 "${ROOT_DIR}/setup.sh" --install --no-color > "$SECOND_OUT"
 grep -Eq "created:[[:space:]]+0" "$SECOND_OUT"
 grep -Eq "current:[[:space:]]+${expected_links}" "$SECOND_OUT"
-grep -Eq "context current:[[:space:]]+2" "$SECOND_OUT"
+grep -Eq "context current:[[:space:]]+3" "$SECOND_OUT"
 assert_context_files
 
 "${ROOT_DIR}/setup.sh" --remove --no-color > "$REMOVE_OUT"
 grep -Eq "removed:[[:space:]]+${expected_links}" "$REMOVE_OUT"
-grep -Eq "context removed:[[:space:]]+2" "$REMOVE_OUT"
+grep -Eq "context removed:[[:space:]]+3" "$REMOVE_OUT"
 test ! -e "${HOME}/.claude/rules/git-workflow.md"
 assert_no_residue
 
