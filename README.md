@@ -84,43 +84,7 @@ Rule files use wrapped Markdown prose and bullets, with continuation
 lines indented under the text they continue. Keep examples, commands,
 tables, and fenced blocks formatted for their own syntax.
 
-- `git-workflow.md` defines branch, commit rhythm, merge readiness,
-  publishing, and local file expectations.
-- `git-messages.md` defines commit, merge, amendment, and temporary
-  message file expectations.
-- `agent-conduct.md` defines safe-conduct expectations: backing up before
-  destructive actions, confirming irreversible work, treating sign-off
-  assets as read-only, verifying point-in-time facts, and honest
-  reporting.
-- `no-plans-on-main.md` defines keeping roadmaps and forward-looking
-  phrasing out of permanent history, with a banned-phrase pre-stage check.
-- `docstrings.md` defines documentation comment expectations for code
-  changes.
-- `development-attribution.md` defines attribution boundaries for
-  committed project files.
-- `changelog-common.md` defines shared changelog format and initial
-  setup expectations.
-- `changelog-date.md` defines date-based changelog section and workflow expectations.
-- `changelog-version.md` defines versioned changelog section and release
-  cut expectations.
-- `versioning-semver.md` defines semantic versioning and release expectations.
-- `testing.md` defines verification expectations before merging branch work.
-- `documentation.md` defines accuracy and example expectations for project docs.
-- `configuration.md` defines repository, local, and secret configuration boundaries.
-- `scripts.md` defines safety, UI, idempotency, error handling, and
-  portability expectations for scripts.
-- `code-quality.md` defines single-source-of-truth versions, not
-  suppressing diagnostics, consistent terminology, realistic sample data,
-  and aligned inline annotations.
-- `engineering-judgment.md` defines explicit-over-auto choices, not
-  designing against a single instance, single source of truth, and one
-  writer per fact.
-- `environment-hygiene.md` defines dependency install location,
-  regenerating moved environments, and target-platform compatibility.
-- `dependencies.md` defines expectations for adding, updating, and
-  removing dependencies.
-- `backward-compatibility.md` defines replacement, removal, migration,
-  and release-impact expectations.
+See `rules/README.md` for the current rule catalog.
 
 ## Skills
 

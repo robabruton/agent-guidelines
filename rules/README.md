@@ -1,0 +1,224 @@
+# Rules
+
+Rules live in `rules/` as portable, reusable expectations for agents
+working in a project. Each rule covers one area of discipline — git
+hygiene, attribution, testing, docs, scripts — at a level of generality
+that holds across languages and project shapes. A project picks up the
+rules it wants through `project-setup.sh`, and the four supported
+harnesses (Claude Code, OpenCode, Pi, Codex) read them from one
+assembled global context file each.
+
+## Frontmatter and Tiering
+
+Every rule file declares YAML frontmatter with two fields:
+
+- **`when:`** — a short phrase that completes "Read when X". `setup.sh`
+  uses it to build the rule router table in the global context file,
+  and `project-setup.sh` uses it for per-project selection.
+- **`load:`** — either `always` (the rule is inlined verbatim into
+  every conversation's global context) or `recall` (the rule appears
+  in the router table only; the model reads its body on demand when
+  the trigger matches the current task).
+
+Six rules are tiered `always`. They form the baseline a model follows
+on every conversation. The remaining fourteen are tiered `recall` and
+cover situational expectations the model reads only when needed.
+
+## Always-Loaded Rules
+
+These rules are inlined into the assembled global context file
+(`~/.claude/CLAUDE.md` and equivalents). The model reads them on
+every conversation.
+
+### `agent-conduct`
+
+Operating discipline for an agent acting on a real project: back up
+before destroying, confirm irreversible and outward-facing actions,
+treat approved assets as read-only, verify point-in-time knowledge
+before asserting it, and report outcomes honestly. The rule exists
+because these failure modes — accidental deletion, unauthorized
+external action, stale-memory assertion — are independently
+expensive to recover from and hold regardless of task or model.
+
+### `development-attribution`
+
+Excludes AI-tool authorship from the project record. No
+`Co-Authored-By` lines naming AI tools or code assistants, no
+references to AI-generated work in committed files, no naming of
+agent tooling in ignore files or build configs, and no hardcoded
+model or vendor names in source. Functional references to AI as a
+*user-facing* feature are allowed; references to AI as a *developer
+or contributor* are not.
+
+### `git-workflow`
+
+Composition model for development: a commit is the smallest
+meaningful change, a branch is a complete unit of work made up of
+many small commits, the project is the sum of all merged branches on
+`main`. Covers branch naming, the commit rhythm (interface first,
+implementation in logical groups, tests as their own units),
+merge-readiness, the always-merge-with-`--no-ff` convention, and
+cleanup after merge. The rule exists so history reflects how work
+actually built up rather than collapsing into monolithic commits.
+
+### `git-messages`
+
+Conventional Commits format with a 50-character target on the
+subject and a 60-character hard cap enforced by the project-setup
+commit-msg hook. Spells out when a body is warranted, when
+subject-only is required (renames, file moves, typo fixes, comment
+corrections, narrowly scoped mechanical edits), the merge commit
+format, and the "history describes what is" discipline — commit
+bodies must not reference reverted work, iteration history, or
+another repository's needs.
+
+### `no-plans-on-main`
+
+Permanent project history must read as a record of work that
+happened, not work that is intended. Forbids roadmaps, TODO lists,
+"phase N" plans, and forward-looking promises in any tracked file,
+commit message, pull request description, merge commit body, or
+branch name. Includes a banned-phrase checklist run before staging
+and a pointer to where plans legitimately belong (durable agent
+memory, untracked `local/` files, scratch branches).
+
+### `merge-requests`
+
+What a pull or merge request description must contain: Summary,
+optional Changes, Test Evidence, optional Notes. Every commit in
+the branch must stand on its own — no `fix`/`fixup` commits
+patching earlier commits in the same branch. Cross-repository
+context belongs in the description rather than in commit history,
+which the git-messages rule keeps self-contained per repo.
+
+## On-Demand Rules
+
+These rules are listed in the global context router table by their
+`when:` trigger and a stable reference path. The model reads them
+when a task matches the trigger.
+
+### `backward-compatibility`
+
+Preserves existing behavior unless the branch explicitly replaces
+it. Identifies what counts as a breaking change (public APIs, CLI
+flags, configuration, file formats, install behavior, documented
+workflows), how to handle replacements and migrations, and the
+release impact under semver — breaking changes warrant a `MAJOR`
+version recommendation.
+
+### `code-quality`
+
+Conventions that the language's own style tooling does not enforce:
+read a project version from package metadata rather than hardcoding,
+never silence type-checker or linter errors with inline ignores,
+pick one term per concept and use it everywhere, keep sample and
+fixture data internally coherent rather than templated, and keep
+inline-annotation alignment consistent across a block.
+
+### `configuration`
+
+Repository, local, and secret configuration handling. Commit what
+is required for build, test, run, and operation; keep personal
+editor, credential, and machine-specific files out of git via local
+excludes; never commit secrets, and treat any that slip through as
+compromised and in need of rotation.
+
+### `dependencies`
+
+Adding, updating, and removing project dependencies. Prefer
+existing project dependencies, standard libraries, and local
+utilities before adding something new; follow the ecosystem's
+lockfile and version-pinning conventions; remove dependencies
+whose justifying feature has been removed rather than leaving
+unused tooling in place.
+
+### `docstrings`
+
+Mandatory documentation for every function, type, constant, macro,
+and module-scoped variable you write or materially change, with a
+small list of trivial exceptions. Specifies voice (third-person
+declarative), what to document, what to skip, and the idiomatic
+doc format per language — Doxygen, Google-style, JSDoc, Rustdoc,
+Godoc, Javadoc, LDoc.
+
+### `documentation`
+
+User-facing documentation must describe behavior that currently
+exists rather than behavior that is planned. Examples should be
+runnable or marked illustrative, alternatives listed side by side
+must use parallel references, one term per concept across the
+docs, and documentation lives where the project already keeps
+related documentation rather than being duplicated.
+
+### `engineering-judgment`
+
+Recurring design decisions: prefer explicit choices over clever
+auto-detection, do not design abstractions against a single
+instance, single source of truth per datum with derived views
+rebuildable from the source, one writer per fact (many readers
+are fine), decide each surface's exposure explicitly rather than
+by default, and use prior implementations as a source of
+requirements rather than code to bulk-port.
+
+### `environment-hygiene`
+
+Environment-level pitfalls that produce "works on my machine"
+failures. Never install dependencies into a location at or above
+the project (parent-walking resolvers pick them up silently and
+duplicate-instance errors follow); regenerate virtual environments
+after moving or renaming package directories so entry-point scripts
+get correct paths; committed files must work on every target
+platform; prefer high-level platform CLIs over raw API calls.
+
+### `scripts`
+
+Predictability and safety for shell scripts, git hooks, installers,
+and command automation. Strict error handling appropriate to the
+scripting language, validated inputs, dry-run or preview modes for
+destructive scripts, idempotency so re-runs are safe, and
+portability across the platforms the project targets.
+
+### `testing`
+
+Verify every branch before it merges, sized to the risk and scope
+of the change. Test selection (smallest reliable check, prefer
+existing project conventions), what to verify (new behavior,
+existing behavior touched, error paths, documentation examples),
+running the project's full check suite before pushing, no
+hardcoded dates in tests, and reproducing expensive remote
+pipeline steps locally first.
+
+### `changelog-common`
+
+Shared format conventions used by both the date-based and versioned
+changelog variants: Keep a Changelog 1.1.0, the six section
+headings (`Added`, `Changed`, `Deprecated`, `Removed`, `Fixed`,
+`Security`), one entry per user-meaningful outcome rather than one
+entry per commit, and consolidation when a section grows noisy.
+Initial setup commits a base file without an empty release section.
+
+### `changelog-date`
+
+Date-based changelog sections for projects without versioned
+releases. Heading format `## YYYY-MM-DD`, no `[Unreleased]`
+section, multiple changes on the same day append to the existing
+dated section, and entries are written into today's section as
+branch work completes rather than retroactively at branch end.
+
+### `changelog-version`
+
+Versioned changelog sections for projects that publish releases.
+An `[Unreleased]` section accumulates entries as branch work
+lands; the cut from `[Unreleased]` to a release section happens on
+the release branch as part of `chore: bump version to X.Y.Z`,
+never as a direct commit on `main`. Includes link-to-diff
+conventions when a remote exists.
+
+### `versioning-semver`
+
+Semantic Versioning for projects with releases, packages, APIs, or
+other versioned artifacts. Defines `PATCH`, `MINOR`, `MAJOR`
+triggers and when to recommend a release versus defer it; covers
+annotated-tag conventions, the tag message format (a release
+summary for humans, not a commit log dump), and how to backfill a
+retroactive tag with the intended committer date.
