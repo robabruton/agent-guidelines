@@ -48,6 +48,7 @@ CONTEXT_TARGETS=(
   "${HOME}/.claude/CLAUDE.md|Claude Code global CLAUDE.md"
   "${HOME}/.config/opencode/AGENTS.md|OpenCode global AGENTS.md"
   "${HOME}/.pi/agent/AGENTS.md|Pi global AGENTS.md"
+  "${HOME}/.codex/AGENTS.md|Codex global AGENTS.md"
 )
 
 CREATED=0

@@ -37,10 +37,10 @@ recall-tier rule with its trigger and a stable reference path. The
 router's reference paths resolve through a single
 `~/.agent-guidelines/rules` directory symlink that points at this
 repository's `rules/`. The targets are `~/.claude/CLAUDE.md` for Claude
-Code, `~/.config/opencode/AGENTS.md` for OpenCode, and
-`~/.pi/agent/AGENTS.md` for Pi. Only the marker-bracketed managed
-block is touched; any other content you keep in those files stays
-intact.
+Code, `~/.config/opencode/AGENTS.md` for OpenCode,
+`~/.pi/agent/AGENTS.md` for Pi, and `~/.codex/AGENTS.md` for Codex.
+Only the marker-bracketed managed block is touched; any other content
+you keep in those files stays intact.
 
 The global set today:
 
@@ -68,6 +68,7 @@ The global set today:
 | Context | `$HOME/.claude/CLAUDE.md` | assembled from `rules/` |
 | Context | `$HOME/.config/opencode/AGENTS.md` | assembled from `rules/` |
 | Context | `$HOME/.pi/agent/AGENTS.md` | assembled from `rules/` |
+| Context | `$HOME/.codex/AGENTS.md` | assembled from `rules/` |
 
 Run the smoke tests for the local tool setup command with:
 
@@ -134,6 +135,21 @@ target repository:
 
 ```bash
 ./project-setup.sh --profile codebase --changelog date /path/to/project
+```
+
+Per-project skills are opt-in via `--include-skill` (repeatable) and
+land in `<project>/.agents/skills/<skill>/`, where OpenCode, Pi, and
+Claude Code discover them. By default they use the same source mode as
+rules (`--rules-source`); `--skills-source symlink|copy` lets you
+override that independently. Symlink mode adds `.agents/skills/` to
+the repository's local `.git/info/exclude` so the links stay out of
+git; copy mode tracks the copied skill tree as a normal project asset.
+
+```bash
+./project-setup.sh --profile codebase \
+  --include-skill test-audit \
+  --include-skill firmware-review \
+  /path/to/project
 ```
 
 Run the smoke tests for the target-repository setup command with:
