@@ -598,20 +598,69 @@ preview_managed_block() {
   fi
 }
 
+write_agent_file_preamble() {
+  cat <<'EOF'
+> **Generated file.** This file is assembled from the project's
+> configured rules by `project-setup.sh`. Re-runs of
+> `project-setup.sh` preserve everything outside the marker pair,
+> including this note and any content you add to the
+> Project-Specific Notes section below.
+
+## Project-Specific Notes
+
+_(Project-specific guidance for agents working in this repository.
+Replace this line with your content; it is preserved across re-runs
+of `project-setup.sh`.)_
+
+EOF
+}
+
+prepend_preamble_if_created() {
+  local target_file="$1"
+  local preamble_file="$2"
+  local status="$3"
+
+  [ "$status" = "created" ] || return 0
+  [ "$DRY_RUN" = true ] && return 0
+
+  local temp_file
+  temp_file="$(mktemp)"
+  cat "$preamble_file" "$target_file" > "$temp_file"
+  mv "$temp_file" "$target_file"
+}
+
+update_managed_block_with_preamble() {
+  local target_file="$1"
+  local block_file="$2"
+  local preamble_file="$3"
+  local label="$4"
+  local status
+
+  status="$(agent_guidelines_update_managed_block "$target_file" "$block_file")"
+  prepend_preamble_if_created "$target_file" "$preamble_file" "$status"
+  add_status "$status" "$label"
+}
+
 assemble_agent_files() {
-  local block_file
+  local block_file preamble_file
   block_file="$(mktemp)"
+  preamble_file="$(mktemp)"
   assemble_rules_block "$block_file"
+  write_agent_file_preamble > "$preamble_file"
 
   if should_mutate; then
-    update_managed_block "$TARGET_DIR/CLAUDE.md" "$block_file" "CLAUDE.md project rules"
-    update_managed_block "$TARGET_DIR/AGENTS.md" "$block_file" "AGENTS.md project rules"
+    update_managed_block_with_preamble \
+      "$TARGET_DIR/CLAUDE.md" "$block_file" "$preamble_file" \
+      "CLAUDE.md project rules"
+    update_managed_block_with_preamble \
+      "$TARGET_DIR/AGENTS.md" "$block_file" "$preamble_file" \
+      "AGENTS.md project rules"
   else
     preview_managed_block "$TARGET_DIR/CLAUDE.md" "CLAUDE.md project rules"
     preview_managed_block "$TARGET_DIR/AGENTS.md" "AGENTS.md project rules"
   fi
 
-  rm -f "$block_file"
+  rm -f "$block_file" "$preamble_file"
 }
 
 skill_excluded() {
