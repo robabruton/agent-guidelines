@@ -6,6 +6,7 @@ set -euo pipefail
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd -P)"
 ASSET_DIR="${SCRIPT_DIR}/skills/project-setup/assets"
 CANONICAL_RULES_DIR="${SCRIPT_DIR}/rules"
+CANONICAL_SKILLS_DIR="${SCRIPT_DIR}/skills"
 
 # shellcheck source=lib/assemble-rules.sh
 . "${SCRIPT_DIR}/lib/assemble-rules.sh"
@@ -13,9 +14,12 @@ CANONICAL_RULES_DIR="${SCRIPT_DIR}/rules"
 PROFILE="auto"
 CHANGELOG_MODE="auto"
 RULE_SOURCE_MODE="symlink"
+SKILL_SOURCE_MODE=""
 TARGET_DIR="."
 INCLUDE_RULES=()
 EXCLUDE_RULES=()
+INCLUDE_SKILLS=()
+EXCLUDE_SKILLS=()
 
 CREATED=()
 UPDATED=()
@@ -83,8 +87,11 @@ Options:
   --changelog none|date|version
                   aliases: dated, dates, versioned, versions
   --rules-source symlink|copy
-  --include-rule <id>
-  --exclude-rule <id>
+  --skills-source symlink|copy   (defaults to --rules-source)
+  --include-rule <id>            (repeatable)
+  --exclude-rule <id>            (repeatable)
+  --include-skill <id>           (repeatable)
+  --exclude-skill <id>           (repeatable)
   -h, --help
 
 Examples:
@@ -92,6 +99,7 @@ Examples:
   ./project-setup.sh --profile codebase .
   ./project-setup.sh --profile released --changelog version .
   ./project-setup.sh --profile codebase --changelog date --include-rule docstrings .
+  ./project-setup.sh --include-skill test-audit --include-skill firmware-review .
 EOF
 }
 
@@ -131,6 +139,11 @@ parse_args() {
         RULE_SOURCE_MODE="$2"
         shift 2
         ;;
+      --skills-source)
+        [ "$#" -ge 2 ] || die "--skills-source requires a value"
+        SKILL_SOURCE_MODE="$2"
+        shift 2
+        ;;
       --include-rule)
         [ "$#" -ge 2 ] || die "--include-rule requires a value"
         INCLUDE_RULES+=("$2")
@@ -139,6 +152,16 @@ parse_args() {
       --exclude-rule)
         [ "$#" -ge 2 ] || die "--exclude-rule requires a value"
         EXCLUDE_RULES+=("$2")
+        shift 2
+        ;;
+      --include-skill)
+        [ "$#" -ge 2 ] || die "--include-skill requires a value"
+        INCLUDE_SKILLS+=("$2")
+        shift 2
+        ;;
+      --exclude-skill)
+        [ "$#" -ge 2 ] || die "--exclude-skill requires a value"
+        EXCLUDE_SKILLS+=("$2")
         shift 2
         ;;
       -h|--help)
@@ -166,6 +189,10 @@ parse_args() {
   esac
   case "$CHANGELOG_MODE" in auto|none|date|version) ;; *) die "invalid changelog mode: $CHANGELOG_MODE" ;; esac
   case "$RULE_SOURCE_MODE" in symlink|copy) ;; *) die "invalid rules source mode: $RULE_SOURCE_MODE" ;; esac
+  if [ -z "$SKILL_SOURCE_MODE" ]; then
+    SKILL_SOURCE_MODE="$RULE_SOURCE_MODE"
+  fi
+  case "$SKILL_SOURCE_MODE" in symlink|copy) ;; *) die "invalid skills source mode: $SKILL_SOURCE_MODE" ;; esac
 }
 
 resolve_target() {
@@ -505,6 +532,94 @@ assemble_agent_files() {
   rm -f "$block_file"
 }
 
+skill_excluded() {
+  local needle="$1"
+  local skill
+  for skill in "${EXCLUDE_SKILLS[@]}"; do
+    [ "$skill" = "$needle" ] && return 0
+  done
+  return 1
+}
+
+install_project_skill_symlink() {
+  local skill="$1"
+  local target="$2"
+  local source="$3"
+
+  if [ -L "$target" ]; then
+    local current
+    current="$(readlink "$target")"
+    if [ "$current" = "$source" ]; then
+      add_status unchanged ".agents/skills/$skill"
+    else
+      add_status skipped ".agents/skills/$skill points to $current"
+    fi
+  elif [ -e "$target" ]; then
+    add_status skipped ".agents/skills/$skill exists and is not a symlink"
+  else
+    ln -s "$source" "$target"
+    add_status created ".agents/skills/$skill"
+  fi
+}
+
+install_project_skill_copy() {
+  local skill="$1"
+  local target="$2"
+  local source="$3"
+
+  if [ -L "$target" ]; then
+    add_status skipped ".agents/skills/$skill exists as a symlink"
+    return
+  fi
+
+  if [ -d "$target" ]; then
+    cp -aR "$source"/. "$target"/
+    add_status updated ".agents/skills/$skill"
+  elif [ -e "$target" ]; then
+    add_status skipped ".agents/skills/$skill exists and is not a directory"
+  else
+    cp -aR "$source" "$target"
+    add_status created ".agents/skills/$skill"
+  fi
+}
+
+install_per_project_skills() {
+  if [ "${#INCLUDE_SKILLS[@]}" -eq 0 ]; then
+    return
+  fi
+
+  local skills_dir="$TARGET_DIR/.agents/skills"
+  mkdir -p "$skills_dir"
+
+  if [ "$SKILL_SOURCE_MODE" = "symlink" ]; then
+    local exclude_file
+    exclude_file="$(git_path info/exclude)"
+    append_missing_line "$exclude_file" ".agents/skills/" "exclude .agents/skills/"
+  fi
+
+  local skill source target
+  for skill in "${INCLUDE_SKILLS[@]}"; do
+    if skill_excluded "$skill"; then
+      add_status skipped ".agents/skills/$skill (excluded)"
+      continue
+    fi
+
+    source="$CANONICAL_SKILLS_DIR/$skill"
+    target="$skills_dir/$skill"
+
+    if [ ! -d "$source" ]; then
+      add_status warning "skill not found: $skill"
+      continue
+    fi
+
+    if [ "$SKILL_SOURCE_MODE" = "symlink" ]; then
+      install_project_skill_symlink "$skill" "$target" "$source"
+    else
+      install_project_skill_copy "$skill" "$target" "$source"
+    fi
+  done
+}
+
 write_local_config() {
   local config_path="$TARGET_DIR/.agent-guidelines/config"
   local temp_file
@@ -516,8 +631,11 @@ write_local_config() {
     printf 'changelog=%s\n' "$CHANGELOG_MODE"
     printf 'versioning=%s\n' "$(versioning_mode)"
     printf 'rules_source=%s\n' "$RULE_SOURCE_MODE"
+    printf 'skills_source=%s\n' "$SKILL_SOURCE_MODE"
     printf 'include_rules=%s\n' "${INCLUDE_RULES[*]:-}"
     printf 'exclude_rules=%s\n' "${EXCLUDE_RULES[*]:-}"
+    printf 'include_skills=%s\n' "${INCLUDE_SKILLS[*]:-}"
+    printf 'exclude_skills=%s\n' "${EXCLUDE_SKILLS[*]:-}"
   } > "$temp_file"
 
   if [ -e "$config_path" ] && cmp -s "$config_path" "$temp_file"; then
@@ -619,6 +737,11 @@ create_initial_commit_if_needed() {
   if [ "$RULE_SOURCE_MODE" = "copy" ]; then
     paths+=(".agent-guidelines/rules")
   fi
+  if [ "$SKILL_SOURCE_MODE" = "copy" ] &&
+    [ "${#INCLUDE_SKILLS[@]}" -gt 0 ] &&
+    [ -d "$TARGET_DIR/.agents/skills" ]; then
+    paths+=(".agents/skills")
+  fi
 
   local path
   for path in "${paths[@]}"; do
@@ -696,6 +819,7 @@ main() {
   configure_rule_source
   write_local_config
   assemble_agent_files
+  install_per_project_skills
   create_initial_commit_if_needed
   install_hooks
   print_summary

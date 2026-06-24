@@ -30,6 +30,9 @@ assert_agent_rules() {
 "${ROOT_DIR}/project-setup.sh" \
   --profile codebase \
   --changelog dated \
+  --include-skill explain \
+  --include-skill test-audit \
+  --exclude-skill test-audit \
   "${SYMLINK_REPO}" > "$SYMLINK_FIRST_OUT"
 
 git -C "$SYMLINK_REPO" status --short > "$SYMLINK_STATUS_OUT"
@@ -44,6 +47,10 @@ test -f "${SYMLINK_REPO}/.git/hooks/pre-commit"
 grep -Fq "Changelog mode: date" "$SYMLINK_FIRST_OUT"
 assert_agent_rules "${SYMLINK_REPO}/CLAUDE.md" "# Date-Based Changelog Rules"
 assert_agent_rules "${SYMLINK_REPO}/AGENTS.md" "# Date-Based Changelog Rules"
+
+test -L "${SYMLINK_REPO}/.agents/skills/explain"
+test ! -e "${SYMLINK_REPO}/.agents/skills/test-audit"
+grep -Fq ".agents/skills/" "${SYMLINK_REPO}/.git/info/exclude"
 
 "${ROOT_DIR}/project-setup.sh" \
   --profile codebase \
@@ -64,6 +71,7 @@ grep -Fq "  none" "$SYMLINK_SECOND_OUT"
   --profile released \
   --changelog versions \
   --rules-source copy \
+  --include-skill firmware-review \
   "${COPY_REPO}" > "$COPY_OUT"
 
 git -C "$COPY_REPO" status --short > "$COPY_STATUS_OUT"
@@ -79,5 +87,11 @@ git -C "$COPY_REPO" ls-files --error-unmatch \
 grep -Fq "Versioning mode: semver" "$COPY_OUT"
 assert_agent_rules "${COPY_REPO}/CLAUDE.md" "# Semantic Versioning Rules"
 assert_agent_rules "${COPY_REPO}/AGENTS.md" "# Semantic Versioning Rules"
+
+test -d "${COPY_REPO}/.agents/skills/firmware-review"
+test ! -L "${COPY_REPO}/.agents/skills/firmware-review"
+test -f "${COPY_REPO}/.agents/skills/firmware-review/SKILL.md"
+git -C "$COPY_REPO" ls-files --error-unmatch \
+  .agents/skills/firmware-review/SKILL.md >/dev/null
 
 printf 'project-setup smoke tests passed\n'
