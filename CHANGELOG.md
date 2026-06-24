@@ -20,6 +20,14 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
   project-specific guidance without it being overwritten. Smoke test
   asserts the preamble exists after the first run and survives the
   idempotent second run.
+- `.github/workflows/smoke.yml` runs every check on push to `main`
+  and on every pull request: shellcheck (warning level and above) on
+  every shell script in the repository, frontmatter validation that
+  every rule file declares `when:` and a valid `load:` value, a
+  consistency check that every rule name referenced by
+  `project-setup.sh` exists in `rules/` and every skill name in
+  `setup.sh`'s `GLOBAL_SKILLS` exists in `skills/`, and both smoke
+  scripts.
 
 - `lib/assemble-rules.sh` shared library exposing marker constants, a
   frontmatter stripper, a frontmatter field reader, a rule-block
@@ -81,6 +89,11 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
   "upcoming", and similar "more work after this" phrasings that slip
   into branch names because conversational language flows into branch
   names without scrutiny.
+- Cleaned `project-setup.sh` by removing two unused `MARKER_BEGIN` /
+  `MARKER_END` local-alias variables left over from the library
+  extraction, and annotated the router-table `printf` in
+  `lib/assemble-rules.sh` with an explicit `shellcheck disable=SC2016`
+  comment explaining why the single-quoted format string is correct.
 
 ## 2026-06-23
 

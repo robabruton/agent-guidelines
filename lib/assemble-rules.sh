@@ -185,6 +185,10 @@ agent_guidelines_build_router_table() {
     [ -f "$file" ] || continue
     local when
     when="$(agent_guidelines_read_frontmatter_field "$file" when)"
+    # shellcheck disable=SC2016
+    # The single-quoted format string is intentional: printf substitutes
+    # the %s placeholders from the positional arguments; we do not want
+    # shell expansion of the format string itself.
     printf '| %s | %s | `%s/%s.md` |\n' \
       "$rule" "$when" "$stable_path" "$rule"
   done
