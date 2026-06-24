@@ -45,6 +45,7 @@ RULE_STORE_PATH="${HOME}/.agent-guidelines/rules"
 # is "path|label" where label is shown in the install/remove summary.
 # Both OpenCode and Pi read AGENTS.md from these paths.
 CONTEXT_TARGETS=(
+  "${HOME}/.claude/CLAUDE.md|Claude Code global CLAUDE.md"
   "${HOME}/.config/opencode/AGENTS.md|OpenCode global AGENTS.md"
   "${HOME}/.pi/agent/AGENTS.md|Pi global AGENTS.md"
 )

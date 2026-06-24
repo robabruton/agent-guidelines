@@ -15,11 +15,12 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 - `when` and `load` YAML frontmatter on every rule file. `load: always`
   marks the six rules that belong in the global set; `load: recall`
   marks the situational ones the model should read on demand.
-- Global `AGENTS.md` assembly for OpenCode and Pi. `setup.sh` now
-  writes a managed block into `~/.config/opencode/AGENTS.md` and
-  `~/.pi/agent/AGENTS.md` containing the always-loaded rules inlined
-  plus a router section listing every recall-tier rule with its
-  trigger and a stable reference path.
+- Global context-file assembly for Claude Code, OpenCode, and Pi.
+  `setup.sh` now writes a managed block into `~/.claude/CLAUDE.md`,
+  `~/.config/opencode/AGENTS.md`, and `~/.pi/agent/AGENTS.md`
+  containing the always-loaded rules inlined plus a router section
+  listing every recall-tier rule with its trigger and a stable
+  reference path.
 - `~/.agent-guidelines/rules` directory symlink so router pointer
   paths resolve to the repository's `rules/` no matter where the
   checkout lives.
