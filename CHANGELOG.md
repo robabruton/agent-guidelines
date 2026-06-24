@@ -10,11 +10,19 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 - `lib/assemble-rules.sh` shared library exposing marker constants, a
   frontmatter stripper, a frontmatter field reader, a rule-block
-  assembler, and a managed-block updater. Reused by `project-setup.sh`
-  and available to other scripts.
+  assembler, a managed-block updater, a managed-block remover, and a
+  router-table builder. Reused by `project-setup.sh` and `setup.sh`.
 - `when` and `load` YAML frontmatter on every rule file. `load: always`
   marks the six rules that belong in the global set; `load: recall`
   marks the situational ones the model should read on demand.
+- Global `AGENTS.md` assembly for OpenCode and Pi. `setup.sh` now
+  writes a managed block into `~/.config/opencode/AGENTS.md` and
+  `~/.pi/agent/AGENTS.md` containing the always-loaded rules inlined
+  plus a router section listing every recall-tier rule with its
+  trigger and a stable reference path.
+- `~/.agent-guidelines/rules` directory symlink so router pointer
+  paths resolve to the repository's `rules/` no matter where the
+  checkout lives.
 
 ### Changed
 
@@ -27,11 +35,14 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
   skill mirrored into the Claude, Agents, and Codex skill directories.
   Non-global rules and skills remain available per project through
   `project-setup.sh`.
+- `setup.sh` summary now reports context-file activity (created,
+  updated, current, removed, cleared) separately from symlink counters.
 - `project-setup.sh` sources `lib/assemble-rules.sh` instead of
   carrying its own copy of the marker-block code. Assembled CLAUDE.md
   and AGENTS.md output is unchanged because the library strips
   frontmatter on inlining.
-- README managed-paths table now lists only the curated global set and
+- README managed-paths table now lists the curated global set together
+  with the two assembled context files and the rule-store symlink, and
   documents that everything else is opt-in per project.
 
 ## 2026-06-23
