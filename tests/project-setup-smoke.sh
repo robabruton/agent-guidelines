@@ -10,11 +10,13 @@ trap 'rm -rf "$TMP_ROOT"' EXIT
 
 SYMLINK_REPO="${TMP_ROOT}/symlink-repo"
 COPY_REPO="${TMP_ROOT}/copy-repo"
+DRY_REPO="${TMP_ROOT}/dry-repo"
 SYMLINK_FIRST_OUT="${TMP_ROOT}/symlink-first.out"
 SYMLINK_SECOND_OUT="${TMP_ROOT}/symlink-second.out"
 SYMLINK_STATUS_OUT="${TMP_ROOT}/symlink-status.out"
 COPY_OUT="${TMP_ROOT}/copy.out"
 COPY_STATUS_OUT="${TMP_ROOT}/copy-status.out"
+DRY_OUT="${TMP_ROOT}/dry.out"
 
 assert_agent_rules() {
   local file="$1"
@@ -93,5 +95,30 @@ test ! -L "${COPY_REPO}/.agents/skills/firmware-review"
 test -f "${COPY_REPO}/.agents/skills/firmware-review/SKILL.md"
 git -C "$COPY_REPO" ls-files --error-unmatch \
   .agents/skills/firmware-review/SKILL.md >/dev/null
+
+mkdir -p "$DRY_REPO"
+git -C "$DRY_REPO" init --quiet --initial-branch=main
+"${ROOT_DIR}/project-setup.sh" \
+  --profile codebase \
+  --changelog dated \
+  --include-skill explain \
+  --dry-run \
+  "${DRY_REPO}" > "$DRY_OUT"
+
+grep -Fq "Mode: dry-run (no files modified)" "$DRY_OUT"
+grep -Fq "Would create:" "$DRY_OUT"
+grep -Fq "Would update:" "$DRY_OUT"
+
+test ! -e "${DRY_REPO}/.gittemplate"
+test ! -e "${DRY_REPO}/CLAUDE.md"
+test ! -e "${DRY_REPO}/AGENTS.md"
+test ! -e "${DRY_REPO}/.agent-guidelines"
+test ! -e "${DRY_REPO}/.agents/skills/explain"
+test ! -e "${DRY_REPO}/.git/hooks/pre-commit"
+
+git -C "$DRY_REPO" log --oneline 2>/dev/null | grep -q . && {
+  echo "dry-run left a commit behind" >&2
+  exit 1
+}
 
 printf 'project-setup smoke tests passed\n'
