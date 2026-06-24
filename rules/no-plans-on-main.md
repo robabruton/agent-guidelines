@@ -46,18 +46,28 @@ commit body, scan the content for forward-looking or provenance-revealing
 phrasing. If any appears, rewrite to describe the present before
 proceeding.
 
-Treat these four artifacts as separate scans — the merge commit body is
-written later than the branch work and is the one most often missed:
+Treat these five artifacts as separate scans — the merge commit body is
+written later than the branch work and is the one most often missed,
+and the branch name is the one most often overlooked because it is
+chosen before any commit exists:
 
 1. Staged file content (source, docs, comments, config).
 2. Commit messages.
 3. The pull/merge request description.
 4. The merge commit body.
+5. The branch name itself, before `git switch -c` or any equivalent
+   creation command. A branch name lands on the default branch as the
+   merge commit's subject line (`Merge branch '<name>'`), so it is
+   permanent history and must pass the same scan.
 
 Phrases to catch (case-insensitive):
 
 - "will be added", "will land", "will follow", "coming soon", "next
   session", "future work", "roadmap"
+- "followup", "follow-up", "followups", "follow-ups", "next-step",
+  "next-steps", "to-do", "upcoming" (and any other "more work after
+  this" phrasing — these slip into branch names easily because
+  conversational language flows into branch names without scrutiny)
 - "not yet", "does not yet", "until X migrates", "when X needs"
 - "first caller", "first migration", "first concrete" (and similar
   "first <noun>" constructions that imply more is planned)
