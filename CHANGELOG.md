@@ -35,6 +35,13 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
   `when_to_use` SKILL.md frontmatter. Non-global skills are
   discoverable from the same global context file as the rule
   router without being loaded on every conversation.
+- `rules/README.md` catalog with a paragraph per rule grouped
+  by always-tier versus recall-tier, plus a short intro
+  covering frontmatter and tiering. Renders as the directory
+  README when browsing the `rules/` tree. The root `README.md`
+  Rules section replaces its per-rule bullet list with a
+  pointer to the new catalog so the catalog is the single
+  source for "what each rule covers."
 - `setup.sh --prune` removes symlinks in the rule and skill
   harness directories whose resolved targets point into this
   repository's `rules/` or `skills/` tree but are no longer in
