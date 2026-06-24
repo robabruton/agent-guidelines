@@ -25,7 +25,9 @@ standard:
   change
 - **description**: imperative mood, lowercase, no period, target <=50
   characters; a few characters over is acceptable when it improves
-  clarity, but do not treat 72 characters as the normal subject length
+  clarity. The `commit-msg` hook installed by `project-setup.sh`
+  enforces a hard limit of 60 characters on the total subject line
+  and rejects anything over that limit
 - **body**: optional only for very small, self-evident changes. If a
   commit changes behavior, policy, workflow, touches multiple files, or
   would benefit from rationale, include a short body that explains WHAT
