@@ -25,63 +25,34 @@ Without an override, backups are written under
 
 ### Managed Paths
 
+`setup.sh` installs a curated **global** set: the rules marked
+`load: always` in their YAML frontmatter and the skills listed in the
+`GLOBAL_SKILLS` array near the top of `setup.sh`. Everything else stays
+out of the global path and is opted in per project through
+`project-setup.sh`.
+
+The global set today:
+
 | Kind | Managed path | Source |
 | --- | --- | --- |
+| Rule | `$HOME/.claude/rules/agent-conduct.md` | `rules/agent-conduct.md` |
+| Rule | `$HOME/.claude/rules/development-attribution.md` | `rules/development-attribution.md` |
 | Rule | `$HOME/.claude/rules/git-workflow.md` | `rules/git-workflow.md` |
 | Rule | `$HOME/.claude/rules/git-messages.md` | `rules/git-messages.md` |
-| Rule | `$HOME/.claude/rules/development-attribution.md` | `rules/development-attribution.md` |
-| Rule | `$HOME/.claude/rules/configuration.md` | `rules/configuration.md` |
-| Rule | `$HOME/.claude/rules/testing.md` | `rules/testing.md` |
-| Rule | `$HOME/.claude/rules/documentation.md` | `rules/documentation.md` |
-| Rule | `$HOME/.claude/rules/docstrings.md` | `rules/docstrings.md` |
-| Rule | `$HOME/.claude/rules/scripts.md` | `rules/scripts.md` |
-| Rule | `$HOME/.claude/rules/dependencies.md` | `rules/dependencies.md` |
-| Rule | `$HOME/.claude/rules/changelog-common.md` | `rules/changelog-common.md` |
-| Rule | `$HOME/.claude/rules/changelog-date.md` | `rules/changelog-date.md` |
-| Rule | `$HOME/.claude/rules/changelog-version.md` | `rules/changelog-version.md` |
-| Rule | `$HOME/.claude/rules/versioning-semver.md` | `rules/versioning-semver.md` |
-| Rule | `$HOME/.claude/rules/backward-compatibility.md` | `rules/backward-compatibility.md` |
-| Rule | `$HOME/.claude/rules/agent-conduct.md` | `rules/agent-conduct.md` |
 | Rule | `$HOME/.claude/rules/no-plans-on-main.md` | `rules/no-plans-on-main.md` |
-| Rule | `$HOME/.claude/rules/code-quality.md` | `rules/code-quality.md` |
-| Rule | `$HOME/.claude/rules/engineering-judgment.md` | `rules/engineering-judgment.md` |
-| Rule | `$HOME/.claude/rules/environment-hygiene.md` | `rules/environment-hygiene.md` |
-| Skill | `$HOME/.claude/skills/project-setup` | `skills/project-setup` |
-| Skill | `$HOME/.claude/skills/code-review` | `skills/code-review` |
-| Skill | `$HOME/.claude/skills/dependency-audit` | `skills/dependency-audit` |
-| Skill | `$HOME/.claude/skills/docstrings` | `skills/docstrings` |
-| Skill | `$HOME/.claude/skills/docs-audit` | `skills/docs-audit` |
-| Skill | `$HOME/.claude/skills/docs-review` | `skills/docs-review` |
-| Skill | `$HOME/.claude/skills/explain` | `skills/explain` |
-| Skill | `$HOME/.claude/skills/firmware-review` | `skills/firmware-review` |
-| Skill | `$HOME/.claude/skills/script-audit` | `skills/script-audit` |
-| Skill | `$HOME/.claude/skills/security-audit` | `skills/security-audit` |
-| Skill | `$HOME/.claude/skills/test-audit` | `skills/test-audit` |
+| Rule | `$HOME/.claude/rules/merge-requests.md` | `rules/merge-requests.md` |
 | Skill | `$HOME/.claude/skills/agent-memory` | `skills/agent-memory` |
-| Skill | `$HOME/.agents/skills/project-setup` | `skills/project-setup` |
-| Skill | `$HOME/.agents/skills/code-review` | `skills/code-review` |
-| Skill | `$HOME/.agents/skills/dependency-audit` | `skills/dependency-audit` |
-| Skill | `$HOME/.agents/skills/docstrings` | `skills/docstrings` |
-| Skill | `$HOME/.agents/skills/docs-audit` | `skills/docs-audit` |
-| Skill | `$HOME/.agents/skills/docs-review` | `skills/docs-review` |
-| Skill | `$HOME/.agents/skills/explain` | `skills/explain` |
-| Skill | `$HOME/.agents/skills/firmware-review` | `skills/firmware-review` |
-| Skill | `$HOME/.agents/skills/script-audit` | `skills/script-audit` |
-| Skill | `$HOME/.agents/skills/security-audit` | `skills/security-audit` |
-| Skill | `$HOME/.agents/skills/test-audit` | `skills/test-audit` |
+| Skill | `$HOME/.claude/skills/code-review` | `skills/code-review` |
+| Skill | `$HOME/.claude/skills/explain` | `skills/explain` |
+| Skill | `$HOME/.claude/skills/project-setup` | `skills/project-setup` |
 | Skill | `$HOME/.agents/skills/agent-memory` | `skills/agent-memory` |
-| Skill | `$HOME/.codex/skills/project-setup` | `skills/project-setup` |
-| Skill | `$HOME/.codex/skills/code-review` | `skills/code-review` |
-| Skill | `$HOME/.codex/skills/dependency-audit` | `skills/dependency-audit` |
-| Skill | `$HOME/.codex/skills/docstrings` | `skills/docstrings` |
-| Skill | `$HOME/.codex/skills/docs-audit` | `skills/docs-audit` |
-| Skill | `$HOME/.codex/skills/docs-review` | `skills/docs-review` |
-| Skill | `$HOME/.codex/skills/explain` | `skills/explain` |
-| Skill | `$HOME/.codex/skills/firmware-review` | `skills/firmware-review` |
-| Skill | `$HOME/.codex/skills/script-audit` | `skills/script-audit` |
-| Skill | `$HOME/.codex/skills/security-audit` | `skills/security-audit` |
-| Skill | `$HOME/.codex/skills/test-audit` | `skills/test-audit` |
+| Skill | `$HOME/.agents/skills/code-review` | `skills/code-review` |
+| Skill | `$HOME/.agents/skills/explain` | `skills/explain` |
+| Skill | `$HOME/.agents/skills/project-setup` | `skills/project-setup` |
 | Skill | `$HOME/.codex/skills/agent-memory` | `skills/agent-memory` |
+| Skill | `$HOME/.codex/skills/code-review` | `skills/code-review` |
+| Skill | `$HOME/.codex/skills/explain` | `skills/explain` |
+| Skill | `$HOME/.codex/skills/project-setup` | `skills/project-setup` |
 
 Run the smoke tests for the local tool setup command with:
 

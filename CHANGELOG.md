@@ -4,6 +4,36 @@ All notable changes to this project will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## 2026-06-24
+
+### Added
+
+- `lib/assemble-rules.sh` shared library exposing marker constants, a
+  frontmatter stripper, a frontmatter field reader, a rule-block
+  assembler, and a managed-block updater. Reused by `project-setup.sh`
+  and available to other scripts.
+- `when` and `load` YAML frontmatter on every rule file. `load: always`
+  marks the six rules that belong in the global set; `load: recall`
+  marks the situational ones the model should read on demand.
+
+### Changed
+
+- `setup.sh` now installs a curated global set instead of every rule
+  and skill. Rules are derived from `load: always` frontmatter; skills
+  come from a small `GLOBAL_SKILLS` array. The global set today is six
+  rules (`agent-conduct`, `development-attribution`, `git-workflow`,
+  `git-messages`, `no-plans-on-main`, `merge-requests`) and four skills
+  (`agent-memory`, `code-review`, `explain`, `project-setup`), each
+  skill mirrored into the Claude, Agents, and Codex skill directories.
+  Non-global rules and skills remain available per project through
+  `project-setup.sh`.
+- `project-setup.sh` sources `lib/assemble-rules.sh` instead of
+  carrying its own copy of the marker-block code. Assembled CLAUDE.md
+  and AGENTS.md output is unchanged because the library strips
+  frontmatter on inlining.
+- README managed-paths table now lists only the curated global set and
+  documents that everything else is opt-in per project.
+
 ## 2026-06-23
 
 ### Added
