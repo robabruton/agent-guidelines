@@ -94,6 +94,12 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
   extraction, and annotated the router-table `printf` in
   `lib/assemble-rules.sh` with an explicit `shellcheck disable=SC2016`
   comment explaining why the single-quoted format string is correct.
+- Commit-subject hook (`commit-msg-conventional` snippet) now caps
+  the total subject line at 60 characters and rejects anything over
+  that. The 50-character target stays as the soft goal — subjects
+  51-60 chars trigger the existing warning but are accepted. The
+  rule wording in `git-messages.md` records the relationship: target
+  50, hard limit 60 enforced by the hook.
 
 ## 2026-06-23
 
