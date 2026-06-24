@@ -75,6 +75,11 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ### Changed
 
+- `git-messages.md` requires a subject-only commit message for
+  renames, file moves, typo fixes, comment corrections, and
+  narrowly scoped mechanical edits. A body for these almost
+  always over-explains the change and should be deleted before
+  committing.
 - Skill catalog moved from `SKILLS.md` at the repository root to
   `skills/README.md` so it renders as the directory README when
   browsing the `skills/` tree. The root `README.md` pointer updates

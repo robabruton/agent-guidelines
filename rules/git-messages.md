@@ -38,15 +38,17 @@ standard:
 
 ## Commit Message Bodies
 
-- A one-line summary-only commit message is acceptable for simple
-  changes that are obvious from the diff, such as a typo fix, a comment
-  correction, or a narrowly scoped mechanical edit
+- For a rename, a file move, a typo fix, a comment correction, or a
+  narrowly scoped mechanical edit, write the subject only. The diff
+  is the explanation; a body almost always over-explains these
+  changes. If you find yourself writing one, the body is wrong-scoped
+  and should be deleted before committing.
 - Include a commit body for anything with non-obvious intent, policy
   changes, workflow changes, cross-file edits, or user-visible behavior
   changes
-- When in doubt, include a short body; two or three lines of useful
-  rationale is better than a subject line that leaves future readers
-  guessing
+- When in doubt for the cases above, include a short body; two or
+  three lines of useful rationale is better than a subject line that
+  leaves future readers guessing
 - Write multiline commit messages with `git commit -F <message-file>` so
   wrapped body lines stay in the intended paragraphs; do not use
   repeated `-m` flags for body paragraphs
