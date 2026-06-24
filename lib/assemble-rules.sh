@@ -10,6 +10,12 @@
 #   agent_guidelines_strip_frontmatter <file>
 #       Print the file's content with any leading YAML frontmatter
 #       removed.
+#   agent_guidelines_format_rule_body <file>
+#       Print the file's body (frontmatter stripped) with every ATX
+#       heading at level 1-5 demoted by one level, so a rule's H1
+#       title becomes an H2 section in the assembled document. H6
+#       headings are left at H6 (the markdown maximum). Hash
+#       characters inside fenced code blocks are not touched.
 #   agent_guidelines_read_frontmatter_field <file> <field>
 #       Print the value of the named field from the file's leading YAML
 #       frontmatter, or empty if the field or frontmatter is absent.
@@ -52,6 +58,18 @@ agent_guidelines_strip_frontmatter() {
   ' "$file"
 }
 
+agent_guidelines_format_rule_body() {
+  local file="$1"
+
+  agent_guidelines_strip_frontmatter "$file" |
+    awk '
+      BEGIN { in_code = 0 }
+      /^```/ { in_code = !in_code; print; next }
+      !in_code && /^#{1,5} / { print "#" $0; next }
+      { print }
+    '
+}
+
 agent_guidelines_read_frontmatter_field() {
   local file="$1"
   local field="$2"
@@ -86,8 +104,8 @@ agent_guidelines_assemble_block() {
       [ -n "$rule" ] || continue
       local path="$rules_dir/$rule.md"
       if [ -f "$path" ]; then
-        agent_guidelines_strip_frontmatter "$path"
-        printf '\n\n'
+        agent_guidelines_format_rule_body "$path"
+        printf '\n'
       else
         printf 'missing-rule: %s\n' "$rule" >&2
       fi
