@@ -97,6 +97,9 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
   the "developed" verb in both prepositional and footer forms.
   The hook also runs its file-scan loop in the main shell so
   its rejection propagates to the hook exit code.
+- `project-setup.sh` summary reports the skill source mode
+  alongside the rule source mode so both modes are visible
+  without having to inspect arguments or environment.
 - Skill catalog moved from `SKILLS.md` at the repository root to
   `skills/README.md` so it renders as the directory README when
   browsing the `skills/` tree. The root `README.md` pointer updates
@@ -145,6 +148,14 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
   headings, emphasis, and the autolinked source URL instead of as
   plain text. README link updated. License detection on the sidebar
   widget is unaffected (works for either filename).
+
+### Fixed
+
+- `project-setup.sh` creates the initial commit when the target
+  is an existing git repository that has no commits, rather than
+  skipping because the repository was not initialized by the
+  current run. The dry-run preview shows the planned initial
+  commit in this case too.
 
 ## 2026-06-23
 
