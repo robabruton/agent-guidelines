@@ -1,0 +1,79 @@
+name: smoke
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  smoke:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out the repository
+        uses: actions/checkout@v4
+
+      - name: Install shellcheck
+        run: sudo apt-get update && sudo apt-get install -y shellcheck
+
+      - name: Lint shell scripts (warning level and above)
+        run: |
+          shellcheck -S warning \
+            setup.sh \
+            project-setup.sh \
+            lib/assemble-rules.sh \
+            tests/setup-smoke.sh \
+            tests/project-setup-smoke.sh \
+            skills/agent-memory/scripts/agent-memory-report.sh
+
+      - name: Validate rule frontmatter
+        run: |
+          fail=0
+          for f in rules/*.md; do
+            if [ "$(head -1 "$f")" != "---" ]; then
+              echo "missing frontmatter delimiter: $f"
+              fail=1
+            fi
+            if ! head -10 "$f" | grep -Eq '^when:[[:space:]]+.+'; then
+              echo "missing or empty when field: $f"
+              fail=1
+            fi
+            if ! head -10 "$f" | grep -Eq '^load:[[:space:]]+(always|recall)$'; then
+              echo "missing or invalid load field: $f"
+              fail=1
+            fi
+          done
+          test "$fail" -eq 0
+
+      - name: Verify rule and skill names referenced by scripts exist
+        run: |
+          eval "$(sed -n '/^MINIMAL_RULES=(/,/^)/p;
+                         /^CODEBASE_EXTRA_RULES=(/,/^)/p;
+                         /^RELEASED_EXTRA_RULES=(/,/^)/p;
+                         /^CANONICAL_RULE_ORDER=(/,/^)/p' project-setup.sh)"
+          eval "$(sed -n '/^GLOBAL_SKILLS=(/,/^)/p' setup.sh)"
+          fail=0
+          for name in "${MINIMAL_RULES[@]}" "${CODEBASE_EXTRA_RULES[@]}" \
+                     "${RELEASED_EXTRA_RULES[@]}" "${CANONICAL_RULE_ORDER[@]}"; do
+            if [ ! -f "rules/${name}.md" ]; then
+              echo "rule referenced by project-setup.sh but missing: ${name}"
+              fail=1
+            fi
+          done
+          for name in "${GLOBAL_SKILLS[@]}"; do
+            if [ ! -d "skills/${name}" ]; then
+              echo "skill referenced by setup.sh but missing: ${name}"
+              fail=1
+            fi
+          done
+          test "$fail" -eq 0
+
+      - name: Configure git identity (required by project-setup.sh)
+        run: |
+          git config --global user.name "CI"
+          git config --global user.email "ci@example.invalid"
+
+      - name: Run setup-smoke
+        run: bash tests/setup-smoke.sh
+
+      - name: Run project-setup-smoke
+        run: bash tests/project-setup-smoke.sh
