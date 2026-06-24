@@ -100,6 +100,11 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 - `project-setup.sh` summary reports the skill source mode
   alongside the rule source mode so both modes are visible
   without having to inspect arguments or environment.
+- `project-setup.sh` summary lists the final selected rules
+  (in canonical order, counted) and the final selected skills
+  (after include/exclude) so the rules and skills that get
+  inlined into the assembled `CLAUDE.md` and `AGENTS.md` are
+  visible without opening the generated files.
 - Skill catalog moved from `SKILLS.md` at the repository root to
   `skills/README.md` so it renders as the directory README when
   browsing the `skills/` tree. The root `README.md` pointer updates
