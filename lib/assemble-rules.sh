@@ -30,6 +30,13 @@
 #       Print a markdown table to stdout listing each rule's "when"
 #       trigger and a stable reference path (stable_path/<rule>.md) so a
 #       model can read the rule on demand.
+#   agent_guidelines_build_skill_router_table <skills_dir> <skill>...
+#       Print a markdown table to stdout listing each skill's
+#       "when_to_use" trigger. Skills are invoked by name, so no path
+#       column is emitted. Reads SKILL.md frontmatter from
+#       skills_dir/<skill>/SKILL.md. A leading "Use when " prefix on
+#       the value is stripped so the cell completes the column header
+#       without doubling.
 
 AGENT_GUIDELINES_MARKER_BEGIN="<!-- BEGIN agent-guidelines project rules -->"
 AGENT_GUIDELINES_MARKER_END="<!-- END agent-guidelines project rules -->"
@@ -191,5 +198,23 @@ agent_guidelines_build_router_table() {
     # shell expansion of the format string itself.
     printf '| %s | %s | `%s/%s.md` |\n' \
       "$rule" "$when" "$stable_path" "$rule"
+  done
+}
+
+agent_guidelines_build_skill_router_table() {
+  local skills_dir="$1"
+  shift
+
+  printf '| Skill | Use when |\n'
+  printf '| --- | --- |\n'
+  local skill
+  for skill in "$@"; do
+    [ -n "$skill" ] || continue
+    local file="$skills_dir/$skill/SKILL.md"
+    [ -f "$file" ] || continue
+    local when_to_use
+    when_to_use="$(agent_guidelines_read_frontmatter_field "$file" when_to_use)"
+    when_to_use="${when_to_use#Use when }"
+    printf '| %s | %s |\n' "$skill" "$when_to_use"
   done
 }
