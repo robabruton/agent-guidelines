@@ -950,7 +950,8 @@ print_summary() {
   printf 'Profile: %s\n' "$PROFILE"
   printf 'Changelog mode: %s\n' "$CHANGELOG_MODE"
   printf 'Versioning mode: %s\n' "$(versioning_mode)"
-  printf 'Rule source mode: %s\n\n' "$RULE_SOURCE_MODE"
+  printf 'Rule source mode: %s\n' "$RULE_SOURCE_MODE"
+  printf 'Skill source mode: %s\n\n' "$SKILL_SOURCE_MODE"
 
   local created_label="Created:"
   local updated_label="Updated:"
