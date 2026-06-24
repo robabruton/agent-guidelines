@@ -75,6 +75,10 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ### Changed
 
+- Skill catalog moved from `SKILLS.md` at the repository root to
+  `skills/README.md` so it renders as the directory README when
+  browsing the `skills/` tree. The root `README.md` pointer updates
+  to the new path; the catalog content moves unchanged.
 - `setup.sh` now installs a curated global set instead of every rule
   and skill. Rules are derived from `load: always` frontmatter; skills
   come from a small `GLOBAL_SKILLS` array. The global set today is six
