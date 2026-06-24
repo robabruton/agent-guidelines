@@ -1,12 +1,18 @@
 # BEGIN agent-guidelines staged attribution guard
-git diff --cached --name-only --diff-filter=ACMR | while IFS= read -r staged_file; do
+# Catches three shapes of AI-tool authorship in staged content:
+#   - Footer/trailer (specific colon-suffixed trailer keys)
+#   - Prepositional (a contribution verb followed by by/with/using
+#     and an AI subject)
+#   - Adjective (an AI subject prefixing a contribution verb as a
+#     hyphenated modifier)
+while IFS= read -r staged_file; do
   if [ ! -f "$staged_file" ]; then
     continue
   fi
 
-  if git diff --cached -- "$staged_file" | grep -Ei '^\+.*((co-)?authored-by:|generated-by:|written-by:|reviewed-by:|planned-by:|(generated|written|reviewed|planned|implemented|authored|co-authored) (by|with|using) .*(ai|llm|assistant|agent|bot|automation|code assistant|coding agent|coding tool))' >/dev/null; then
+  if git diff --cached -- "$staged_file" | grep -Ei '^\+.*((co-)?authored-by:|generated-by:|written-by:|reviewed-by:|planned-by:|developed-by:|(generated|written|reviewed|planned|implemented|authored|co-authored|developed) (by|with|using) .*(ai|llm|assistant|agent|bot|automation|code assistant|coding agent|coding tool)|(ai|llm)-(generated|written|authored|reviewed|planned|implemented|coded|assisted|developed))' >/dev/null; then
     echo "Development-tool attribution found in staged content: $staged_file" >&2
     exit 1
   fi
-done
+done < <(git diff --cached --name-only --diff-filter=ACMR)
 # END agent-guidelines staged attribution guard

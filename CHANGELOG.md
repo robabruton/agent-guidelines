@@ -91,6 +91,12 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
   `README.md` by basename so a directory-level catalog file
   under `rules/` is not subject to the per-file delimiter,
   `when:`, and `load:` assertions that apply to rule files.
+- `pre-commit-attribution` hook catches additional AI-tool
+  attribution shapes: the adjective form (an AI subject
+  prefixing a contribution verb as a hyphenated modifier) and
+  the "developed" verb in both prepositional and footer forms.
+  The hook also runs its file-scan loop in the main shell so
+  its rejection propagates to the hook exit code.
 - Skill catalog moved from `SKILLS.md` at the repository root to
   `skills/README.md` so it renders as the directory README when
   browsing the `skills/` tree. The root `README.md` pointer updates
