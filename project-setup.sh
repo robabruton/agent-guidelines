@@ -669,6 +669,15 @@ skill_excluded() {
   return 1
 }
 
+selected_skills_filtered() {
+  local skill
+  for skill in "${INCLUDE_SKILLS[@]}"; do
+    if ! skill_excluded "$skill"; then
+      printf '%s\n' "$skill"
+    fi
+  done
+}
+
 install_project_skill_symlink() {
   local skill="$1"
   local target="$2"
@@ -963,6 +972,21 @@ print_summary() {
   printf 'Versioning mode: %s\n' "$(versioning_mode)"
   printf 'Rule source mode: %s\n' "$RULE_SOURCE_MODE"
   printf 'Skill source mode: %s\n\n' "$SKILL_SOURCE_MODE"
+
+  local included_rules=()
+  local r
+  while IFS= read -r r; do
+    [ -n "$r" ] && included_rules+=("$r")
+  done < <(selected_rules_ordered)
+
+  local included_skills=()
+  local s
+  while IFS= read -r s; do
+    [ -n "$s" ] && included_skills+=("$s")
+  done < <(selected_skills_filtered)
+
+  print_list "Rules included (${#included_rules[@]}):" "${included_rules[@]}"
+  print_list "Skills included (${#included_skills[@]}):" "${included_skills[@]}"
 
   local created_label="Created:"
   local updated_label="Updated:"
