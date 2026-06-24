@@ -59,6 +59,7 @@ SKIPPED=0
 WARNINGS=0
 MISSING=0
 CONFLICTS=0
+PRUNED=0
 CONTEXT_CREATED=0
 CONTEXT_UPDATED=0
 CONTEXT_UNCHANGED=0
@@ -105,7 +106,11 @@ Options:
   --install       Create or repair managed tool links (default)
   --remove        Remove managed links that point into this repository
   --status        Report link state without changing files
-  --dry-run       Preview install or remove actions without changing files
+  --prune         Remove symlinks in managed directories that point into
+                  this repository but are no longer in the managed set;
+                  symlinks pointing elsewhere are left untouched
+  --dry-run       Preview install, remove, or prune actions without
+                  changing files
   --force         Back up conflicting files before replacing them
   --backup-path   Path for forced replacement backups
   --no-color      Disable colored output
@@ -117,6 +122,8 @@ Examples:
   ./setup.sh --install
   ./setup.sh --force --backup-path /tmp/agent-guidelines-backups
   ./setup.sh --remove --dry-run
+  ./setup.sh --prune --dry-run
+  ./setup.sh --prune
 EOF
 }
 
@@ -186,6 +193,10 @@ parse_args() {
         ;;
       --status)
         ACTION="status"
+        shift
+        ;;
+      --prune)
+        ACTION="prune"
         shift
         ;;
       --dry-run)
@@ -617,6 +628,70 @@ status_context() {
   done
 }
 
+# Walks the rule and skill harness directories looking for symlinks
+# whose resolved targets point into this repository's rules/ or skills/
+# tree. Classifies each such symlink three ways:
+#   managed - link path appears in today's LINKS array; left alone
+#   orphan  - target inside repo but link path not in LINKS; removed
+#   foreign - target resolves outside this repo; left strictly alone
+# The foreign bucket is the safety rail that prevents a user's own
+# symlink in a managed directory from ever being touched.
+prune_orphans() {
+  section "Orphan Links"
+
+  local managed_paths=()
+  local link_entry rest link_path
+  for link_entry in "${LINKS[@]}"; do
+    rest="${link_entry#*|}"
+    link_path="${rest%%|*}"
+    managed_paths+=("$link_path")
+  done
+
+  local rules_real skills_real
+  rules_real="$(real_path "$RULES_DIR")"
+  skills_real="$(real_path "$SKILLS_DIR")"
+
+  local scan_dirs=("${HOME}/.claude/rules")
+  local harness
+  for harness in "${SKILL_HARNESSES[@]}"; do
+    scan_dirs+=("$harness")
+  done
+
+  local scan_dir target matched m
+  for scan_dir in "${scan_dirs[@]}"; do
+    [ -d "$scan_dir" ] || continue
+    while IFS= read -r -d '' link_path; do
+      target="$(link_target "$link_path")"
+
+      case "$target" in
+        "$rules_real"/*|"$skills_real"/*) ;;
+        *) continue ;;
+      esac
+
+      matched=false
+      for m in "${managed_paths[@]}"; do
+        if [ "$m" = "$link_path" ]; then
+          matched=true
+          break
+        fi
+      done
+      [ "$matched" = true ] && continue
+
+      if [ "$DRY_RUN" = true ]; then
+        entry "$CYAN" "?" "would prune" "$link_path" "-> $target"
+      else
+        rm "$link_path"
+        entry "$RED" "-" "pruned" "$link_path" "-> $target"
+      fi
+      PRUNED=$((PRUNED + 1))
+    done < <(find "$scan_dir" -maxdepth 1 -type l -print0 2>/dev/null)
+  done
+
+  if [ "$PRUNED" -eq 0 ]; then
+    entry "$DIM" "·" "none" "managed dirs" "no orphan links found"
+  fi
+}
+
 print_summary() {
   section "Summary"
   summary_entry() {
@@ -653,6 +728,10 @@ print_summary() {
       summary_entry "context cleared:" "$CONTEXT_CLEARED"
       summary_entry "skipped:" "$SKIPPED"
       ;;
+    prune)
+      summary_entry "dry run:" "$DRY_RUN"
+      summary_entry "pruned:" "$PRUNED"
+      ;;
   esac
 
   printf '\n'
@@ -663,11 +742,11 @@ main() {
   setup_colors
   build_links
   validate_sources
-  process_links
   case "$ACTION" in
-    install) install_context ;;
-    remove)  remove_context ;;
-    status)  status_context ;;
+    install) process_links; install_context ;;
+    remove)  process_links; remove_context ;;
+    status)  process_links; status_context ;;
+    prune)   prune_orphans ;;
   esac
   print_summary
 }
