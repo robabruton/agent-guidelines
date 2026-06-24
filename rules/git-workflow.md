@@ -1,3 +1,7 @@
+---
+when: always
+load: always
+---
 # Git Workflow Rules
 
 ## How Work Builds Up

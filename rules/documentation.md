@@ -1,3 +1,7 @@
+---
+when: writing or updating user-facing documentation, READMEs, guides, or example commands
+load: recall
+---
 # Documentation Rules
 
 Documentation must describe the project as it actually works. Do not

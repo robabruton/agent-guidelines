@@ -1,3 +1,7 @@
+---
+when: maintaining a versioned CHANGELOG.md, including the Unreleased to release cut
+load: recall
+---
 # Versioned Changelog Rules
 
 Use versioned changelog sections for projects that publish releases,

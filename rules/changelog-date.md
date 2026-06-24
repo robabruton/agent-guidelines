@@ -1,3 +1,7 @@
+---
+when: maintaining a date-based CHANGELOG.md for an unversioned project
+load: recall
+---
 # Date-Based Changelog Rules
 
 Use date-based changelog sections for projects that do not publish

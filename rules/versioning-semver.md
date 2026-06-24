@@ -1,3 +1,7 @@
+---
+when: tagging releases, deciding a version bump, or shipping versioned artifacts
+load: recall
+---
 # Semantic Versioning Rules
 
 Use Semantic Versioning (`MAJOR.MINOR.PATCH`) for projects that have

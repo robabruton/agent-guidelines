@@ -1,3 +1,7 @@
+---
+when: writing tests, modifying existing tests, or verifying a branch before merge or push
+load: recall
+---
 # Testing Rules
 
 Verify every branch before it is merged. The amount of testing should

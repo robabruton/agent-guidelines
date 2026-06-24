@@ -1,3 +1,7 @@
+---
+when: always
+load: always
+---
 # Development Attribution Rules
 
 - Do not include `Co-Authored-By` lines referencing AI tools, code

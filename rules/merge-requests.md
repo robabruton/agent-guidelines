@@ -1,3 +1,7 @@
+---
+when: always
+load: always
+---
 # Pull / Merge Request Rules
 
 A pull or merge request description is the permanent public record of a

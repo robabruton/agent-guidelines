@@ -1,3 +1,7 @@
+---
+when: creating, editing, or grouping entries in a CHANGELOG.md
+load: recall
+---
 # Changelog Common Rules
 
 Maintain a `CHANGELOG.md` in the repository root using the
