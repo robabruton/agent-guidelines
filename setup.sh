@@ -34,6 +34,21 @@ FORCE=false
 COLOR_MODE="auto"
 BACKUP_PATH="${HOME}/.agent-guidelines/backups/$(date +%Y%m%d-%H%M%S)"
 
+# Stable on-disk path that recall-tier rule references in the global
+# AGENTS.md router resolve to. Created as a directory symlink so all
+# rule files are reachable from a single fixed path no matter where this
+# repository is checked out.
+RULE_STORE_PATH="${HOME}/.agent-guidelines/rules"
+
+# Global context files that receive an inlined copy of the always-loaded
+# rules plus a router section listing the recall-tier rules. Each entry
+# is "path|label" where label is shown in the install/remove summary.
+# Both OpenCode and Pi read AGENTS.md from these paths.
+CONTEXT_TARGETS=(
+  "${HOME}/.config/opencode/AGENTS.md|OpenCode global AGENTS.md"
+  "${HOME}/.pi/agent/AGENTS.md|Pi global AGENTS.md"
+)
+
 CREATED=0
 CURRENT=0
 REMOVED=0
@@ -42,6 +57,13 @@ SKIPPED=0
 WARNINGS=0
 MISSING=0
 CONFLICTS=0
+CONTEXT_CREATED=0
+CONTEXT_UPDATED=0
+CONTEXT_UNCHANGED=0
+CONTEXT_REMOVED=0
+CONTEXT_CLEARED=0
+CONTEXT_ABSENT=0
+CONTEXT_MISSING=0
 
 LINKS=()
 
@@ -50,6 +72,8 @@ LINKS=()
 # for every harness directory in SKILL_HARNESSES.
 build_links() {
   LINKS=()
+
+  LINKS+=("store|${RULE_STORE_PATH}|${RULES_DIR}")
 
   local file
   for file in "${RULES_DIR}"/*.md; do
@@ -405,6 +429,7 @@ process_links() {
       case "$kind" in
         rule) section "Rules" ;;
         skill) section "Skills" ;;
+        store) section "Stores" ;;
       esac
     fi
 
@@ -413,6 +438,154 @@ process_links() {
       remove) remove_link "$kind" "$link_path" "$source" ;;
       status) status_link "$kind" "$link_path" "$source" ;;
     esac
+  done
+}
+
+assemble_context_block() {
+  local block_file="$1"
+  local always_rules=()
+  local recall_rules=()
+  local file load name
+
+  for file in "${RULES_DIR}"/*.md; do
+    [ -f "$file" ] || continue
+    load="$(agent_guidelines_read_frontmatter_field "$file" load)"
+    name="$(basename "$file" .md)"
+    case "$load" in
+      always) always_rules+=("$name") ;;
+      recall) recall_rules+=("$name") ;;
+    esac
+  done
+
+  {
+    printf '%s\n\n' "$AGENT_GUIDELINES_MARKER_BEGIN"
+
+    local r
+    for r in "${always_rules[@]}"; do
+      agent_guidelines_strip_frontmatter "${RULES_DIR}/${r}.md"
+      printf '\n\n'
+    done
+
+    if [ "${#recall_rules[@]}" -gt 0 ]; then
+      printf '## Situational Rules — Read When Triggered\n\n'
+      printf 'These rules describe expectations that only apply to specific\n'
+      printf 'kinds of work. When the trigger matches the current task, read\n'
+      printf 'the file before acting on that work.\n\n'
+
+      agent_guidelines_build_router_table \
+        "${RULES_DIR}" "${RULE_STORE_PATH}" "${recall_rules[@]}"
+      printf '\n'
+    fi
+
+    printf '%s\n' "$AGENT_GUIDELINES_MARKER_END"
+  } > "$block_file"
+}
+
+install_context() {
+  local block_file
+  block_file="$(mktemp)"
+  assemble_context_block "$block_file"
+
+  section "Context Files"
+  local item path label
+  for item in "${CONTEXT_TARGETS[@]}"; do
+    path="${item%%|*}"
+    label="${item##*|}"
+
+    if [ "$DRY_RUN" = true ]; then
+      if [ -e "$path" ] &&
+        grep -Fxq "$AGENT_GUIDELINES_MARKER_BEGIN" "$path" 2>/dev/null; then
+        entry "$CYAN" "?" "would update" "$path" "$label"
+        CONTEXT_UPDATED=$((CONTEXT_UPDATED + 1))
+      elif [ -e "$path" ]; then
+        entry "$CYAN" "?" "would append" "$path" "$label"
+        CONTEXT_UPDATED=$((CONTEXT_UPDATED + 1))
+      else
+        entry "$CYAN" "?" "would create" "$path" "$label"
+        CONTEXT_CREATED=$((CONTEXT_CREATED + 1))
+      fi
+      continue
+    fi
+
+    mkdir -p "$(dirname "$path")"
+    local result
+    result="$(agent_guidelines_update_managed_block "$path" "$block_file")"
+    case "$result" in
+      created)
+        entry "$GREEN" "+" "created" "$path" "$label"
+        CONTEXT_CREATED=$((CONTEXT_CREATED + 1))
+        ;;
+      updated)
+        entry "$GREEN" "↻" "updated" "$path" "$label"
+        CONTEXT_UPDATED=$((CONTEXT_UPDATED + 1))
+        ;;
+      unchanged)
+        entry "$GREEN" "✓" "current" "$path" "$label"
+        CONTEXT_UNCHANGED=$((CONTEXT_UNCHANGED + 1))
+        ;;
+    esac
+  done
+
+  rm -f "$block_file"
+}
+
+remove_context() {
+  section "Context Files"
+  local item path label
+  for item in "${CONTEXT_TARGETS[@]}"; do
+    path="${item%%|*}"
+    label="${item##*|}"
+
+    if [ "$DRY_RUN" = true ]; then
+      if [ -e "$path" ] &&
+        grep -Fxq "$AGENT_GUIDELINES_MARKER_BEGIN" "$path" 2>/dev/null; then
+        entry "$CYAN" "?" "would clear" "$path" "$label"
+        CONTEXT_REMOVED=$((CONTEXT_REMOVED + 1))
+      else
+        entry "$DIM" "·" "skipped" "$path" "$label not managed"
+        CONTEXT_ABSENT=$((CONTEXT_ABSENT + 1))
+      fi
+      continue
+    fi
+
+    local result
+    result="$(agent_guidelines_remove_managed_block "$path")"
+    case "$result" in
+      removed)
+        entry "$RED" "-" "removed" "$path" "$label"
+        CONTEXT_REMOVED=$((CONTEXT_REMOVED + 1))
+        ;;
+      cleared)
+        entry "$RED" "↳" "cleared" "$path" "$label kept content outside markers"
+        CONTEXT_CLEARED=$((CONTEXT_CLEARED + 1))
+        ;;
+      absent)
+        entry "$DIM" "·" "absent" "$path" "$label has no managed block"
+        CONTEXT_ABSENT=$((CONTEXT_ABSENT + 1))
+        ;;
+      missing)
+        entry "$DIM" "·" "missing" "$path" "$label not present"
+        CONTEXT_MISSING=$((CONTEXT_MISSING + 1))
+        ;;
+    esac
+  done
+}
+
+status_context() {
+  section "Context Files"
+  local item path label
+  for item in "${CONTEXT_TARGETS[@]}"; do
+    path="${item%%|*}"
+    label="${item##*|}"
+
+    if [ -e "$path" ] &&
+      grep -Fxq "$AGENT_GUIDELINES_MARKER_BEGIN" "$path" 2>/dev/null; then
+      entry "$GREEN" "✓" "managed" "$path" "$label"
+      CONTEXT_UNCHANGED=$((CONTEXT_UNCHANGED + 1))
+    else
+      entry "$DIM" "·" "missing" "$path" "$label not yet assembled"
+      CONTEXT_MISSING=$((CONTEXT_MISSING + 1))
+    fi
   done
 }
 
@@ -429,6 +602,8 @@ print_summary() {
       summary_entry "current:" "$CURRENT"
       summary_entry "missing:" "$MISSING"
       summary_entry "conflicts:" "$CONFLICTS"
+      summary_entry "context managed:" "$CONTEXT_UNCHANGED"
+      summary_entry "context missing:" "$CONTEXT_MISSING"
       ;;
     install)
       summary_entry "dry run:" "$DRY_RUN"
@@ -436,6 +611,9 @@ print_summary() {
       summary_entry "backup path:" "$BACKUP_PATH"
       summary_entry "created:" "$CREATED"
       summary_entry "current:" "$CURRENT"
+      summary_entry "context created:" "$CONTEXT_CREATED"
+      summary_entry "context updated:" "$CONTEXT_UPDATED"
+      summary_entry "context current:" "$CONTEXT_UNCHANGED"
       summary_entry "backups:" "$BACKED_UP"
       summary_entry "skipped:" "$SKIPPED"
       summary_entry "warnings:" "$WARNINGS"
@@ -443,6 +621,8 @@ print_summary() {
     remove)
       summary_entry "dry run:" "$DRY_RUN"
       summary_entry "removed:" "$REMOVED"
+      summary_entry "context removed:" "$CONTEXT_REMOVED"
+      summary_entry "context cleared:" "$CONTEXT_CLEARED"
       summary_entry "skipped:" "$SKIPPED"
       ;;
   esac
@@ -456,6 +636,11 @@ main() {
   build_links
   validate_sources
   process_links
+  case "$ACTION" in
+    install) install_context ;;
+    remove)  remove_context ;;
+    status)  status_context ;;
+  esac
   print_summary
 }
 
