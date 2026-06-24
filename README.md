@@ -168,3 +168,10 @@ Run the smoke tests for the target-repository setup command with:
 ```bash
 tests/project-setup-smoke.sh
 ```
+
+## License
+
+This repository is published under the
+[PolyForm Noncommercial License 1.0.0](LICENSE). Noncommercial use
+is freely permitted; commercial use requires a separate agreement
+with the copyright holder.
