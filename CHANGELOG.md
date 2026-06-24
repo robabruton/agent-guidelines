@@ -161,6 +161,14 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
   skipping because the repository was not initialized by the
   current run. The dry-run preview shows the planned initial
   commit in this case too.
+- Assembled `CLAUDE.md`, `AGENTS.md`, and the global context
+  files render as proper markdown documents: every rule's H1
+  title is demoted to H2 (with deeper headings shifted in step,
+  capped at H6) so the assembled file has hierarchical
+  structure instead of eleven sibling H1s, and the separator
+  between rules is a single blank line instead of two.
+  Hash characters inside fenced code blocks are left
+  untouched.
 
 ## 2026-06-23
 
