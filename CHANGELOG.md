@@ -27,6 +27,13 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
   discovers them by walking up from cwd. Symlink mode adds
   `.agents/skills/` to the project's local git exclude so the links
   stay out of source control; copy mode tracks the copied skill tree.
+- `--dry-run` flag on `project-setup.sh` that previews every action
+  (created, updated, unchanged, skipped, warnings) without writing
+  files, creating symlinks, configuring git, installing hooks, or
+  making commits. Flags whether the managed context block would be
+  created, replace an existing block, or append at the end because no
+  marker pair was found. Smoke test exercises the full preview flow
+  and asserts no state is left behind.
 - `~/.agent-guidelines/rules` directory symlink so router pointer
   paths resolve to the repository's `rules/` no matter where the
   checkout lives.

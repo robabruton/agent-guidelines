@@ -16,6 +16,7 @@ CHANGELOG_MODE="auto"
 RULE_SOURCE_MODE="symlink"
 SKILL_SOURCE_MODE=""
 TARGET_DIR="."
+DRY_RUN=false
 INCLUDE_RULES=()
 EXCLUDE_RULES=()
 INCLUDE_SKILLS=()
@@ -92,7 +93,15 @@ Options:
   --exclude-rule <id>            (repeatable)
   --include-skill <id>           (repeatable)
   --exclude-skill <id>           (repeatable)
+  --dry-run                      preview actions without modifying anything
   -h, --help
+
+Dry-run notes:
+  Previews structural changes (created vs updated vs unchanged) without
+  writing files, creating symlinks, configuring git, installing hooks,
+  or making commits. Most accurate when the target directory already
+  contains a git repository; on a fresh non-git directory the preview
+  reports the repo init step and skips git-dependent previews.
 
 Examples:
   ./project-setup.sh .
@@ -114,6 +123,14 @@ add_status() {
     skipped) SKIPPED+=("$message") ;;
     warning) WARNINGS+=("$message") ;;
   esac
+}
+
+should_mutate() {
+  [ "$DRY_RUN" != true ]
+}
+
+target_has_git_repo() {
+  git -C "$TARGET_DIR" rev-parse --is-inside-work-tree >/dev/null 2>&1
 }
 
 die() {
@@ -164,6 +181,10 @@ parse_args() {
         EXCLUDE_SKILLS+=("$2")
         shift 2
         ;;
+      --dry-run)
+        DRY_RUN=true
+        shift
+        ;;
       -h|--help)
         usage
         exit 0
@@ -196,7 +217,11 @@ parse_args() {
 }
 
 resolve_target() {
-  mkdir -p "$TARGET_DIR"
+  if should_mutate; then
+    mkdir -p "$TARGET_DIR"
+  elif [ ! -d "$TARGET_DIR" ]; then
+    die "--dry-run target directory does not exist: $TARGET_DIR"
+  fi
   TARGET_DIR="$(cd "$TARGET_DIR" && pwd -P)"
 }
 
@@ -221,14 +246,17 @@ EOF
 }
 
 init_git_if_needed() {
-  if git -C "$TARGET_DIR" rev-parse --is-inside-work-tree >/dev/null 2>&1; then
+  if target_has_git_repo; then
     add_status unchanged "git repository already exists"
     REPO_CREATED=false
-  else
-    git -C "$TARGET_DIR" init --initial-branch=main >/dev/null
-    add_status created "git repository"
-    REPO_CREATED=true
+    return
   fi
+
+  if should_mutate; then
+    git -C "$TARGET_DIR" init --initial-branch=main >/dev/null
+  fi
+  add_status created "git repository"
+  REPO_CREATED=true
 }
 
 infer_profile() {
@@ -290,8 +318,10 @@ write_file_if_missing() {
     return
   fi
 
-  mkdir -p "$(dirname "$path")"
-  cp "$source" "$path"
+  if should_mutate; then
+    mkdir -p "$(dirname "$path")"
+    cp "$source" "$path"
+  fi
   add_status created "$label"
 }
 
@@ -303,20 +333,29 @@ write_readme_if_missing() {
     return
   fi
 
-  {
-    printf '# %s\n\n' "$(basename "$TARGET_DIR")"
-  } > "$path"
+  if should_mutate; then
+    {
+      printf '# %s\n\n' "$(basename "$TARGET_DIR")"
+    } > "$path"
+  fi
   add_status created "README.md"
 }
 
 configure_commit_template() {
+  if ! target_has_git_repo; then
+    add_status skipped "git commit.template (target has no git repo)"
+    return
+  fi
+
   local current
   current="$(git -C "$TARGET_DIR" config --local --get commit.template || true)"
 
   if [ "$current" = ".gittemplate" ]; then
     add_status unchanged "git commit.template"
   else
-    git -C "$TARGET_DIR" config --local commit.template .gittemplate
+    if should_mutate; then
+      git -C "$TARGET_DIR" config --local commit.template .gittemplate
+    fi
     add_status updated "git commit.template"
   fi
 }
@@ -335,19 +374,29 @@ append_missing_line() {
   local line="$2"
   local label="$3"
 
-  touch "$file"
-  if grep -Fxq "$line" "$file"; then
+  if [ -e "$file" ] && grep -Fxq "$line" "$file"; then
     add_status unchanged "$label"
-  else
-    printf '%s\n' "$line" >> "$file"
-    add_status updated "$label"
+    return
   fi
+
+  if should_mutate; then
+    touch "$file"
+    printf '%s\n' "$line" >> "$file"
+  fi
+  add_status updated "$label"
 }
 
 configure_local_excludes() {
+  if ! target_has_git_repo; then
+    add_status skipped "git info/exclude (target has no git repo)"
+    return
+  fi
+
   local exclude_file
   exclude_file="$(git_path info/exclude)"
-  mkdir -p "$(dirname "$exclude_file")"
+  if should_mutate; then
+    mkdir -p "$(dirname "$exclude_file")"
+  fi
 
   append_missing_line "$exclude_file" "CLAUDE.md" "exclude CLAUDE.md"
   append_missing_line "$exclude_file" "CLAUDE.local.md" "exclude CLAUDE.local.md"
@@ -372,7 +421,9 @@ configure_rule_source() {
   local state_dir="$TARGET_DIR/.agent-guidelines"
   local rules_path="$state_dir/rules"
 
-  mkdir -p "$state_dir"
+  if should_mutate; then
+    mkdir -p "$state_dir"
+  fi
 
   if [ "$RULE_SOURCE_MODE" = "symlink" ]; then
     if [ -L "$rules_path" ]; then
@@ -387,21 +438,29 @@ configure_rule_source() {
       add_status skipped ".agent-guidelines/rules exists and is not a symlink"
       RULE_SOURCE_MODE="copy"
     else
-      ln -s "$CANONICAL_RULES_DIR" "$rules_path"
+      if should_mutate; then
+        ln -s "$CANONICAL_RULES_DIR" "$rules_path"
+      fi
       add_status created ".agent-guidelines/rules symlink"
     fi
   fi
 
   if [ "$RULE_SOURCE_MODE" = "copy" ]; then
-    mkdir -p "$rules_path"
-    cp "$CANONICAL_RULES_DIR"/*.md "$rules_path"/
+    if should_mutate; then
+      mkdir -p "$rules_path"
+      cp "$CANONICAL_RULES_DIR"/*.md "$rules_path"/
+    fi
     add_status updated ".agent-guidelines/rules snapshot"
   fi
 
   RULE_SOURCE_DIR="$rules_path"
   if [ ! -e "$RULE_SOURCE_DIR" ]; then
     RULE_SOURCE_DIR="$CANONICAL_RULES_DIR"
-    add_status warning "using canonical rules directly because project rule source was unavailable"
+    if ! should_mutate; then
+      add_status warning "preview is using canonical rules directly; install would create $rules_path"
+    else
+      add_status warning "using canonical rules directly because project rule source was unavailable"
+    fi
   fi
 }
 
@@ -523,12 +582,35 @@ update_managed_block() {
   add_status "$status" "$label"
 }
 
+preview_managed_block() {
+  local target="$1"
+  local label="$2"
+
+  if [ ! -e "$target" ]; then
+    add_status created "$label"
+    return
+  fi
+  if grep -Fxq "$AGENT_GUIDELINES_MARKER_BEGIN" "$target" 2>/dev/null &&
+    grep -Fxq "$AGENT_GUIDELINES_MARKER_END" "$target" 2>/dev/null; then
+    add_status updated "$label"
+  else
+    add_status updated "$label (block would be appended)"
+  fi
+}
+
 assemble_agent_files() {
   local block_file
   block_file="$(mktemp)"
   assemble_rules_block "$block_file"
-  update_managed_block "$TARGET_DIR/CLAUDE.md" "$block_file" "CLAUDE.md project rules"
-  update_managed_block "$TARGET_DIR/AGENTS.md" "$block_file" "AGENTS.md project rules"
+
+  if should_mutate; then
+    update_managed_block "$TARGET_DIR/CLAUDE.md" "$block_file" "CLAUDE.md project rules"
+    update_managed_block "$TARGET_DIR/AGENTS.md" "$block_file" "AGENTS.md project rules"
+  else
+    preview_managed_block "$TARGET_DIR/CLAUDE.md" "CLAUDE.md project rules"
+    preview_managed_block "$TARGET_DIR/AGENTS.md" "AGENTS.md project rules"
+  fi
+
   rm -f "$block_file"
 }
 
@@ -557,7 +639,9 @@ install_project_skill_symlink() {
   elif [ -e "$target" ]; then
     add_status skipped ".agents/skills/$skill exists and is not a symlink"
   else
-    ln -s "$source" "$target"
+    if should_mutate; then
+      ln -s "$source" "$target"
+    fi
     add_status created ".agents/skills/$skill"
   fi
 }
@@ -573,12 +657,16 @@ install_project_skill_copy() {
   fi
 
   if [ -d "$target" ]; then
-    cp -aR "$source"/. "$target"/
+    if should_mutate; then
+      cp -aR "$source"/. "$target"/
+    fi
     add_status updated ".agents/skills/$skill"
   elif [ -e "$target" ]; then
     add_status skipped ".agents/skills/$skill exists and is not a directory"
   else
-    cp -aR "$source" "$target"
+    if should_mutate; then
+      cp -aR "$source" "$target"
+    fi
     add_status created ".agents/skills/$skill"
   fi
 }
@@ -589,9 +677,11 @@ install_per_project_skills() {
   fi
 
   local skills_dir="$TARGET_DIR/.agents/skills"
-  mkdir -p "$skills_dir"
+  if should_mutate; then
+    mkdir -p "$skills_dir"
+  fi
 
-  if [ "$SKILL_SOURCE_MODE" = "symlink" ]; then
+  if [ "$SKILL_SOURCE_MODE" = "symlink" ] && target_has_git_repo; then
     local exclude_file
     exclude_file="$(git_path info/exclude)"
     append_missing_line "$exclude_file" ".agents/skills/" "exclude .agents/skills/"
@@ -642,8 +732,10 @@ write_local_config() {
     add_status unchanged ".agent-guidelines/config"
   else
     [ -e "$config_path" ] && existed=true
-    mkdir -p "$(dirname "$config_path")"
-    cp "$temp_file" "$config_path"
+    if should_mutate; then
+      mkdir -p "$(dirname "$config_path")"
+      cp "$temp_file" "$config_path"
+    fi
     if [ "$existed" = true ]; then
       add_status updated ".agent-guidelines/config"
     else
@@ -662,25 +754,37 @@ install_hook_snippet() {
   hook_path="$(git_path "hooks/$hook_name")"
   snippet_path="$ASSET_DIR/hooks/$snippet_name"
 
-  mkdir -p "$(dirname "$hook_path")"
+  if should_mutate; then
+    mkdir -p "$(dirname "$hook_path")"
+  fi
   if [ ! -e "$hook_path" ]; then
-    printf '#!/bin/sh\n\n' > "$hook_path"
+    if should_mutate; then
+      printf '#!/bin/sh\n\n' > "$hook_path"
+    fi
     add_status created "$hook_name hook"
   fi
 
   local begin_marker
   begin_marker="$(sed -n '1p' "$snippet_path")"
 
-  if grep -Fxq "$begin_marker" "$hook_path"; then
-    replace_hook_block "$hook_path" "$snippet_path" "$begin_marker" "$hook_name $snippet_name"
+  if [ -e "$hook_path" ] && grep -Fxq "$begin_marker" "$hook_path"; then
+    if should_mutate; then
+      replace_hook_block "$hook_path" "$snippet_path" "$begin_marker" "$hook_name $snippet_name"
+    else
+      add_status updated "$hook_name $snippet_name"
+    fi
   else
-    printf '\n' >> "$hook_path"
-    cat "$snippet_path" >> "$hook_path"
-    printf '\n' >> "$hook_path"
+    if should_mutate; then
+      printf '\n' >> "$hook_path"
+      cat "$snippet_path" >> "$hook_path"
+      printf '\n' >> "$hook_path"
+    fi
     add_status updated "$hook_name $snippet_name"
   fi
 
-  chmod +x "$hook_path"
+  if should_mutate; then
+    chmod +x "$hook_path"
+  fi
 }
 
 replace_hook_block() {
@@ -717,6 +821,10 @@ replace_hook_block() {
 }
 
 install_hooks() {
+  if ! target_has_git_repo; then
+    add_status skipped "git hooks (target has no git repo)"
+    return
+  fi
   install_hook_snippet pre-commit pre-commit-main-branch
   install_hook_snippet pre-commit pre-commit-attribution
   install_hook_snippet commit-msg commit-msg-attribution
@@ -727,6 +835,11 @@ install_hooks() {
 create_initial_commit_if_needed() {
   if [ "$REPO_CREATED" != true ]; then
     add_status skipped "initial commit because repository already existed"
+    return
+  fi
+
+  if ! should_mutate; then
+    add_status created "initial commit (would be created by install)"
     return
   fi
 
@@ -782,6 +895,9 @@ print_summary() {
   email="$(git config --get user.email || true)"
 
   printf '\nProject setup summary\n'
+  if [ "$DRY_RUN" = true ]; then
+    printf 'Mode: dry-run (no files modified)\n'
+  fi
   printf 'Repository: %s\n' "$TARGET_DIR"
   printf 'Branch: %s\n' "$branch"
   printf 'Git user: %s <%s>\n' "$name" "$email"
@@ -790,8 +906,15 @@ print_summary() {
   printf 'Versioning mode: %s\n' "$(versioning_mode)"
   printf 'Rule source mode: %s\n\n' "$RULE_SOURCE_MODE"
 
-  print_list "Created:" "${CREATED[@]}"
-  print_list "Updated:" "${UPDATED[@]}"
+  local created_label="Created:"
+  local updated_label="Updated:"
+  if [ "$DRY_RUN" = true ]; then
+    created_label="Would create:"
+    updated_label="Would update:"
+  fi
+
+  print_list "$created_label" "${CREATED[@]}"
+  print_list "$updated_label" "${UPDATED[@]}"
   print_list "Unchanged:" "${UNCHANGED[@]}"
   print_list "Skipped:" "${SKIPPED[@]}"
   print_list "Warnings:" "${WARNINGS[@]}"

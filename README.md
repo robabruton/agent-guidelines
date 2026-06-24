@@ -145,6 +145,17 @@ override that independently. Symlink mode adds `.agents/skills/` to
 the repository's local `.git/info/exclude` so the links stay out of
 git; copy mode tracks the copied skill tree as a normal project asset.
 
+Use `--dry-run` to preview every action without changing anything.
+Most accurate against an existing git repository; on a fresh non-git
+directory the preview reports the would-be repo init step and skips
+git-dependent previews. The output flags whether the assembled
+context block would be created, replace an existing managed block,
+or append at the end because no marker pair was found.
+
+```bash
+./project-setup.sh --dry-run --profile codebase --changelog date .
+```
+
 ```bash
 ./project-setup.sh --profile codebase \
   --include-skill test-audit \
