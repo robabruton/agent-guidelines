@@ -20,6 +20,42 @@ FORCE_REPO_HOME="${TMP_ROOT}/force-home"
 FORCE_OUT="${TMP_ROOT}/force.out"
 CUSTOM_BACKUP_PATH="${TMP_ROOT}/custom-backups"
 
+GLOBAL_RULES=(
+  agent-conduct
+  development-attribution
+  git-workflow
+  git-messages
+  no-plans-on-main
+  merge-requests
+)
+
+GLOBAL_SKILLS=(
+  agent-memory
+  code-review
+  explain
+  project-setup
+)
+
+SKILL_HARNESSES=(
+  .claude
+  .agents
+  .codex
+)
+
+assert_managed_links() {
+  local rule
+  for rule in "${GLOBAL_RULES[@]}"; do
+    test -L "${HOME}/.claude/rules/${rule}.md"
+  done
+
+  local harness skill
+  for harness in "${SKILL_HARNESSES[@]}"; do
+    for skill in "${GLOBAL_SKILLS[@]}"; do
+      test -L "${HOME}/${harness}/skills/${skill}"
+    done
+  done
+}
+
 "${ROOT_DIR}/setup.sh" --status --no-color > "$STATUS_OUT"
 grep -Eq "action:[[:space:]]+status" "$STATUS_OUT"
 grep -Eq "conflicts:[[:space:]]+0" "$STATUS_OUT"
@@ -35,44 +71,16 @@ test ! -e "${HOME}/.claude/rules/git-workflow.md"
 
 "${ROOT_DIR}/setup.sh" --install --no-color > "$INSTALL_OUT"
 grep -Eq "created:[[:space:]]+${expected_links}" "$INSTALL_OUT"
-test -L "${HOME}/.claude/rules/git-workflow.md"
-test -L "${HOME}/.claude/rules/git-messages.md"
-test -L "${HOME}/.claude/skills/project-setup"
-test -L "${HOME}/.claude/skills/code-review"
-test -L "${HOME}/.claude/skills/dependency-audit"
-test -L "${HOME}/.claude/skills/docstrings"
-test -L "${HOME}/.claude/skills/docs-audit"
-test -L "${HOME}/.claude/skills/docs-review"
-test -L "${HOME}/.claude/skills/explain"
-test -L "${HOME}/.claude/skills/firmware-review"
-test -L "${HOME}/.claude/skills/script-audit"
-test -L "${HOME}/.claude/skills/security-audit"
-test -L "${HOME}/.claude/skills/test-audit"
-test -L "${HOME}/.claude/skills/agent-memory"
-test -L "${HOME}/.agents/skills/project-setup"
-test -L "${HOME}/.agents/skills/code-review"
-test -L "${HOME}/.agents/skills/dependency-audit"
-test -L "${HOME}/.agents/skills/docstrings"
-test -L "${HOME}/.agents/skills/docs-audit"
-test -L "${HOME}/.agents/skills/docs-review"
-test -L "${HOME}/.agents/skills/explain"
-test -L "${HOME}/.agents/skills/firmware-review"
-test -L "${HOME}/.agents/skills/script-audit"
-test -L "${HOME}/.agents/skills/security-audit"
-test -L "${HOME}/.agents/skills/test-audit"
-test -L "${HOME}/.agents/skills/agent-memory"
-test -L "${HOME}/.codex/skills/project-setup"
-test -L "${HOME}/.codex/skills/code-review"
-test -L "${HOME}/.codex/skills/dependency-audit"
-test -L "${HOME}/.codex/skills/docstrings"
-test -L "${HOME}/.codex/skills/docs-audit"
-test -L "${HOME}/.codex/skills/docs-review"
-test -L "${HOME}/.codex/skills/explain"
-test -L "${HOME}/.codex/skills/firmware-review"
-test -L "${HOME}/.codex/skills/script-audit"
-test -L "${HOME}/.codex/skills/security-audit"
-test -L "${HOME}/.codex/skills/test-audit"
-test -L "${HOME}/.codex/skills/agent-memory"
+assert_managed_links
+
+# A skill that is no longer global (e.g. test-audit) must NOT be linked
+# globally by setup.sh after the global-set curation.
+test ! -e "${HOME}/.claude/skills/test-audit"
+test ! -e "${HOME}/.agents/skills/firmware-review"
+
+# A rule that is load: recall must NOT be linked globally either.
+test ! -e "${HOME}/.claude/rules/testing.md"
+test ! -e "${HOME}/.claude/rules/code-quality.md"
 
 "${ROOT_DIR}/setup.sh" --install --no-color > "$SECOND_OUT"
 grep -Eq "created:[[:space:]]+0" "$SECOND_OUT"

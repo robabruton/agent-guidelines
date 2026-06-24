@@ -7,6 +7,27 @@ REPO_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd -P)"
 RULES_DIR="${REPO_DIR}/rules"
 SKILLS_DIR="${REPO_DIR}/skills"
 
+# shellcheck source=lib/assemble-rules.sh
+. "${REPO_DIR}/lib/assemble-rules.sh"
+
+# Skills installed into every harness's global skills directory. Skills use
+# the standard SKILL.md frontmatter schema, so the global set stays
+# hardcoded here rather than deriving from a non-standard field.
+GLOBAL_SKILLS=(
+  agent-memory
+  code-review
+  explain
+  project-setup
+)
+
+# Harness directories that receive symlinks for every entry in
+# GLOBAL_SKILLS. Adding a new harness adds one path here.
+SKILL_HARNESSES=(
+  "${HOME}/.claude/skills"
+  "${HOME}/.agents/skills"
+  "${HOME}/.codex/skills"
+)
+
 ACTION="install"
 DRY_RUN=false
 FORCE=false
@@ -22,63 +43,33 @@ WARNINGS=0
 MISSING=0
 CONFLICTS=0
 
-LINKS=(
-  "rule|${HOME}/.claude/rules/git-workflow.md|${RULES_DIR}/git-workflow.md"
-  "rule|${HOME}/.claude/rules/git-messages.md|${RULES_DIR}/git-messages.md"
-  "rule|${HOME}/.claude/rules/development-attribution.md|${RULES_DIR}/development-attribution.md"
-  "rule|${HOME}/.claude/rules/configuration.md|${RULES_DIR}/configuration.md"
-  "rule|${HOME}/.claude/rules/testing.md|${RULES_DIR}/testing.md"
-  "rule|${HOME}/.claude/rules/documentation.md|${RULES_DIR}/documentation.md"
-  "rule|${HOME}/.claude/rules/docstrings.md|${RULES_DIR}/docstrings.md"
-  "rule|${HOME}/.claude/rules/scripts.md|${RULES_DIR}/scripts.md"
-  "rule|${HOME}/.claude/rules/dependencies.md|${RULES_DIR}/dependencies.md"
-  "rule|${HOME}/.claude/rules/changelog-common.md|${RULES_DIR}/changelog-common.md"
-  "rule|${HOME}/.claude/rules/changelog-date.md|${RULES_DIR}/changelog-date.md"
-  "rule|${HOME}/.claude/rules/changelog-version.md|${RULES_DIR}/changelog-version.md"
-  "rule|${HOME}/.claude/rules/versioning-semver.md|${RULES_DIR}/versioning-semver.md"
-  "rule|${HOME}/.claude/rules/backward-compatibility.md|${RULES_DIR}/backward-compatibility.md"
-  "rule|${HOME}/.claude/rules/agent-conduct.md|${RULES_DIR}/agent-conduct.md"
-  "rule|${HOME}/.claude/rules/no-plans-on-main.md|${RULES_DIR}/no-plans-on-main.md"
-  "rule|${HOME}/.claude/rules/code-quality.md|${RULES_DIR}/code-quality.md"
-  "rule|${HOME}/.claude/rules/engineering-judgment.md|${RULES_DIR}/engineering-judgment.md"
-  "rule|${HOME}/.claude/rules/environment-hygiene.md|${RULES_DIR}/environment-hygiene.md"
-  "skill|${HOME}/.claude/skills/project-setup|${SKILLS_DIR}/project-setup"
-  "skill|${HOME}/.claude/skills/code-review|${SKILLS_DIR}/code-review"
-  "skill|${HOME}/.claude/skills/dependency-audit|${SKILLS_DIR}/dependency-audit"
-  "skill|${HOME}/.claude/skills/docstrings|${SKILLS_DIR}/docstrings"
-  "skill|${HOME}/.claude/skills/docs-audit|${SKILLS_DIR}/docs-audit"
-  "skill|${HOME}/.claude/skills/docs-review|${SKILLS_DIR}/docs-review"
-  "skill|${HOME}/.claude/skills/explain|${SKILLS_DIR}/explain"
-  "skill|${HOME}/.claude/skills/firmware-review|${SKILLS_DIR}/firmware-review"
-  "skill|${HOME}/.claude/skills/script-audit|${SKILLS_DIR}/script-audit"
-  "skill|${HOME}/.claude/skills/security-audit|${SKILLS_DIR}/security-audit"
-  "skill|${HOME}/.claude/skills/test-audit|${SKILLS_DIR}/test-audit"
-  "skill|${HOME}/.claude/skills/agent-memory|${SKILLS_DIR}/agent-memory"
-  "skill|${HOME}/.agents/skills/project-setup|${SKILLS_DIR}/project-setup"
-  "skill|${HOME}/.agents/skills/code-review|${SKILLS_DIR}/code-review"
-  "skill|${HOME}/.agents/skills/dependency-audit|${SKILLS_DIR}/dependency-audit"
-  "skill|${HOME}/.agents/skills/docstrings|${SKILLS_DIR}/docstrings"
-  "skill|${HOME}/.agents/skills/docs-audit|${SKILLS_DIR}/docs-audit"
-  "skill|${HOME}/.agents/skills/docs-review|${SKILLS_DIR}/docs-review"
-  "skill|${HOME}/.agents/skills/explain|${SKILLS_DIR}/explain"
-  "skill|${HOME}/.agents/skills/firmware-review|${SKILLS_DIR}/firmware-review"
-  "skill|${HOME}/.agents/skills/script-audit|${SKILLS_DIR}/script-audit"
-  "skill|${HOME}/.agents/skills/security-audit|${SKILLS_DIR}/security-audit"
-  "skill|${HOME}/.agents/skills/test-audit|${SKILLS_DIR}/test-audit"
-  "skill|${HOME}/.agents/skills/agent-memory|${SKILLS_DIR}/agent-memory"
-  "skill|${HOME}/.codex/skills/project-setup|${SKILLS_DIR}/project-setup"
-  "skill|${HOME}/.codex/skills/code-review|${SKILLS_DIR}/code-review"
-  "skill|${HOME}/.codex/skills/dependency-audit|${SKILLS_DIR}/dependency-audit"
-  "skill|${HOME}/.codex/skills/docstrings|${SKILLS_DIR}/docstrings"
-  "skill|${HOME}/.codex/skills/docs-audit|${SKILLS_DIR}/docs-audit"
-  "skill|${HOME}/.codex/skills/docs-review|${SKILLS_DIR}/docs-review"
-  "skill|${HOME}/.codex/skills/explain|${SKILLS_DIR}/explain"
-  "skill|${HOME}/.codex/skills/firmware-review|${SKILLS_DIR}/firmware-review"
-  "skill|${HOME}/.codex/skills/script-audit|${SKILLS_DIR}/script-audit"
-  "skill|${HOME}/.codex/skills/security-audit|${SKILLS_DIR}/security-audit"
-  "skill|${HOME}/.codex/skills/test-audit|${SKILLS_DIR}/test-audit"
-  "skill|${HOME}/.codex/skills/agent-memory|${SKILLS_DIR}/agent-memory"
-)
+LINKS=()
+
+# Populate LINKS from the rule files marked load: always in their YAML
+# frontmatter and from the hardcoded GLOBAL_SKILLS list. Builds entries
+# for every harness directory in SKILL_HARNESSES.
+build_links() {
+  LINKS=()
+
+  local file
+  for file in "${RULES_DIR}"/*.md; do
+    [ -f "$file" ] || continue
+    local load
+    load="$(agent_guidelines_read_frontmatter_field "$file" load)"
+    if [ "$load" = "always" ]; then
+      local name
+      name="$(basename "$file" .md)"
+      LINKS+=("rule|${HOME}/.claude/rules/${name}.md|${RULES_DIR}/${name}.md")
+    fi
+  done
+
+  local skill harness
+  for harness in "${SKILL_HARNESSES[@]}"; do
+    for skill in "${GLOBAL_SKILLS[@]}"; do
+      LINKS+=("skill|${harness}/${skill}|${SKILLS_DIR}/${skill}")
+    done
+  done
+}
 
 usage() {
   cat <<'EOF'
@@ -462,6 +453,7 @@ print_summary() {
 main() {
   parse_args "$@"
   setup_colors
+  build_links
   validate_sources
   process_links
   print_summary
