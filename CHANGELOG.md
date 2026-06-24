@@ -12,6 +12,14 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
   with a short pointer from the README. Noncommercial use is freely
   permitted; commercial use requires a separate agreement with the
   copyright holder.
+- `project-setup.sh` now prepends a generated-file meta-header and a
+  `## Project-Specific Notes` placeholder section above the marker
+  block when it creates a new `CLAUDE.md` or `AGENTS.md`. The
+  preamble sits outside the marker pair so it is preserved across
+  re-runs; users can replace the placeholder text with their own
+  project-specific guidance without it being overwritten. Smoke test
+  asserts the preamble exists after the first run and survives the
+  idempotent second run.
 
 - `lib/assemble-rules.sh` shared library exposing marker constants, a
   frontmatter stripper, a frontmatter field reader, a rule-block

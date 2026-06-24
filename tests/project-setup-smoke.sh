@@ -29,6 +29,18 @@ assert_agent_rules() {
   grep -Fq "<!-- END agent-guidelines project rules -->" "$file"
 }
 
+assert_agent_preamble() {
+  local file="$1"
+
+  test -f "$file"
+  grep -Fq "**Generated file.**" "$file"
+  grep -Fq "## Project-Specific Notes" "$file"
+  # Preamble lives ABOVE the marker block
+  marker_line="$(grep -nF '<!-- BEGIN agent-guidelines project rules -->' "$file" | head -1 | cut -d: -f1)"
+  preamble_line="$(grep -nF '## Project-Specific Notes' "$file" | head -1 | cut -d: -f1)"
+  test "$preamble_line" -lt "$marker_line"
+}
+
 "${ROOT_DIR}/project-setup.sh" \
   --profile codebase \
   --changelog dated \
@@ -49,6 +61,8 @@ test -f "${SYMLINK_REPO}/.git/hooks/pre-commit"
 grep -Fq "Changelog mode: date" "$SYMLINK_FIRST_OUT"
 assert_agent_rules "${SYMLINK_REPO}/CLAUDE.md" "# Date-Based Changelog Rules"
 assert_agent_rules "${SYMLINK_REPO}/AGENTS.md" "# Date-Based Changelog Rules"
+assert_agent_preamble "${SYMLINK_REPO}/CLAUDE.md"
+assert_agent_preamble "${SYMLINK_REPO}/AGENTS.md"
 
 test -L "${SYMLINK_REPO}/.agents/skills/explain"
 test ! -e "${SYMLINK_REPO}/.agents/skills/test-audit"
@@ -68,6 +82,9 @@ fi
 
 grep -Fq "Created:" "$SYMLINK_SECOND_OUT"
 grep -Fq "  none" "$SYMLINK_SECOND_OUT"
+# Preamble must survive idempotent re-run
+assert_agent_preamble "${SYMLINK_REPO}/CLAUDE.md"
+assert_agent_preamble "${SYMLINK_REPO}/AGENTS.md"
 
 "${ROOT_DIR}/project-setup.sh" \
   --profile released \
