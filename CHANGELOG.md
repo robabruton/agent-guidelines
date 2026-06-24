@@ -35,6 +35,13 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
   `when_to_use` SKILL.md frontmatter. Non-global skills are
   discoverable from the same global context file as the rule
   router without being loaded on every conversation.
+- `setup.sh --prune` removes symlinks in the rule and skill
+  harness directories whose resolved targets point into this
+  repository's `rules/` or `skills/` tree but are no longer in
+  the managed link set. Symlinks whose targets resolve outside
+  the repository are left untouched, so user-created links in a
+  managed directory are never affected. Honors `--dry-run` for
+  preview.
 
 - `lib/assemble-rules.sh` shared library exposing marker constants, a
   frontmatter stripper, a frontmatter field reader, a rule-block
