@@ -72,8 +72,16 @@ assert_context_files() {
     test -f "$path"
     grep -Fq "<!-- BEGIN agent-guidelines project rules -->" "$path"
     grep -Fq "<!-- END agent-guidelines project rules -->" "$path"
-    grep -Fq "# Agent Conduct Rules" "$path"
-    grep -Fq "# Git Workflow Rules" "$path"
+    grep -Eq "^## Agent Conduct Rules$" "$path"
+    grep -Eq "^## Git Workflow Rules$" "$path"
+    if grep -Eq "^# " "$path"; then
+      echo "stray H1 in $path" >&2
+      return 1
+    fi
+    if awk 'BEGIN{p=""} /^$/&&p==""{f=1;exit} {p=$0} END{exit !f}' "$path"; then
+      echo "consecutive blank lines in $path" >&2
+      return 1
+    fi
     grep -Fq "## Situational Rules" "$path"
     grep -Fq "agent-guidelines/rules/code-quality.md" "$path"
     grep -Fq "agent-guidelines/rules/testing.md" "$path"

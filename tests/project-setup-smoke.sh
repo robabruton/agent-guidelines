@@ -24,9 +24,17 @@ assert_agent_rules() {
 
   test -f "$file"
   grep -Fq "<!-- BEGIN agent-guidelines project rules -->" "$file"
-  grep -Fq "# Git Workflow Rules" "$file"
+  grep -Eq "^## Git Workflow Rules$" "$file"
   grep -Fq "$expected_heading" "$file"
   grep -Fq "<!-- END agent-guidelines project rules -->" "$file"
+  if grep -Eq "^# " "$file"; then
+    echo "stray H1 in $file" >&2
+    return 1
+  fi
+  if awk 'BEGIN{p=""} /^$/&&p==""{f=1;exit} {p=$0} END{exit !f}' "$file"; then
+    echo "consecutive blank lines in $file" >&2
+    return 1
+  fi
 }
 
 assert_agent_preamble() {
