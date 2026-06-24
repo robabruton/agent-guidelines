@@ -459,6 +459,21 @@ assemble_context_block() {
     esac
   done
 
+  local recall_skills=()
+  local skill_dir skill_name g is_global
+  for skill_dir in "${SKILLS_DIR}"/*/; do
+    [ -f "${skill_dir}SKILL.md" ] || continue
+    skill_name="$(basename "$skill_dir")"
+    is_global=false
+    for g in "${GLOBAL_SKILLS[@]}"; do
+      if [ "$g" = "$skill_name" ]; then
+        is_global=true
+        break
+      fi
+    done
+    [ "$is_global" = false ] && recall_skills+=("$skill_name")
+  done
+
   {
     printf '%s\n\n' "$AGENT_GUIDELINES_MARKER_BEGIN"
 
@@ -476,6 +491,17 @@ assemble_context_block() {
 
       agent_guidelines_build_router_table \
         "${RULES_DIR}" "${RULE_STORE_PATH}" "${recall_rules[@]}"
+      printf '\n'
+    fi
+
+    if [ "${#recall_skills[@]}" -gt 0 ]; then
+      printf '## Situational Skills — Invoke When Triggered\n\n'
+      printf 'These skills cover focused tasks that only apply in certain\n'
+      printf 'situations. When the trigger matches the current task, invoke\n'
+      printf 'the skill by name before acting on that work.\n\n'
+
+      agent_guidelines_build_skill_router_table \
+        "${SKILLS_DIR}" "${recall_skills[@]}"
       printf '\n'
     fi
 

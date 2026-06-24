@@ -28,6 +28,13 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
   `project-setup.sh` exists in `rules/` and every skill name in
   `setup.sh`'s `GLOBAL_SKILLS` exists in `skills/`, and both smoke
   scripts.
+- Skill router section in the assembled global context. `setup.sh`
+  now appends a `## Situational Skills — Invoke When Triggered`
+  table listing every skill in `skills/` that is not in
+  `GLOBAL_SKILLS`, with each row built from the skill's
+  `when_to_use` SKILL.md frontmatter. Non-global skills are
+  discoverable from the same global context file as the rule
+  router without being loaded on every conversation.
 
 - `lib/assemble-rules.sh` shared library exposing marker constants, a
   frontmatter stripper, a frontmatter field reader, a rule-block

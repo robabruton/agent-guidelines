@@ -77,8 +77,19 @@ assert_context_files() {
     grep -Fq "## Situational Rules" "$path"
     grep -Fq "agent-guidelines/rules/code-quality.md" "$path"
     grep -Fq "agent-guidelines/rules/testing.md" "$path"
+    grep -Fq "## Situational Skills" "$path"
+    grep -Fq "| security-audit |" "$path"
+    grep -Fq "| docstrings |" "$path"
+    if grep -Fq "| agent-memory |" "$path"; then
+      echo "global skill leaked into router in $path" >&2
+      return 1
+    fi
     if grep -Fq "load: always" "$path"; then
       echo "frontmatter leaked into $path" >&2
+      return 1
+    fi
+    if grep -Eq "^argument-hint:" "$path"; then
+      echo "skill frontmatter leaked into $path" >&2
       return 1
     fi
   done
