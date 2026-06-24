@@ -80,6 +80,10 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
   narrowly scoped mechanical edits. A body for these almost
   always over-explains the change and should be deleted before
   committing.
+- `.github/workflows/smoke.yml` rule frontmatter check skips
+  `README.md` by basename so a directory-level catalog file
+  under `rules/` is not subject to the per-file delimiter,
+  `when:`, and `load:` assertions that apply to rule files.
 - Skill catalog moved from `SKILLS.md` at the repository root to
   `skills/README.md` so it renders as the directory README when
   browsing the `skills/` tree. The root `README.md` pointer updates

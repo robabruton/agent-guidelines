@@ -29,6 +29,9 @@ jobs:
         run: |
           fail=0
           for f in rules/*.md; do
+            if [ "$(basename "$f")" = README.md ]; then
+              continue
+            fi
             if [ "$(head -1 "$f")" != "---" ]; then
               echo "missing frontmatter delimiter: $f"
               fail=1
