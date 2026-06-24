@@ -8,6 +8,11 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ### Added
 
+- `LICENSE` file containing the PolyForm Noncommercial License 1.0.0,
+  with a short pointer from the README. Noncommercial use is freely
+  permitted; commercial use requires a separate agreement with the
+  copyright holder.
+
 - `lib/assemble-rules.sh` shared library exposing marker constants, a
   frontmatter stripper, a frontmatter field reader, a rule-block
   assembler, a managed-block updater, a managed-block remover, and a
