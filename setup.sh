@@ -490,8 +490,8 @@ assemble_context_block() {
 
     local r
     for r in "${always_rules[@]}"; do
-      agent_guidelines_strip_frontmatter "${RULES_DIR}/${r}.md"
-      printf '\n\n'
+      agent_guidelines_format_rule_body "${RULES_DIR}/${r}.md"
+      printf '\n'
     done
 
     if [ "${#recall_rules[@]}" -gt 0 ]; then
