@@ -1,3 +1,7 @@
+---
+when: writing or modifying production code, including comments, sample data, and inline annotations
+load: recall
+---
 # Code Quality Rules
 
 Conventions for writing code that stays correct, honest, and low-noise

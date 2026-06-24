@@ -1,3 +1,7 @@
+---
+when: always
+load: always
+---
 # Agent Conduct Rules
 
 Operating discipline for an agent acting on a real project: be careful

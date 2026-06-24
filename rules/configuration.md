@@ -1,3 +1,7 @@
+---
+when: committing config files, example envs, or anything that touches secret handling
+load: recall
+---
 # Configuration Rules
 
 Configuration should make the project reproducible without committing

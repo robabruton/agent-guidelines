@@ -1,3 +1,7 @@
+---
+when: writing or modifying shell scripts, git hooks, installers, or command automation
+load: recall
+---
 # Script Rules
 
 Scripts should be predictable, readable, and safe to run more than once.

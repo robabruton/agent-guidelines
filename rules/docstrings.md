@@ -1,3 +1,7 @@
+---
+when: writing or modifying functions, types, modules, macros, or other documented code symbols
+load: recall
+---
 # Docstring Rules
 
 Every function, type, constant, macro, and module-scoped variable you

@@ -1,3 +1,7 @@
+---
+when: always
+load: always
+---
 # No Plans in Permanent History
 
 Permanent project history — every commit message, every file on the

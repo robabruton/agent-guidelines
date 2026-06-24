@@ -1,3 +1,7 @@
+---
+when: adding, updating, or removing project dependencies or lockfiles
+load: recall
+---
 # Dependency Rules
 
 Dependencies should solve a real project problem and justify their

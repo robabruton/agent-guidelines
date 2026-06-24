@@ -1,3 +1,7 @@
+---
+when: always
+load: always
+---
 # Git Message Rules
 
 Use clear, structured Git messages so history remains readable from

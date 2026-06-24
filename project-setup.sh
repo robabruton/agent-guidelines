@@ -7,6 +7,9 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd -P)"
 ASSET_DIR="${SCRIPT_DIR}/skills/project-setup/assets"
 CANONICAL_RULES_DIR="${SCRIPT_DIR}/rules"
 
+# shellcheck source=lib/assemble-rules.sh
+. "${SCRIPT_DIR}/lib/assemble-rules.sh"
+
 PROFILE="auto"
 CHANGELOG_MODE="auto"
 RULE_SOURCE_MODE="symlink"
@@ -20,8 +23,8 @@ UNCHANGED=()
 SKIPPED=()
 WARNINGS=()
 
-MARKER_BEGIN="<!-- BEGIN agent-guidelines project rules -->"
-MARKER_END="<!-- END agent-guidelines project rules -->"
+MARKER_BEGIN="$AGENT_GUIDELINES_MARKER_BEGIN"
+MARKER_END="$AGENT_GUIDELINES_MARKER_END"
 
 MINIMAL_RULES=(
   agent-conduct
@@ -458,66 +461,39 @@ selected_rules_ordered() {
 
 assemble_rules_block() {
   local block_file="$1"
-  local rules
-  rules="$(selected_rules_ordered)"
+  local rules=()
+  local rule
+  local missing_log
+  missing_log="$(mktemp)"
 
-  {
-    printf '%s\n\n' "$MARKER_BEGIN"
-    local rule
-    while IFS= read -r rule; do
-      [ -n "$rule" ] || continue
-      local path="$RULE_SOURCE_DIR/$rule.md"
-      if [ -f "$path" ]; then
-        cat "$path"
-        printf '\n\n'
-      else
-        add_status warning "selected rule unavailable: $rule"
-      fi
-    done <<< "$rules"
-    printf '%s\n' "$MARKER_END"
-  } > "$block_file"
+  while IFS= read -r rule; do
+    [ -n "$rule" ] && rules+=("$rule")
+  done < <(selected_rules_ordered)
+
+  agent_guidelines_assemble_block \
+    "$block_file" "$RULE_SOURCE_DIR" "${rules[@]}" 2> "$missing_log"
+
+  while IFS= read -r line; do
+    case "$line" in
+      missing-rule:*)
+        add_status warning "selected rule unavailable: ${line#missing-rule: }"
+        ;;
+      *)
+        [ -n "$line" ] && printf '%s\n' "$line" >&2
+        ;;
+    esac
+  done < "$missing_log"
+  rm -f "$missing_log"
 }
 
 update_managed_block() {
   local target_file="$1"
   local block_file="$2"
   local label="$3"
-  local temp_file
-  temp_file="$(mktemp)"
+  local status
 
-  if [ ! -e "$target_file" ]; then
-    cp "$block_file" "$target_file"
-    add_status created "$label"
-    rm -f "$temp_file"
-    return
-  fi
-
-  if grep -Fxq "$MARKER_BEGIN" "$target_file" && grep -Fxq "$MARKER_END" "$target_file"; then
-    awk -v begin="$MARKER_BEGIN" -v end="$MARKER_END" -v block="$block_file" '
-      $0 == begin {
-        while ((getline line < block) > 0) print line
-        in_block = 1
-        next
-      }
-      $0 == end {
-        in_block = 0
-        next
-      }
-      !in_block { print }
-    ' "$target_file" > "$temp_file"
-  else
-    cat "$target_file" > "$temp_file"
-    printf '\n%s\n' "" >> "$temp_file"
-    cat "$block_file" >> "$temp_file"
-  fi
-
-  if cmp -s "$target_file" "$temp_file"; then
-    add_status unchanged "$label"
-  else
-    cp "$temp_file" "$target_file"
-    add_status updated "$label"
-  fi
-  rm -f "$temp_file"
+  status="$(agent_guidelines_update_managed_block "$target_file" "$block_file")"
+  add_status "$status" "$label"
 }
 
 assemble_agent_files() {

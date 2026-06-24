@@ -1,3 +1,7 @@
+---
+when: replacing, removing, or migrating existing user-visible behavior, APIs, or formats
+load: recall
+---
 # Backward Compatibility Rules
 
 Preserve existing behavior unless the branch explicitly replaces it.

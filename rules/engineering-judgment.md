@@ -1,3 +1,7 @@
+---
+when: making design, abstraction, auto-detection, or single-source-of-truth decisions
+load: recall
+---
 # Engineering Judgment Rules
 
 Design principles for the recurring "which way should this go" decisions.

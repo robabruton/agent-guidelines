@@ -1,3 +1,7 @@
+---
+when: installing dependencies, moving or regenerating envs, or working across target platforms
+load: recall
+---
 # Environment Hygiene Rules
 
 Lessons about the development environment itself — where dependencies
