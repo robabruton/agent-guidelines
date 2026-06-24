@@ -31,10 +31,18 @@ Without an override, backups are written under
 out of the global path and is opted in per project through
 `project-setup.sh`.
 
+For non-Claude harnesses (OpenCode and Pi), `setup.sh` also assembles a
+global `AGENTS.md` containing the same six rules inlined plus a router
+section that lists every recall-tier rule with its trigger and a stable
+reference path. The router's reference paths resolve through a single
+`~/.agent-guidelines/rules` directory symlink that points at this
+repository's `rules/`.
+
 The global set today:
 
 | Kind | Managed path | Source |
 | --- | --- | --- |
+| Store | `$HOME/.agent-guidelines/rules` | `rules/` |
 | Rule | `$HOME/.claude/rules/agent-conduct.md` | `rules/agent-conduct.md` |
 | Rule | `$HOME/.claude/rules/development-attribution.md` | `rules/development-attribution.md` |
 | Rule | `$HOME/.claude/rules/git-workflow.md` | `rules/git-workflow.md` |
@@ -53,6 +61,8 @@ The global set today:
 | Skill | `$HOME/.codex/skills/code-review` | `skills/code-review` |
 | Skill | `$HOME/.codex/skills/explain` | `skills/explain` |
 | Skill | `$HOME/.codex/skills/project-setup` | `skills/project-setup` |
+| Context | `$HOME/.config/opencode/AGENTS.md` | assembled from `rules/` |
+| Context | `$HOME/.pi/agent/AGENTS.md` | assembled from `rules/` |
 
 Run the smoke tests for the local tool setup command with:
 

@@ -22,6 +22,14 @@
 #       contents, append the block if target_file lacks markers, or
 #       create target_file from block_file. Prints "created", "updated",
 #       or "unchanged" on stdout.
+#   agent_guidelines_remove_managed_block <target_file>
+#       Strip the marker block from target_file. Removes the file if it
+#       becomes empty (or whitespace only). Prints "removed",
+#       "cleared", "absent", or "missing" on stdout.
+#   agent_guidelines_build_router_table <rules_dir> <stable_path> <rule>...
+#       Print a markdown table to stdout listing each rule's "when"
+#       trigger and a stable reference path (stable_path/<rule>.md) so a
+#       model can read the rule on demand.
 
 AGENT_GUIDELINES_MARKER_BEGIN="<!-- BEGIN agent-guidelines project rules -->"
 AGENT_GUIDELINES_MARKER_END="<!-- END agent-guidelines project rules -->"
@@ -127,4 +135,57 @@ agent_guidelines_update_managed_block() {
   fi
   rm -f "$temp_file"
   printf '%s' "$result"
+}
+
+agent_guidelines_remove_managed_block() {
+  local target_file="$1"
+  local temp_file
+
+  if [ ! -e "$target_file" ]; then
+    printf 'missing'
+    return
+  fi
+
+  if ! grep -Fxq "$AGENT_GUIDELINES_MARKER_BEGIN" "$target_file" ||
+    ! grep -Fxq "$AGENT_GUIDELINES_MARKER_END" "$target_file"; then
+    printf 'absent'
+    return
+  fi
+
+  temp_file="$(mktemp)"
+  awk \
+    -v begin="$AGENT_GUIDELINES_MARKER_BEGIN" \
+    -v end="$AGENT_GUIDELINES_MARKER_END" '
+    $0 == begin { in_block = 1; next }
+    $0 == end   { in_block = 0; next }
+    !in_block   { print }
+  ' "$target_file" > "$temp_file"
+
+  if grep -Eq '[^[:space:]]' "$temp_file"; then
+    cp "$temp_file" "$target_file"
+    rm -f "$temp_file"
+    printf 'cleared'
+  else
+    rm -f "$temp_file" "$target_file"
+    printf 'removed'
+  fi
+}
+
+agent_guidelines_build_router_table() {
+  local rules_dir="$1"
+  local stable_path="$2"
+  shift 2
+
+  printf '| Rule | Read when | Path |\n'
+  printf '| --- | --- | --- |\n'
+  local rule
+  for rule in "$@"; do
+    [ -n "$rule" ] || continue
+    local file="$rules_dir/$rule.md"
+    [ -f "$file" ] || continue
+    local when
+    when="$(agent_guidelines_read_frontmatter_field "$file" when)"
+    printf '| %s | %s | `%s/%s.md` |\n' \
+      "$rule" "$when" "$stable_path" "$rule"
+  done
 }

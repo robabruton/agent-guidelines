@@ -42,6 +42,11 @@ SKILL_HARNESSES=(
   .codex
 )
 
+CONTEXT_TARGETS=(
+  ".config/opencode/AGENTS.md"
+  ".pi/agent/AGENTS.md"
+)
+
 assert_managed_links() {
   local rule
   for rule in "${GLOBAL_RULES[@]}"; do
@@ -54,6 +59,35 @@ assert_managed_links() {
       test -L "${HOME}/${harness}/skills/${skill}"
     done
   done
+
+  test -L "${HOME}/.agent-guidelines/rules"
+}
+
+assert_context_files() {
+  local target
+  for target in "${CONTEXT_TARGETS[@]}"; do
+    local path="${HOME}/${target}"
+    test -f "$path"
+    grep -Fq "<!-- BEGIN agent-guidelines project rules -->" "$path"
+    grep -Fq "<!-- END agent-guidelines project rules -->" "$path"
+    grep -Fq "# Agent Conduct Rules" "$path"
+    grep -Fq "# Git Workflow Rules" "$path"
+    grep -Fq "## Situational Rules" "$path"
+    grep -Fq "agent-guidelines/rules/code-quality.md" "$path"
+    grep -Fq "agent-guidelines/rules/testing.md" "$path"
+    if grep -Fq "load: always" "$path"; then
+      echo "frontmatter leaked into $path" >&2
+      return 1
+    fi
+  done
+}
+
+assert_no_residue() {
+  local target
+  for target in "${CONTEXT_TARGETS[@]}"; do
+    test ! -e "${HOME}/${target}"
+  done
+  test ! -e "${HOME}/.agent-guidelines/rules"
 }
 
 "${ROOT_DIR}/setup.sh" --status --no-color > "$STATUS_OUT"
@@ -71,7 +105,9 @@ test ! -e "${HOME}/.claude/rules/git-workflow.md"
 
 "${ROOT_DIR}/setup.sh" --install --no-color > "$INSTALL_OUT"
 grep -Eq "created:[[:space:]]+${expected_links}" "$INSTALL_OUT"
+grep -Eq "context created:[[:space:]]+2" "$INSTALL_OUT"
 assert_managed_links
+assert_context_files
 
 # A skill that is no longer global (e.g. test-audit) must NOT be linked
 # globally by setup.sh after the global-set curation.
@@ -85,10 +121,14 @@ test ! -e "${HOME}/.claude/rules/code-quality.md"
 "${ROOT_DIR}/setup.sh" --install --no-color > "$SECOND_OUT"
 grep -Eq "created:[[:space:]]+0" "$SECOND_OUT"
 grep -Eq "current:[[:space:]]+${expected_links}" "$SECOND_OUT"
+grep -Eq "context current:[[:space:]]+2" "$SECOND_OUT"
+assert_context_files
 
 "${ROOT_DIR}/setup.sh" --remove --no-color > "$REMOVE_OUT"
 grep -Eq "removed:[[:space:]]+${expected_links}" "$REMOVE_OUT"
+grep -Eq "context removed:[[:space:]]+2" "$REMOVE_OUT"
 test ! -e "${HOME}/.claude/rules/git-workflow.md"
+assert_no_residue
 
 export HOME="$FORCE_REPO_HOME"
 mkdir -p "${HOME}/.claude/rules"
