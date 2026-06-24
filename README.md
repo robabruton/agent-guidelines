@@ -172,6 +172,6 @@ tests/project-setup-smoke.sh
 ## License
 
 This repository is published under the
-[PolyForm Noncommercial License 1.0.0](LICENSE). Noncommercial use
+[PolyForm Noncommercial License 1.0.0](LICENSE.md). Noncommercial use
 is freely permitted; commercial use requires a separate agreement
 with the copyright holder.
