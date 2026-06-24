@@ -126,7 +126,7 @@ tables, and fenced blocks formatted for their own syntax.
 
 Skills live in `skills/` as reusable agent workflows.
 
-See `SKILLS.md` for the current skill catalog.
+See `skills/README.md` for the current skill catalog.
 
 ## Project Setup Script
 
