@@ -58,6 +58,10 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 - README managed-paths table now lists the curated global set together
   with the two assembled context files and the rule-store symlink, and
   documents that everything else is opt-in per project.
+- `no-plans-on-main.md` now prescribes mirroring the project's tracked
+  layout inside `local/` (e.g. `local/plans/`, `local/scripts/`) so
+  the local equivalent of any tracked path is easy to find under a
+  single excluded root.
 
 ## 2026-06-23
 

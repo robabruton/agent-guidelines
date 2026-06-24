@@ -31,6 +31,13 @@ Reserve top-level directories (`docs/`, `scripts/`, etc.) for real
 tracked content. Isolate local-only material one level deeper under
 `local/` so the top-level directory still holds shippable work.
 
+Organize files inside `local/` to mirror the project's tracked layout
+— `local/plans/`, `local/docs/`, `local/scripts/`, and so on. The
+mirror makes the local equivalent of any tracked path easy to find,
+keeps a single `local/` entry in the personal ignore mechanism, and
+avoids ad-hoc top-level scratch directories that look like project
+content.
+
 ## Banned-Phrase Pre-Stage Checklist
 
 Before staging any file that will land on the default branch, and before
