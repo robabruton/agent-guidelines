@@ -100,6 +100,11 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
   51-60 chars trigger the existing warning but are accepted. The
   rule wording in `git-messages.md` records the relationship: target
   50, hard limit 60 enforced by the hook.
+- Renamed `LICENSE` to `LICENSE.md` so GitHub renders the
+  markdown-formatted PolyForm Noncommercial 1.0.0 text with proper
+  headings, emphasis, and the autolinked source URL instead of as
+  plain text. README link updated. License detection on the sidebar
+  widget is unaffected (works for either filename).
 
 ## 2026-06-23
 
