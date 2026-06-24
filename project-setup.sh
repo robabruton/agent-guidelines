@@ -879,8 +879,19 @@ install_hooks() {
 }
 
 create_initial_commit_if_needed() {
-  if [ "$REPO_CREATED" != true ]; then
-    add_status skipped "initial commit because repository already existed"
+  if ! target_has_git_repo; then
+    # Dry-run may report a planned init without creating .git/, in
+    # which case the initial commit is planned but cannot be staged.
+    if [ "$REPO_CREATED" = true ] && ! should_mutate; then
+      add_status created "initial commit (would be created by install)"
+      return
+    fi
+    add_status skipped "initial commit because target has no git repo"
+    return
+  fi
+
+  if git -C "$TARGET_DIR" rev-parse --verify --quiet HEAD >/dev/null 2>&1; then
+    add_status skipped "initial commit because repository already has commits"
     return
   fi
 
@@ -950,7 +961,8 @@ print_summary() {
   printf 'Profile: %s\n' "$PROFILE"
   printf 'Changelog mode: %s\n' "$CHANGELOG_MODE"
   printf 'Versioning mode: %s\n' "$(versioning_mode)"
-  printf 'Rule source mode: %s\n\n' "$RULE_SOURCE_MODE"
+  printf 'Rule source mode: %s\n' "$RULE_SOURCE_MODE"
+  printf 'Skill source mode: %s\n\n' "$SKILL_SOURCE_MODE"
 
   local created_label="Created:"
   local updated_label="Updated:"
