@@ -62,6 +62,12 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
   layout inside `local/` (e.g. `local/plans/`, `local/scripts/`) so
   the local equivalent of any tracked path is easy to find under a
   single excluded root.
+- `no-plans-on-main.md` pre-stage checklist now treats the branch name
+  itself as a fifth artifact to scan, and the banned-phrase list now
+  explicitly catches "followup", "follow-up", "next-step", "to-do",
+  "upcoming", and similar "more work after this" phrasings that slip
+  into branch names because conversational language flows into branch
+  names without scrutiny.
 
 ## 2026-06-23
 
