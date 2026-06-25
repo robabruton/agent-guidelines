@@ -24,9 +24,12 @@ enough for one commit and stopping to record it before moving on.
 
 ## Branching
 
-- NEVER commit directly to the `main` branch — there are NO exceptions,
-  including changelog cuts, version bumps, or other "bookkeeping"
-  commits
+- NEVER author work commits directly on the `main` branch — there are
+  NO exceptions for changelog cuts, version bumps, or other
+  "bookkeeping" commits. `--no-ff` merge commits are the only commits
+  that originate on `main`, and the pre-commit main-branch guard
+  installed by `project-setup.sh` allows them while blocking every
+  other commit on `main`.
 - Create a new branch for every feature, fix, or change
 - Use descriptive slash-prefixed branch names:
   `feat/description`, `fix/description`, `chore/description`
