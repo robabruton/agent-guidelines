@@ -16,6 +16,16 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
   layout the templates show and the layout some hosts produce
   on save are reported correctly. Body prose containing
   `type:` no longer masks a real missing-tiering entry.
+- Git hook templates exempt merge commits so a `--no-ff` merge
+  into `main` with the mandated `Merge branch '<name>'`
+  subject is no longer rejected. `commit-msg-conventional`
+  skips the Conventional Commits format check and the
+  60-character length cap during a merge, and
+  `pre-commit-main-branch` allows the main-branch guard to
+  pass when finishing a conflicted merge with `git commit`.
+  Ordinary authored commits remain subject to both checks.
+  Existing repositories need `project-setup.sh` re-run to pick
+  up the corrected hook blocks.
 
 ### Changed
 
@@ -23,6 +33,13 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
   normalization alongside the existing loader-verification
   guidance so future sessions auditing a normalized store know
   the layout is expected and harmless.
+- `git-workflow.md` clarifies that the no-direct-commits-to-
+  main discipline applies to authored work commits and that
+  `--no-ff` merge commits are the only commits that originate
+  on `main`. `git-messages.md` clarifies that the `commit-msg`
+  hook exempts merge commits from the Conventional Commits
+  format check and the 60-character length cap so the
+  mandated `Merge branch '<name>'` subject is allowed.
 
 ## 2026-06-24
 
