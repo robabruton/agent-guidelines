@@ -4,6 +4,26 @@ All notable changes to this project will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## 2026-06-25
+
+### Fixed
+
+- `agent-memory-report.sh` recognizes the tiering fields
+  (`load`, `status`, `type`) and the `name:` slug whether they
+  appear as flat top-level YAML keys or nested under a
+  `metadata:` map. The script scopes its key lookups to the
+  frontmatter block and accepts any indentation, so both the
+  layout the templates show and the layout some hosts produce
+  on save are reported correctly. Body prose containing
+  `type:` no longer masks a real missing-tiering entry.
+
+### Changed
+
+- `agent-memory/SKILL.md` documents host frontmatter
+  normalization alongside the existing loader-verification
+  guidance so future sessions auditing a normalized store know
+  the layout is expected and harmless.
+
 ## 2026-06-24
 
 ### Added

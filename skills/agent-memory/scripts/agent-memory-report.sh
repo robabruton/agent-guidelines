@@ -23,6 +23,19 @@ no matching entry name.
 EOF
 }
 
+# Print the YAML frontmatter block (the content between the first two
+# '---' fences). Some hosts normalize an entry's front matter on save
+# and nest most fields under a 'metadata:' map; scoping key lookups to
+# the frontmatter and allowing any indentation handles both the flat
+# top-level layout and the nested layout.
+frontmatter() {
+  awk '
+    NR==1 && $0=="---" { inblock=1; next }
+    inblock && $0=="---" { exit }
+    inblock { print }
+  ' "$1"
+}
+
 case "${1:-}" in
   -h|--help) usage; exit 0 ;;
 esac
@@ -59,7 +72,7 @@ for f in "${files[@]}"; do
   base=$(basename "$f")
   [ "$base" = "MEMORY.md" ] && continue
   for field in load status type; do
-    if ! grep -qE "^${field}:" "$f"; then
+    if ! frontmatter "$f" | grep -qE "^[[:space:]]*${field}:"; then
       printf '  %-44s missing: %s\n' "$base" "$field"
       missing=1
     fi
@@ -69,8 +82,9 @@ done
 echo
 
 echo "unresolved [[links]] (no entry has a matching name: slug):"
-slugs=$(grep -hoE '^name:[[:space:]]*[A-Za-z0-9_-]+' "${files[@]}" 2>/dev/null \
-        | sed -E 's/^name:[[:space:]]*//' | sort -u || true)
+slugs=$(for f in "${files[@]}"; do frontmatter "$f"; done \
+        | grep -oE '^[[:space:]]*name:[[:space:]]*[A-Za-z0-9_-]+' \
+        | sed -E 's/^[[:space:]]*name:[[:space:]]*//' | sort -u || true)
 found_any=0
 for f in "${files[@]}"; do
   targets=$(grep -oE '\[\[[A-Za-z0-9_-]+\]\]' "$f" 2>/dev/null \
