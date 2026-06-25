@@ -5,6 +5,15 @@ if ! git rev-parse --verify HEAD >/dev/null 2>&1; then
   exit 0
 fi
 
+# Allow completing a merge on main. A conflicted merge is finished
+# with git commit, which runs pre-commit; merges are how completed
+# branches land on main, so the guard exempts them. Ordinary
+# authored commits on main remain blocked because MERGE_HEAD is
+# only set during a merge.
+if [ -f "$(git rev-parse --git-path MERGE_HEAD 2>/dev/null)" ]; then
+  exit 0
+fi
+
 if [ "$current_branch" = "main" ]; then
   echo "Direct commits to main are blocked. Create a feature branch first." >&2
   exit 1
