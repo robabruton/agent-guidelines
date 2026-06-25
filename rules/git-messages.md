@@ -27,7 +27,9 @@ standard:
   characters; a few characters over is acceptable when it improves
   clarity. The `commit-msg` hook installed by `project-setup.sh`
   enforces a hard limit of 60 characters on the total subject line
-  and rejects anything over that limit
+  and rejects anything over that limit. Merge commits — which use
+  git's `Merge branch '<branch-name>'` subject — are exempt from
+  both the Conventional Commits format check and the length cap.
 - **body**: optional only for very small, self-evident changes. If a
   commit changes behavior, policy, workflow, touches multiple files, or
   would benefit from rationale, include a short body that explains WHAT
