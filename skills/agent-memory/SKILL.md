@@ -199,6 +199,20 @@ host loads and recalls memory before reorganizing into subdirectories. If
 unconfirmed, stay flat and tier with the `load` field plus naming, rather
 than directory structure.
 
+### Expect host frontmatter normalization
+
+Some hosts rewrite an entry's front matter on save, keeping only `name`
+and `description` at the top level and moving every other field (`type`,
+`load`, `status`, `updated`, `triggers`, and any host-added bookkeeping
+fields) under a `metadata:` map. Inline lists may also be rendered as
+block lists.
+
+This is expected and harmless: the tiering fields remain authoritative
+wherever the host places them. Author entries in the flat form the
+templates show; do not fight the rewrite. When auditing tiering by hand,
+look under `metadata:` too. `agent-memory-report.sh` tolerates both
+layouts.
+
 ## 5. Recall
 
 At the start of a task, read the router index and pull the entries whose
