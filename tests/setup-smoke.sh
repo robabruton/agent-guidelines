@@ -20,15 +20,6 @@ FORCE_REPO_HOME="${TMP_ROOT}/force-home"
 FORCE_OUT="${TMP_ROOT}/force.out"
 CUSTOM_BACKUP_PATH="${TMP_ROOT}/custom-backups"
 
-GLOBAL_RULES=(
-  agent-conduct
-  development-attribution
-  git-workflow
-  git-messages
-  no-plans-on-main
-  merge-requests
-)
-
 GLOBAL_SKILLS=(
   agent-memory
   code-review
@@ -50,11 +41,6 @@ CONTEXT_TARGETS=(
 )
 
 assert_managed_links() {
-  local rule
-  for rule in "${GLOBAL_RULES[@]}"; do
-    test -L "${HOME}/.claude/rules/${rule}.md"
-  done
-
   local harness skill
   for harness in "${SKILL_HARNESSES[@]}"; do
     for skill in "${GLOBAL_SKILLS[@]}"; do
@@ -63,6 +49,11 @@ assert_managed_links() {
   done
 
   test -L "${HOME}/.agent-guidelines/rules"
+
+  # Rules are delivered through the assembled context files only;
+  # no per-rule symlinks may be installed.
+  test ! -e "${HOME}/.claude/rules/agent-conduct.md"
+  test ! -e "${HOME}/.claude/rules/git-workflow.md"
 }
 
 assert_context_files() {
@@ -135,7 +126,7 @@ assert_context_files
 test ! -e "${HOME}/.claude/skills/test-audit"
 test ! -e "${HOME}/.agents/skills/firmware-review"
 
-# A rule that is load: recall must NOT be linked globally either.
+# No rule of any tier is linked globally; context files carry them.
 test ! -e "${HOME}/.claude/rules/testing.md"
 test ! -e "${HOME}/.claude/rules/code-quality.md"
 
@@ -177,24 +168,24 @@ test ! -e "${HOME}/.claude/rules/git-workflow.md"
 assert_no_residue
 
 export HOME="$FORCE_REPO_HOME"
-mkdir -p "${HOME}/.claude/rules"
-printf 'local file\n' > "${HOME}/.claude/rules/git-workflow.md"
+mkdir -p "${HOME}/.claude/skills"
+printf 'local file\n' > "${HOME}/.claude/skills/code-review"
 
 "${ROOT_DIR}/setup.sh" --force --backup-path "$CUSTOM_BACKUP_PATH" --no-color > "$FORCE_OUT"
 grep -Eq "backups:[[:space:]]+1" "$FORCE_OUT"
 grep -Eq "forced:[[:space:]]+true" "$FORCE_OUT"
 grep -Eq "backup path:[[:space:]]+${CUSTOM_BACKUP_PATH}" "$FORCE_OUT"
 grep -Eq "warnings:[[:space:]]+0" "$FORCE_OUT"
-test -L "${HOME}/.claude/rules/git-workflow.md"
-backup_file="$(find "$CUSTOM_BACKUP_PATH" -path "*/.claude/rules/git-workflow.md" -type f -print -quit)"
+test -L "${HOME}/.claude/skills/code-review"
+backup_file="$(find "$CUSTOM_BACKUP_PATH" -path "*/.claude/skills/code-review" -type f -print -quit)"
 test -n "$backup_file"
 
 # --prune scenario: plant orphan symlinks pointing into this repository
-# (one rule that is load:recall, one skill not in GLOBAL_SKILLS) and a
-# foreign symlink whose target sits outside the repository. Verify that
-# --prune --dry-run previews removal of the orphans only, --prune
-# actually removes them, and the foreign symlink and managed links
-# remain intact.
+# (two rule links of the kind earlier installs created, one skill not
+# in GLOBAL_SKILLS) and a foreign symlink whose target sits outside the
+# repository. Verify that --prune --dry-run previews removal of the
+# orphans only, --prune actually removes them, and the foreign symlink
+# and managed links remain intact.
 export HOME="${TMP_ROOT}/prune-home"
 mkdir -p "$HOME"
 PRUNE_DRY_OUT="${TMP_ROOT}/prune-dry.out"
@@ -204,31 +195,34 @@ FOREIGN_TARGET="${FOREIGN_DIR}/notes.md"
 
 "${ROOT_DIR}/setup.sh" --install --no-color > /dev/null
 
-mkdir -p "$FOREIGN_DIR"
+mkdir -p "$FOREIGN_DIR" "${HOME}/.claude/rules"
 printf 'user-private\n' > "$FOREIGN_TARGET"
+ln -s "${ROOT_DIR}/rules/agent-conduct.md" "${HOME}/.claude/rules/agent-conduct.md"
 ln -s "${ROOT_DIR}/rules/code-quality.md" "${HOME}/.claude/rules/code-quality.md"
 ln -s "${ROOT_DIR}/skills/security-audit" "${HOME}/.claude/skills/security-audit"
 ln -s "$FOREIGN_TARGET" "${HOME}/.claude/rules/foreign.md"
 
 "${ROOT_DIR}/setup.sh" --prune --dry-run --no-color > "$PRUNE_DRY_OUT"
 grep -Eq "action:[[:space:]]+prune" "$PRUNE_DRY_OUT"
-grep -Eq "pruned:[[:space:]]+2" "$PRUNE_DRY_OUT"
+grep -Eq "pruned:[[:space:]]+3" "$PRUNE_DRY_OUT"
+grep -Fq "agent-conduct.md" "$PRUNE_DRY_OUT"
 grep -Fq "code-quality.md" "$PRUNE_DRY_OUT"
 grep -Fq "security-audit" "$PRUNE_DRY_OUT"
 if grep -Fq "foreign.md" "$PRUNE_DRY_OUT"; then
   echo "foreign symlink reported by --prune --dry-run" >&2
   exit 1
 fi
+test -L "${HOME}/.claude/rules/agent-conduct.md"
 test -L "${HOME}/.claude/rules/code-quality.md"
 test -L "${HOME}/.claude/skills/security-audit"
 test -L "${HOME}/.claude/rules/foreign.md"
 
 "${ROOT_DIR}/setup.sh" --prune --no-color > "$PRUNE_OUT"
-grep -Eq "pruned:[[:space:]]+2" "$PRUNE_OUT"
+grep -Eq "pruned:[[:space:]]+3" "$PRUNE_OUT"
+test ! -e "${HOME}/.claude/rules/agent-conduct.md"
 test ! -e "${HOME}/.claude/rules/code-quality.md"
 test ! -e "${HOME}/.claude/skills/security-audit"
 test -L "${HOME}/.claude/rules/foreign.md"
-test -L "${HOME}/.claude/rules/agent-conduct.md"
 test -L "${HOME}/.claude/skills/agent-memory"
 
 "${ROOT_DIR}/setup.sh" --prune --no-color > "$PRUNE_OUT"
