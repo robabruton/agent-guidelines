@@ -25,6 +25,10 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
   `~/.claude/rules/`. A harness that reads both channels loaded the
   same rule text twice in every conversation. Run `setup.sh --prune`
   to remove links left by earlier installs.
+- `development-attribution.md` states that the installed hooks
+  reject every authorship trailer regardless of who is named and
+  that human collaborators are credited in commit body prose, so the
+  rule and its enforcement describe the same boundary.
 - The `docs-audit` and `docs-review` triggers open with the factual
   accuracy versus writing quality distinction and cross-reference
   each other, so trigger text alone routes to the right skill.

@@ -6,6 +6,11 @@ load: always
 
 - Do not include `Co-Authored-By` lines referencing AI tools, code
   assistants, or automation tools in commit messages
+- The hooks installed by `project-setup.sh` enforce this by rejecting
+  authorship trailers (`Co-Authored-By`, `Generated-by`, and similar)
+  in commit messages and staged content regardless of who is named,
+  since a pattern cannot tell tool names from human names. Credit
+  human collaborators in commit body prose rather than trailers
 - Do not reference AI tools, LLMs, code assistants, or automation tools
   as having developed, written, generated, reviewed, or planned any part
   of the project
