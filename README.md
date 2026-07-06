@@ -133,6 +133,12 @@ Run the smoke tests for the target-repository setup command with:
 tests/project-setup-smoke.sh
 ```
 
+Run the smoke tests for the installed git hook snippets with:
+
+```bash
+tests/hooks-smoke.sh
+```
+
 ## License
 
 This repository is published under the
