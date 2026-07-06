@@ -1,6 +1,6 @@
 ---
-when: always
-load: always
+when: opening, writing, or reviewing a pull/merge request, or publishing a branch for review
+load: recall
 ---
 # Pull / Merge Request Rules
 

@@ -20,8 +20,8 @@ Every rule file declares YAML frontmatter with two fields:
   in the router table only; the model reads its body on demand when
   the trigger matches the current task).
 
-Six rules are tiered `always`. They form the baseline a model follows
-on every conversation. The remaining fourteen are tiered `recall` and
+Five rules are tiered `always`. They form the baseline a model follows
+on every conversation. The remaining fifteen are tiered `recall` and
 cover situational expectations the model reads only when needed.
 
 ## Always-Loaded Rules
@@ -81,15 +81,6 @@ commit message, pull request description, merge commit body, or
 branch name. Includes a banned-phrase checklist run before staging
 and a pointer to where plans legitimately belong (durable agent
 memory, untracked `local/` files, scratch branches).
-
-### `merge-requests`
-
-What a pull or merge request description must contain: Summary,
-optional Changes, Test Evidence, optional Notes. Every commit in
-the branch must stand on its own — no `fix`/`fixup` commits
-patching earlier commits in the same branch. Cross-repository
-context belongs in the description rather than in commit history,
-which the git-messages rule keeps self-contained per repo.
 
 ## On-Demand Rules
 
@@ -169,6 +160,15 @@ duplicate-instance errors follow); regenerate virtual environments
 after moving or renaming package directories so entry-point scripts
 get correct paths; committed files must work on every target
 platform; prefer high-level platform CLIs over raw API calls.
+
+### `merge-requests`
+
+What a pull or merge request description must contain: Summary,
+optional Changes, Test Evidence, optional Notes. Every commit in
+the branch must stand on its own — no `fix`/`fixup` commits
+patching earlier commits in the same branch. Cross-repository
+context belongs in the description rather than in commit history,
+which the git-messages rule keeps self-contained per repo.
 
 ### `scripts`
 
