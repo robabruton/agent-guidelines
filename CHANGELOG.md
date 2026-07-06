@@ -4,6 +4,32 @@ All notable changes to this project will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## 2026-07-06
+
+### Fixed
+
+- The pre-push branch-name guard validates the branches actually
+  being pushed, read from the ref list git supplies on stdin,
+  instead of the currently checked-out branch. Deletions and tag
+  pushes are not name-checked, and the `revert/` prefix is accepted
+  alongside the other Conventional Commit types.
+- The commit guards are portable and self-hosting: the staged
+  attribution guard runs under plain POSIX sh and lists every staged
+  file carrying tool attribution, both attribution patterns are
+  assembled from split fragments so committing the hook definitions
+  themselves does not trip the staged guard, and the conventional
+  commit guard counts subject length in characters rather than bytes
+  and points `git revert`'s default subject at the `revert:` type.
+  Existing repositories need `project-setup.sh` re-run to pick up
+  the updated hook blocks.
+
+### Added
+
+- `tests/hooks-smoke.sh` verifies the installed hook snippets in a
+  temporary repository: guard rejections and passes, merge
+  exemptions, and pre-push ref handling including deletions and
+  tags.
+
 ## 2026-06-25
 
 ### Fixed

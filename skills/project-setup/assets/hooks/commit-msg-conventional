@@ -13,11 +13,17 @@ if ! printf '%s\n' "$subject" | grep -E '^(feat|fix|refactor|perf|docs|style|tes
   echo "Commit subject must use Conventional Commits:" >&2
   echo "  <type>(<scope>): <description>" >&2
   echo "Allowed types: feat, fix, refactor, perf, docs, style, test, build, ci, chore, revert" >&2
+  case "$subject" in
+    Revert\ *) echo "Hint: rewrite git revert's default subject as revert: <description>" >&2 ;;
+  esac
   exit 1
 fi
 
-if [ "${#subject}" -gt 60 ]; then
-  echo "Commit subject is ${#subject} characters; hard limit is 60." >&2
+# wc -m counts characters under the active locale; ${#subject} counts
+# bytes in some POSIX shells, which over-counts multibyte characters.
+subject_length="$(printf '%s' "$subject" | wc -m)"
+if [ "$subject_length" -gt 60 ]; then
+  echo "Commit subject is ${subject_length} characters; hard limit is 60." >&2
   echo "Target is 50 characters; a few characters over is acceptable when it improves clarity." >&2
   exit 1
 fi

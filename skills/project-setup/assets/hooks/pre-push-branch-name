@@ -1,13 +1,27 @@
 # BEGIN agent-guidelines branch-name guard
-current_branch="$(git symbolic-ref --quiet --short HEAD 2>/dev/null || true)"
+# Validates the branches actually being pushed, read from the ref list
+# git supplies on stdin, rather than the currently checked-out branch.
+# Deletions are allowed so a badly named remote branch can still be
+# removed; tag and non-branch refs are not name-checked.
+while read -r local_ref local_sha remote_ref remote_sha; do
+  case "$local_sha" in
+    *[!0]*) ;;
+    *) continue ;;
+  esac
 
-case "$current_branch" in
-  main|feat/*|fix/*|chore/*|docs/*|refactor/*|test/*|build/*|ci/*|perf/*|style/*)
-    ;;
-  *)
-    echo "Branch names must use main or a Conventional Commit type prefix." >&2
-    echo "Examples: feat/setup-skill, fix/hook-install" >&2
-    exit 1
-    ;;
-esac
+  case "$remote_ref" in
+    refs/heads/*) pushed_branch="${remote_ref#refs/heads/}" ;;
+    *) continue ;;
+  esac
+
+  case "$pushed_branch" in
+    main|feat/*|fix/*|chore/*|docs/*|refactor/*|test/*|build/*|ci/*|perf/*|style/*|revert/*)
+      ;;
+    *)
+      echo "Refusing to push '$pushed_branch': branch names must use main or a Conventional Commit type prefix." >&2
+      echo "Examples: feat/setup-skill, fix/hook-install" >&2
+      exit 1
+      ;;
+  esac
+done
 # END agent-guidelines branch-name guard
