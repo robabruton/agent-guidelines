@@ -16,7 +16,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 - `tests/hooks-smoke.sh` verifies the installed hook snippets in a
   temporary repository: guard rejections and passes, merge
   exemptions, and pre-push ref handling including deletions and
-  tags.
+  tags. CI lints it and runs it on a runner whose `/bin/sh` is dash,
+  so the snippets are exercised under a strict POSIX shell.
 
 ### Changed
 
