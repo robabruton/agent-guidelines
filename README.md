@@ -30,16 +30,16 @@ Without an override, backups are written under
 
 ### Managed Paths
 
-`setup.sh` installs a curated **global** set: the rules marked
-`load: always` in their YAML frontmatter and the skills listed in the
-`GLOBAL_SKILLS` array near the top of `setup.sh`. Everything else stays
-out of the global path and is opted in per project through
+`setup.sh` installs a curated **global** set: the skills listed in the
+`GLOBAL_SKILLS` array near the top of `setup.sh`, a stable rules store
+symlink, and one assembled context file per harness. Everything else
+stays out of the global path and is opted in per project through
 `project-setup.sh`.
 
-`setup.sh` also assembles a global context file per harness containing
-the same six rules inlined plus a router section that lists every
-recall-tier rule with its trigger and a stable reference path. The
-router's reference paths resolve through a single
+Each assembled context file contains the rules marked `load: always`
+in their YAML frontmatter inlined, plus a router section that lists
+every recall-tier rule with its trigger and a stable reference path.
+The router's reference paths resolve through a single
 `~/.agent-guidelines/rules` directory symlink that points at this
 repository's `rules/`. The targets are `~/.claude/CLAUDE.md` for Claude
 Code, `~/.config/opencode/AGENTS.md` for OpenCode,
@@ -47,17 +47,16 @@ Code, `~/.config/opencode/AGENTS.md` for OpenCode,
 Only the marker-bracketed managed block is touched; any other content
 you keep in those files stays intact.
 
+The context files are the only global delivery channel for rules, so a
+harness that also reads a per-rule directory never loads the same rule
+twice. `setup.sh --prune` removes per-rule symlinks left in
+`~/.claude/rules/` by earlier installs.
+
 The global set today:
 
 | Kind | Managed path | Source |
 | --- | --- | --- |
 | Store | `$HOME/.agent-guidelines/rules` | `rules/` |
-| Rule | `$HOME/.claude/rules/agent-conduct.md` | `rules/agent-conduct.md` |
-| Rule | `$HOME/.claude/rules/development-attribution.md` | `rules/development-attribution.md` |
-| Rule | `$HOME/.claude/rules/git-workflow.md` | `rules/git-workflow.md` |
-| Rule | `$HOME/.claude/rules/git-messages.md` | `rules/git-messages.md` |
-| Rule | `$HOME/.claude/rules/no-plans-on-main.md` | `rules/no-plans-on-main.md` |
-| Rule | `$HOME/.claude/rules/merge-requests.md` | `rules/merge-requests.md` |
 | Skill | `$HOME/.claude/skills/agent-memory` | `skills/agent-memory` |
 | Skill | `$HOME/.claude/skills/code-review` | `skills/code-review` |
 | Skill | `$HOME/.claude/skills/explain` | `skills/explain` |
