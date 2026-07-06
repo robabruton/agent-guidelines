@@ -1,7 +1,7 @@
 ---
 name: docs-audit
-description: Audit documentation against actual project files, scripts, commands, options, examples, managed paths, and generated behavior for factual accuracy.
-when_to_use: Use when verifying README files, setup instructions, CLI examples, managed path lists, skill catalogs, rule references, changelog guidance, or other docs against repository reality.
+description: Audit documentation for factual accuracy against actual project files, scripts, commands, options, examples, managed paths, and generated behavior.
+when_to_use: Use for factual accuracy of documentation — verifying that README files, setup instructions, CLI examples, managed path lists, skill catalogs, rule references, or changelog guidance match repository reality. For writing quality, use docs-review instead.
 argument-hint: "[file|directory|project|changes]"
 allowed-tools: Read Grep Glob
 ---
