@@ -25,6 +25,13 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
   `~/.claude/rules/`. A harness that reads both channels loaded the
   same rule text twice in every conversation. Run `setup.sh --prune`
   to remove links left by earlier installs.
+- The always-tier rules `git-workflow.md`, `git-messages.md`, and
+  `no-plans-on-main.md` state each expectation once instead of
+  restating it across sections: branch naming, commit-when-done,
+  message-file handling, merge message format, and the local/ layout
+  each have a single home, with cross-references where two rules
+  meet. Every requirement is retained at a lower standing context
+  cost.
 - `development-attribution.md` states that the installed hooks
   reject every authorship trailer regardless of who is named and
   that human collaborators are credited in commit body prose, so the
