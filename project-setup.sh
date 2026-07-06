@@ -28,6 +28,9 @@ UNCHANGED=()
 SKIPPED=()
 WARNINGS=()
 
+# Profile rule lists and the canonical order are also documented in
+# skills/project-setup/SKILL.md for environments without this script;
+# keep the two in sync.
 MINIMAL_RULES=(
   agent-conduct
   git-workflow

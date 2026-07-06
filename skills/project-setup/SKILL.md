@@ -13,9 +13,12 @@ Use this skill for both new repositories and existing repositories that
 need project rules, git configuration, local hooks, or agent instruction
 files refreshed.
 
-The repository command that implements this target-repository workflow is
-`project-setup.sh`. Keep that distinct from any future setup command used
-to configure or develop the `agent-guidelines` repository itself.
+The repository command that implements this target-repository workflow
+is `project-setup.sh`; when it is available, run it instead of
+performing the steps manually, and treat it as the authoritative
+definition of profiles, rule selection, and file handling. Keep it
+distinct from `setup.sh`, which links this repository's rules and
+skills into local tool configuration directories.
 
 ## Target Directory
 
@@ -144,8 +147,8 @@ git init --initial-branch=main
 - If symlink creation is unavailable or the user selects copy mode, copy
   rule files into `.agent-guidelines/rules` as a snapshot
 - Treat `.agent-guidelines/config` as local setup state that records the
-  selected profile, changelog mode, versioning mode, included rules, and
-  excluded rules
+  selected profile, changelog mode, versioning mode, rule and skill
+  source modes, and the included and excluded rules and skills
 - Do not symlink `CLAUDE.md` or `AGENTS.md`; generate their managed
   blocks from the selected rule source instead
 - Read rule files from the first available source:
@@ -157,8 +160,11 @@ git init --initial-branch=main
   warning
 - Supported profiles include these rule files when available:
   - `minimal`:
+    - `agent-conduct.md`
     - `git-workflow.md`
     - `git-messages.md`
+    - `no-plans-on-main.md`
+    - `merge-requests.md`
     - `development-attribution.md`
     - `configuration.md`
     - `testing.md`
@@ -168,6 +174,9 @@ git init --initial-branch=main
     - `docstrings.md`
     - `dependencies.md`
     - `scripts.md`
+    - `code-quality.md`
+    - `engineering-judgment.md`
+    - `environment-hygiene.md`
   - `released`:
     - all `codebase` rules
     - `backward-compatibility.md`
@@ -189,14 +198,20 @@ git init --initial-branch=main
   - Remove explicit exclude-rule overrides
   - Keep mode-required rules
 - Canonical rule order:
+  - `agent-conduct.md`
   - `git-workflow.md`
   - `git-messages.md`
+  - `no-plans-on-main.md`
+  - `merge-requests.md`
   - `development-attribution.md`
   - `configuration.md`
   - `testing.md`
   - `documentation.md`
   - `docstrings.md`
   - `scripts.md`
+  - `code-quality.md`
+  - `engineering-judgment.md`
+  - `environment-hygiene.md`
   - `dependencies.md`
   - `changelog-common.md`
   - `changelog-date.md`
@@ -209,6 +224,24 @@ git init --initial-branch=main
   rule
 - Do not rewrite, summarize, or otherwise change the rule text
 - Report which rule files were included, skipped, or unavailable
+
+## Per-Project Skills
+
+- Install skills only when the user opts in with `include skill <id>`
+  (`--include-skill` for the script); `exclude skill <id>` removes a
+  skill from the selection
+- Install selected skills into `.agents/skills/<skill>/` in the target
+  repository, where the supported harnesses discover project skills
+- Use the same source mode as rules unless the user overrides it
+  (`--skills-source symlink|copy`)
+- In symlink mode, link each skill directory to its canonical source
+  and add `.agents/skills/` to `.git/info/exclude` so the links stay
+  out of git
+- In copy mode, copy the skill directory as a tracked project asset
+- Leave a path in place and report it as skipped when it exists and is
+  not what the selected mode would create (a symlink pointing
+  elsewhere, a regular file, or a directory in symlink mode)
+- Warn when a selected skill does not exist in the skills source
 
 ## Commit Template
 
@@ -265,6 +298,7 @@ Only when the skill initializes a new git repository:
   - `CHANGELOG.md` when changelog maintenance is selected
   - `.agent-guidelines/rules/` when copy mode is selected for a
     portable rule snapshot
+  - `.agents/skills/` when skills are selected in copy mode
 - Do not stage or commit local agent instruction files:
   - `CLAUDE.md`
   - `CLAUDE.local.md`
@@ -351,6 +385,10 @@ At the end, print:
 - Rule source mode:
   - symlink
   - copy
+- Skill source mode:
+  - symlink
+  - copy
+- Included rules and included skills, in their applied order
 - Created files, hooks, config values, and commits
 - Updated files, hooks, and config values
 - Unchanged files, hooks, and config values

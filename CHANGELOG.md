@@ -6,6 +6,26 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ## 2026-07-06
 
+### Added
+
+- `setup.sh --status` verifies each assembled context file against
+  the current rules and reports it as current, stale, or missing,
+  and `--dry-run` previews only the files an install would actually
+  change. A stale block previously reported as managed, so an
+  out-of-date install was invisible.
+- `tests/hooks-smoke.sh` verifies the installed hook snippets in a
+  temporary repository: guard rejections and passes, merge
+  exemptions, and pre-push ref handling including deletions and
+  tags.
+
+### Changed
+
+- `project-setup/SKILL.md` matches `project-setup.sh`: the profile
+  rule lists and canonical rule order include every rule the script
+  applies, per-project skill installation and its source modes are
+  documented, and the script is named as the authoritative
+  implementation to run when available.
+
 ### Fixed
 
 - The pre-push branch-name guard validates the branches actually
@@ -22,18 +42,6 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
   and points `git revert`'s default subject at the `revert:` type.
   Existing repositories need `project-setup.sh` re-run to pick up
   the updated hook blocks.
-
-### Added
-
-- `setup.sh --status` verifies each assembled context file against
-  the current rules and reports it as current, stale, or missing,
-  and `--dry-run` previews only the files an install would actually
-  change. A stale block previously reported as managed, so an
-  out-of-date install was invisible.
-- `tests/hooks-smoke.sh` verifies the installed hook snippets in a
-  temporary repository: guard rejections and passes, merge
-  exemptions, and pre-push ref handling including deletions and
-  tags.
 
 ## 2026-06-25
 
