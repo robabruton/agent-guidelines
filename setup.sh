@@ -71,25 +71,16 @@ CONTEXT_MISSING=0
 
 LINKS=()
 
-# Populate LINKS from the rule files marked load: always in their YAML
-# frontmatter and from the hardcoded GLOBAL_SKILLS list. Builds entries
-# for every harness directory in SKILL_HARNESSES.
+# Populate LINKS from the rule store and the hardcoded GLOBAL_SKILLS
+# list, building skill entries for every harness directory in
+# SKILL_HARNESSES. Rules reach every harness through the assembled
+# context files only; installing them as per-rule symlinks as well
+# would make harnesses that read a global rules directory load the
+# same text twice.
 build_links() {
   LINKS=()
 
   LINKS+=("store|${RULE_STORE_PATH}|${RULES_DIR}")
-
-  local file
-  for file in "${RULES_DIR}"/*.md; do
-    [ -f "$file" ] || continue
-    local load
-    load="$(agent_guidelines_read_frontmatter_field "$file" load)"
-    if [ "$load" = "always" ]; then
-      local name
-      name="$(basename "$file" .md)"
-      LINKS+=("rule|${HOME}/.claude/rules/${name}.md|${RULES_DIR}/${name}.md")
-    fi
-  done
 
   local skill harness
   for harness in "${SKILL_HARNESSES[@]}"; do
@@ -441,7 +432,6 @@ process_links() {
     if [ "$kind" != "$current_kind" ]; then
       current_kind="$kind"
       case "$kind" in
-        rule) section "Rules" ;;
         skill) section "Skills" ;;
         store) section "Stores" ;;
       esac
@@ -674,6 +664,9 @@ prune_orphans() {
   rules_real="$(real_path "$RULES_DIR")"
   skills_real="$(real_path "$SKILLS_DIR")"
 
+  # ~/.claude/rules is scanned even though no links are installed
+  # there today, so per-rule symlinks left behind by earlier installs
+  # are cleaned up.
   local scan_dirs=("${HOME}/.claude/rules")
   local harness
   for harness in "${SKILL_HARNESSES[@]}"; do
