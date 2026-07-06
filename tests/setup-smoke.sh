@@ -145,6 +145,31 @@ grep -Eq "current:[[:space:]]+${expected_links}" "$SECOND_OUT"
 grep -Eq "context current:[[:space:]]+4" "$SECOND_OUT"
 assert_context_files
 
+# Staleness detection: change a line inside one managed block, then
+# verify --status flags the file, --dry-run previews exactly one
+# update, and --install repairs it.
+STALE_TARGET="${HOME}/.claude/CLAUDE.md"
+STALE_STATUS_OUT="${TMP_ROOT}/stale-status.out"
+STALE_DRY_OUT="${TMP_ROOT}/stale-dry.out"
+STALE_REPAIR_OUT="${TMP_ROOT}/stale-repair.out"
+awk '{ sub(/^## Agent Conduct Rules$/, "## Edited Rules"); print }' \
+  "$STALE_TARGET" > "${STALE_TARGET}.tmp"
+mv "${STALE_TARGET}.tmp" "$STALE_TARGET"
+
+"${ROOT_DIR}/setup.sh" --status --no-color > "$STALE_STATUS_OUT"
+grep -Eq "context current:[[:space:]]+3" "$STALE_STATUS_OUT"
+grep -Eq "context stale:[[:space:]]+1" "$STALE_STATUS_OUT"
+grep -Fq "out of date; run --install" "$STALE_STATUS_OUT"
+
+"${ROOT_DIR}/setup.sh" --dry-run --no-color > "$STALE_DRY_OUT"
+grep -Eq "context updated:[[:space:]]+1" "$STALE_DRY_OUT"
+grep -Eq "context current:[[:space:]]+3" "$STALE_DRY_OUT"
+
+"${ROOT_DIR}/setup.sh" --install --no-color > "$STALE_REPAIR_OUT"
+grep -Eq "context updated:[[:space:]]+1" "$STALE_REPAIR_OUT"
+grep -Eq "context current:[[:space:]]+3" "$STALE_REPAIR_OUT"
+assert_context_files
+
 "${ROOT_DIR}/setup.sh" --remove --no-color > "$REMOVE_OUT"
 grep -Eq "removed:[[:space:]]+${expected_links}" "$REMOVE_OUT"
 grep -Eq "context removed:[[:space:]]+4" "$REMOVE_OUT"

@@ -32,6 +32,10 @@
 #       Strip the marker block from target_file. Removes the file if it
 #       becomes empty (or whitespace only). Prints "removed",
 #       "cleared", "absent", or "missing" on stdout.
+#   agent_guidelines_extract_managed_block <target_file>
+#       Print the marker block from target_file, including both marker
+#       lines, so callers can compare the installed block against a
+#       freshly assembled one. Prints nothing when no block exists.
 #   agent_guidelines_build_router_table <rules_dir> <stable_path> <rule>...
 #       Print a markdown table to stdout listing each rule's "when"
 #       trigger and a stable reference path (stable_path/<rule>.md) so a
@@ -194,6 +198,20 @@ agent_guidelines_remove_managed_block() {
     rm -f "$temp_file" "$target_file"
     printf 'removed'
   fi
+}
+
+agent_guidelines_extract_managed_block() {
+  local target_file="$1"
+
+  [ -e "$target_file" ] || return 0
+
+  awk \
+    -v begin="$AGENT_GUIDELINES_MARKER_BEGIN" \
+    -v end="$AGENT_GUIDELINES_MARKER_END" '
+    $0 == begin { in_block = 1 }
+    in_block    { print }
+    $0 == end && in_block { exit }
+  ' "$target_file"
 }
 
 agent_guidelines_build_router_table() {
