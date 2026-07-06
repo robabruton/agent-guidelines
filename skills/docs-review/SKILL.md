@@ -1,7 +1,7 @@
 ---
 name: docs-review
 description: Review documentation for reader clarity, structure, tone, grammar, style, completeness, and task flow without turning it into a factual docs audit.
-when_to_use: Use when reviewing README files, guides, rules, skill docs, setup instructions, or other documentation as writing for clarity, organization, tone, grammar, style, and reader success.
+when_to_use: Use for writing quality of documentation — reviewing README files, guides, rules, skill docs, or setup instructions for clarity, organization, tone, grammar, style, and reader success. For factual accuracy against the repository, use docs-audit instead.
 argument-hint: "[file|directory|project|changes]"
 allowed-tools: Read Grep Glob
 ---
