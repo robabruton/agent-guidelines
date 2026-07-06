@@ -25,6 +25,10 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
   `~/.claude/rules/`. A harness that reads both channels loaded the
   same rule text twice in every conversation. Run `setup.sh --prune`
   to remove links left by earlier installs.
+- The `merge-requests` rule is tiered `recall`: it appears in the
+  router table with a pull/merge request trigger instead of being
+  inlined into every conversation's global context. Project profiles
+  still include it in generated instruction files.
 - `project-setup/SKILL.md` matches `project-setup.sh`: the profile
   rule lists and canonical rule order include every rule the script
   applies, per-project skill installation and its source modes are
