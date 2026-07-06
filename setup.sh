@@ -63,6 +63,7 @@ PRUNED=0
 CONTEXT_CREATED=0
 CONTEXT_UPDATED=0
 CONTEXT_UNCHANGED=0
+CONTEXT_STALE=0
 CONTEXT_REMOVED=0
 CONTEXT_CLEARED=0
 CONTEXT_ABSENT=0
@@ -534,8 +535,14 @@ install_context() {
     if [ "$DRY_RUN" = true ]; then
       if [ -e "$path" ] &&
         grep -Fxq "$AGENT_GUIDELINES_MARKER_BEGIN" "$path" 2>/dev/null; then
-        entry "$CYAN" "?" "would update" "$path" "$label"
-        CONTEXT_UPDATED=$((CONTEXT_UPDATED + 1))
+        if agent_guidelines_extract_managed_block "$path" |
+          cmp -s "$block_file" -; then
+          entry "$GREEN" "✓" "current" "$path" "$label already up to date"
+          CONTEXT_UNCHANGED=$((CONTEXT_UNCHANGED + 1))
+        else
+          entry "$CYAN" "?" "would update" "$path" "$label"
+          CONTEXT_UPDATED=$((CONTEXT_UPDATED + 1))
+        fi
       elif [ -e "$path" ]; then
         entry "$CYAN" "?" "would append" "$path" "$label"
         CONTEXT_UPDATED=$((CONTEXT_UPDATED + 1))
@@ -610,7 +617,14 @@ remove_context() {
   done
 }
 
+# Reports each context file as current (managed block matches a fresh
+# assembly), stale (managed block present but out of date; --install
+# refreshes it), or missing (no managed block yet).
 status_context() {
+  local block_file
+  block_file="$(mktemp)"
+  assemble_context_block "$block_file"
+
   section "Context Files"
   local item path label
   for item in "${CONTEXT_TARGETS[@]}"; do
@@ -619,13 +633,22 @@ status_context() {
 
     if [ -e "$path" ] &&
       grep -Fxq "$AGENT_GUIDELINES_MARKER_BEGIN" "$path" 2>/dev/null; then
-      entry "$GREEN" "✓" "managed" "$path" "$label"
-      CONTEXT_UNCHANGED=$((CONTEXT_UNCHANGED + 1))
+      if agent_guidelines_extract_managed_block "$path" |
+        cmp -s "$block_file" -; then
+        entry "$GREEN" "✓" "current" "$path" "$label"
+        CONTEXT_UNCHANGED=$((CONTEXT_UNCHANGED + 1))
+      else
+        entry "$YELLOW" "!" "stale" "$path" "$label out of date; run --install"
+        CONTEXT_STALE=$((CONTEXT_STALE + 1))
+        WARNINGS=$((WARNINGS + 1))
+      fi
     else
       entry "$DIM" "·" "missing" "$path" "$label not yet assembled"
       CONTEXT_MISSING=$((CONTEXT_MISSING + 1))
     fi
   done
+
+  rm -f "$block_file"
 }
 
 # Walks the rule and skill harness directories looking for symlinks
@@ -705,7 +728,8 @@ print_summary() {
       summary_entry "current:" "$CURRENT"
       summary_entry "missing:" "$MISSING"
       summary_entry "conflicts:" "$CONFLICTS"
-      summary_entry "context managed:" "$CONTEXT_UNCHANGED"
+      summary_entry "context current:" "$CONTEXT_UNCHANGED"
+      summary_entry "context stale:" "$CONTEXT_STALE"
       summary_entry "context missing:" "$CONTEXT_MISSING"
       ;;
     install)
