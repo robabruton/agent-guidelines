@@ -6,21 +6,16 @@ load: always
 
 ## How Work Builds Up
 
-Think of development as composition from small pieces:
+Development composes bottom-up from small pieces:
 
 1. **A commit** is the smallest meaningful change — one function
    implemented, one bug fixed, one config option added. It should be
    describable in a single sentence and independently revertable.
 2. **A branch** is a complete unit of work made up of many small
-   commits — a feature, a component, a fix. It has a clear goal and is
-   only merged when that goal is fully achieved.
+   commits — a feature, a component, a fix — merged only when its
+   goal is fully achieved.
 3. **The project** is the sum of all merged branches on `main`. Each
    merge represents a completed, tested piece of work.
-
-This is bottom-up composition. You don't need to plan every commit in
-advance — you commit naturally as you work, whenever you've completed a
-meaningful change. The discipline is in recognizing when you've done
-enough for one commit and stopping to record it before moving on.
 
 ## Branching
 
@@ -30,30 +25,24 @@ enough for one commit and stopping to record it before moving on.
   that originate on `main`, and the pre-commit main-branch guard
   installed by `project-setup.sh` allows them while blocking every
   other commit on `main`.
-- Create a new branch for every feature, fix, or change
-- Use descriptive slash-prefixed branch names:
-  `feat/description`, `fix/description`, `chore/description`
-- Before creating a branch, choose the branch type from the work being
-  done and verify that the name matches the documented pattern. If the
-  branch name does not fit, stop and choose a better name before running
-  `git checkout -b`.
-- Name the branch from the work being done, not from where the repository
-  happens to be checked out. Before starting a new piece of work, confirm
-  the current branch's scope actually covers it; if it does not, create a
-  new branch rather than piling distinct work onto a branch named for a
-  different scope.
-- Only merge back to `main` when the work for that branch is fully
-  complete
-- Always merge with `--no-ff` to create an explicit merge commit, even
-  when a fast-forward is possible. This preserves the branch as a
-  visible grouping of related commits in the history and makes it
-  possible to revert an entire feature with a single `git revert`.
-- If the project maintains a `CHANGELOG.md`, keep changelog edits on the
-  branch that made the work — never as a follow-up commit on main. For
-  versioned projects, the `[Unreleased]` to release cut happens on the
-  release branch. For date-based projects, write entries directly into
-  that day's dated section. See `changelog-common.md`,
-  `changelog-date.md`, and `changelog-version.md` for details.
+- Create a new branch for every feature, fix, or change, with a
+  descriptive slash-prefixed name: `feat/description`,
+  `fix/description`, `chore/description`
+- Name the branch from the work being done, not from where the
+  repository happens to be checked out, and verify the name matches
+  the documented pattern before creating it. Before starting new
+  work, confirm the current branch's scope covers it; if not, create
+  a new branch rather than piling distinct work onto a branch named
+  for a different scope.
+- Merge back to `main` only when the branch's work is fully complete,
+  and always with `--no-ff`, even when a fast-forward is possible.
+  The explicit merge commit preserves the branch as a visible
+  grouping in history and makes a whole feature revertable with a
+  single `git revert`.
+- If the project maintains a `CHANGELOG.md`, keep changelog edits on
+  the branch that made the work — never as a follow-up commit on
+  main. See `changelog-common.md`, `changelog-date.md`, and
+  `changelog-version.md` for section formats and the release cut.
 
 ## Commits
 
@@ -66,61 +55,53 @@ A feature branch should have MANY small commits, not one or two large
 ones. The natural rhythm when building something:
 
 1. **Interface first** — define the header / API / types. Commit.
-2. **Implement in logical groups** — don't implement everything then
-   commit. Group related functions (e.g., all sensor-related builders,
-   all actuator-related builders) and commit each group. A 500-line
-   source file should never land in a single commit.
+2. **Implement in logical groups** — group related functions (e.g.,
+   all sensor-related builders) and commit each group rather than
+   implementing everything and committing once. A 500-line source
+   file should never land in a single commit.
 3. **Tests** — commit as their own unit per logical group, or as a
    cohesive set if they're small.
 
-STOP and commit after completing each meaningful change before moving on
-to the next one. A meaningful change is something you can describe in a
-single sentence: one function added, one handler implemented, one test
-written, one config option wired up.
+Commit naturally as you work: STOP and record each meaningful change
+before moving to the next — one function added, one handler
+implemented, one test written, one config option wired up. When in
+doubt, commit more often: small commits can be squashed later, but a
+monolithic commit can't be split after the fact.
 
-When in doubt, commit more often rather than less often. Err on the side
-of too many small commits — they can be squashed later, but a monolithic
-commit can't be split after the fact.
-
-Let commits emerge from the work. Do NOT pre-plan a numbered list of
-commits ("commit 1 will be X, commit 2 will be Y, six total") before
-starting — the count falls out of the work naturally. Describing the
-shape of the work (interface first, then implementation groups, then
-tests) is fine; building a counted commit list up front is not, and it
-fights with letting the commit history reflect what actually happened.
+Let commits emerge from the work. Describing its shape (interface
+first, then implementation groups, then tests) is fine, but do NOT
+pre-plan a numbered commit list ("commit 1 will be X, six total") —
+the count falls out of the work naturally, and a counted list fights
+letting history reflect what actually happened.
 
 ### What NOT to do
 
-- NEVER have more than 3-4 modified files uncommitted at once — if you
-  do, you've gone too far without committing
-- Do NOT batch unrelated changes into a single commit
-- Do NOT implement an entire source file and commit it all at once —
-  break it into logical groups
+- NEVER have more than 3-4 modified files uncommitted at once
+- Do NOT batch unrelated changes into a single commit. If a change
+  belongs to a different scope than the current branch, put it on a
+  separate branch unless it is required to complete this branch
+  safely.
 - If you find yourself writing "and" in a commit message subject, it
   should probably be two commits
 - The revert test: every commit should be independently revertable
   without undoing unrelated work
-- If a new change belongs to a different scope than the current branch,
-  stop and put it on a separate branch unless it is required to complete
-  the current branch safely
 
 ## Merge Readiness
 
-- A branch must not be merged if it breaks behavior that already exists
-  on `main`
-- If a branch intentionally replaces existing behavior, it must include
-  the replacement before it is merged
-- Documentation must describe behavior that exists on the branch being
-  merged, not planned future behavior
+- A branch must not break behavior that already exists on `main`; if
+  it intentionally replaces existing behavior, it must include the
+  replacement before it is merged
+- Documentation must describe behavior that exists on the branch
+  being merged, not planned future behavior
 - Run the relevant checks for the project before merging; if no
   automated checks exist yet, review the changed files manually
 - Treat project hooks as part of the workflow. Understand and resolve
-  hook failures before continuing; do not bypass hooks unless the team
-  has agreed that the hook is wrong for the current change.
-- Before merging, review the branch diff against the branch goal.
-  Confirm that the diff is scoped, changelog entries are correct,
-  temporary files are removed, generated files are intentional, and no
-  unrelated changes were included.
+  hook failures before continuing; do not bypass hooks unless the
+  team has agreed that the hook is wrong for the current change.
+- Before merging, review the branch diff against the branch goal:
+  the diff is scoped, changelog entries are correct, temporary files
+  are removed, generated files are intentional, and no unrelated
+  changes were included
 - For versioned projects, check whether the branch warrants a release
   and either recommend the appropriate version bump or state that no
   release is needed
@@ -129,35 +110,34 @@ fights with letting the commit history reflect what actually happened.
 
 ## When the Default Branch Is Protected
 
-If `main` is protected so direct pushes are rejected, never merge locally
-and then try to push. Use the hosting platform's pull/merge request flow:
-push the branch, open the request, wait for required checks to pass, and
-merge through the platform. After merging, verify the result — confirm the
-merge landed with the intended commit body, because a body lost at merge
-time is on permanent, protected history and is costly to correct.
+If `main` is protected so direct pushes are rejected, never merge
+locally and then try to push. Push the branch, open a pull/merge
+request, wait for required checks to pass, and merge through the
+platform. Afterwards, confirm the merge landed with the intended
+commit body — a body lost at merge time is on permanent, protected
+history and is costly to correct.
 
 ## After Merge
 
-- Delete the local feature branch after it has been merged into `main`
-- Use safe deletion (`git branch -d <branch>`) so Git refuses if the
-  branch was not fully merged
-- Do not use force deletion (`git branch -D <branch>`) unless you
-  intentionally want to discard unmerged branch history
-- After merging, verify `git status`, confirm the merged branch was
-  deleted, remove temporary files, and check recent history to ensure
-  the merge commit represents the intended branch
+- Delete the local feature branch with safe deletion
+  (`git branch -d <branch>`) so Git refuses if it was not fully
+  merged; use force deletion (`-D`) only to intentionally discard
+  unmerged branch history
+- Verify `git status`, confirm the merged branch was deleted, remove
+  temporary files, and check recent history to ensure the merge
+  commit represents the intended branch
 
 ## Publishing
 
 - Push feature branches when work should be backed up, reviewed, or
-  shared
-- Push `main` only after it represents a coherent merged state
+  shared; push `main` only after it represents a coherent merged
+  state
 
 ## Local and Generated Files
 
-- Local scratch files, generated candidate lists, temporary exports, and
-  machine-specific artifacts must not be committed unless they are part
-  of the project contract
-- Add local-only files to `.git/info/exclude` when the ignore rule is
-  personal to one checkout; add them to a tracked ignore file only when
-  the pattern should apply to everyone
+- Local scratch files, generated candidate lists, temporary exports,
+  and machine-specific artifacts must not be committed unless they
+  are part of the project contract
+- Add local-only ignore rules to `.git/info/exclude` when they are
+  personal to one checkout; use a tracked ignore file only for
+  patterns that should apply to everyone
