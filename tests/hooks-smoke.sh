@@ -24,7 +24,7 @@ expect_fail() {
 
 "${ROOT_DIR}/project-setup.sh" --profile minimal --changelog none "$REPO" > /dev/null
 
-cd "$REPO"
+cd "$REPO" || exit 1
 
 # Hook snippets must be valid POSIX sh. dash is the strictest common
 # /bin/sh, so use it for the syntax check when it is installed.
@@ -51,13 +51,13 @@ git add file-b.txt
 expect_fail git commit -m "Add file b"
 
 # Conventional guard: a subject over 60 characters fails.
-long_subject="feat: $(printf 'x%.0s' $(seq 1 60))"
+long_subject="feat: $(printf 'x%.0s' {1..60})"
 expect_fail git commit -m "$long_subject"
 
 # Conventional guard: multibyte characters are counted as characters,
 # not bytes. This subject is 57 characters but 98 bytes in UTF-8.
 if [ "$(locale charmap 2>/dev/null)" = "UTF-8" ]; then
-  accents="$(printf 'é%.0s' $(seq 1 40))"
+  accents="$(printf 'é%.0s' {1..40})"
   git commit -q -m "feat: café notes ${accents}"
   printf 'b\n' >> file-b.txt
   git add file-b.txt
