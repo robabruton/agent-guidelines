@@ -23,6 +23,7 @@ jobs:
             lib/assemble-rules.sh \
             tests/setup-smoke.sh \
             tests/project-setup-smoke.sh \
+            tests/hooks-smoke.sh \
             skills/agent-memory/scripts/agent-memory-report.sh
 
       - name: Validate rule frontmatter
@@ -80,3 +81,8 @@ jobs:
 
       - name: Run project-setup-smoke
         run: bash tests/project-setup-smoke.sh
+
+      # Ubuntu's /bin/sh is dash, so this run also proves the hook
+      # snippets execute under a strict POSIX shell.
+      - name: Run hooks-smoke
+        run: bash tests/hooks-smoke.sh
