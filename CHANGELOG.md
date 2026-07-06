@@ -25,6 +25,9 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
   `~/.claude/rules/`. A harness that reads both channels loaded the
   same rule text twice in every conversation. Run `setup.sh --prune`
   to remove links left by earlier installs.
+- The `docs-audit` and `docs-review` triggers open with the factual
+  accuracy versus writing quality distinction and cross-reference
+  each other, so trigger text alone routes to the right skill.
 - The `merge-requests` rule is tiered `recall`: it appears in the
   router table with a pull/merge request trigger instead of being
   inlined into every conversation's global context. Project profiles
