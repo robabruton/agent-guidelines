@@ -76,6 +76,11 @@ assert_context_files() {
     grep -Fq "## Situational Rules" "$path"
     grep -Fq "agent-guidelines/rules/code-quality.md" "$path"
     grep -Fq "agent-guidelines/rules/testing.md" "$path"
+    grep -Fq "agent-guidelines/rules/merge-requests.md" "$path"
+    if grep -Eq "^## Pull / Merge Request Rules$" "$path"; then
+      echo "recall-tier rule inlined in $path" >&2
+      return 1
+    fi
     grep -Fq "## Situational Skills" "$path"
     grep -Fq "| security-audit |" "$path"
     grep -Fq "| docstrings |" "$path"
