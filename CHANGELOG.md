@@ -20,6 +20,11 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ### Changed
 
+- `setup.sh` delivers global rules through the assembled context
+  files only and no longer installs per-rule symlinks into
+  `~/.claude/rules/`. A harness that reads both channels loaded the
+  same rule text twice in every conversation. Run `setup.sh --prune`
+  to remove links left by earlier installs.
 - `project-setup/SKILL.md` matches `project-setup.sh`: the profile
   rule lists and canonical rule order include every rule the script
   applies, per-project skill installation and its source modes are
