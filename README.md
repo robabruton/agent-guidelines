@@ -18,6 +18,11 @@ tool configuration directories:
 Output uses aligned status labels and color when supported. Use
 `--no-color` or set `NO_COLOR=1` for plain output.
 
+`--status` verifies each assembled context file against the current
+rules and reports it as current, stale, or missing; `--dry-run`
+previews only the files an install would actually change. Run
+`--install` to refresh anything reported stale.
+
 Use `--backup-path <path>` with `--force` to choose where conflicting
 files, directories, or foreign symlinks are moved before replacement.
 Without an override, backups are written under

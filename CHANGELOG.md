@@ -25,6 +25,11 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ### Added
 
+- `setup.sh --status` verifies each assembled context file against
+  the current rules and reports it as current, stale, or missing,
+  and `--dry-run` previews only the files an install would actually
+  change. A stale block previously reported as managed, so an
+  out-of-date install was invisible.
 - `tests/hooks-smoke.sh` verifies the installed hook snippets in a
   temporary repository: guard rejections and passes, merge
   exemptions, and pre-push ref handling including deletions and
