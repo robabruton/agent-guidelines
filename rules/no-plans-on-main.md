@@ -27,16 +27,13 @@ summary: >-
 - Write tracked documentation in the present tense, describing only
   behavior that exists.
 
-The sections below give the rationale and the details behind each
-constraint. Permanent project history — every commit message, every file on the
-default branch, every release artifact — must read as a record of
-work that *happened*, not work that is *intended*. Speculative
-content (roadmaps, TODO lists, "phase N" plans, "what's next" notes,
-forward-looking promises) must never land in that history. The
-project should always look intentional, with documentation that
-describes behavior that actually exists; a tracked roadmap invites
-drift when priorities shift, and the discrepancy makes the work look
-planned-but-undone.
+Permanent history is every commit message, every file on the default
+branch, every release artifact. The project should always look
+intentional: a tracked plan invites drift when priorities shift, and
+the discrepancy makes the work look planned-but-undone. The
+pre-commit guard installed by `project-setup.sh` rejects the phrase
+list below in staged content; the other artifacts rely on the manual
+scan. The rationale and detail behind each constraint:
 
 ## Where Plans Belong Instead
 
@@ -96,7 +93,6 @@ future: "Implements X" instead of "First implementation of X; Y will
 follow." "All access goes through the store" instead of "Swapping
 the backend later leaves this unchanged."
 
-Run the scan before the first commit, every time. Phrasing that
-reaches a shared default branch can only be removed by history
-rewriting and coordinated force-pushes; catching it after the fact
-is the costly path.
+Phrasing that reaches a shared default branch can only be removed by
+history rewriting and coordinated force-pushes; catching it after
+the fact is the costly path.
