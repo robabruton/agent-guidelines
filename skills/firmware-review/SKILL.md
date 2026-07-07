@@ -24,9 +24,9 @@ Determine the review target from the user request:
 - Component name: locate and review the relevant driver, peripheral,
   board, RTOS, boot, or protocol code.
 
-For changed-code reviews, inspect both staged and unstaged changes. Use
-`git diff --name-only`, `git diff --cached --name-only`, and
-`git status --short` when available.
+For changed-code reviews, inspect both staged and unstaged changes
+(`git diff --name-only`, `git diff --cached --name-only`,
+`git status --short`).
 
 Prefer `rg --files` to find likely targets. Include `.c`, `.h`, `.cpp`,
 `.hpp`, `.S`, `.s`, `.ld`, `.lds`, linker fragments, startup files,
@@ -232,23 +232,10 @@ generated file is not meant to be edited directly.
 
 ## Output Format
 
-Lead with findings grouped by severity:
+Lead with findings grouped by severity (Critical, High, Medium, Low),
+one bullet per finding:
 
-```text
-Critical
-- path:line - Issue. Suggested fix or verification.
-
-High
-- path:line - Issue. Suggested fix or verification.
-
-Medium
-- path:line - Issue. Suggested fix or verification.
-
-Low
-- path:line - Issue. Suggested fix or verification.
-```
-
-Use these severities:
+`path:line - Issue. Suggested fix or verification.`
 
 - **Critical:** Likely unsafe hardware state, memory corruption, bricking,
   unrecoverable boot failure, or field data loss.

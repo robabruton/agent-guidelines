@@ -26,9 +26,9 @@ Determine the audit target from the user request:
 - `project`: audit the repository.
 - Branch, commit, or diff: audit the security impact of those changes.
 
-For changed-code audits, inspect both staged and unstaged changes. Use
-`git diff --name-only`, `git diff --cached --name-only`, and
-`git status --short` when available.
+For changed-code audits, inspect both staged and unstaged changes
+(`git diff --name-only`, `git diff --cached --name-only`,
+`git status --short`).
 
 Prefer `rg --files` to find likely targets. Include source files,
 configuration, environment examples, scripts, CI files, dependency
@@ -260,32 +260,13 @@ would confirm the risk.
 
 ## Output Format
 
-Start with a short attack surface summary, then list findings grouped by
-severity:
+Start with a short attack surface summary (entry points, trust
+boundaries, assets), then list findings grouped by severity
+(Critical, High, Medium, Low), one bullet per finding, closing the
+list with an `Assumptions To Verify` group for conditions that could
+become findings if confirmed:
 
-```text
-Attack Surface
-- Entry points:
-- Trust boundaries:
-- Assets:
-
-Critical
-- path:line - Issue. Impact. Suggested fix.
-
-High
-- path:line - Issue. Impact. Suggested fix.
-
-Medium
-- path:line - Issue. Impact. Suggested fix.
-
-Low
-- path:line - Issue. Impact. Suggested fix.
-
-Assumptions To Verify
-- path:line - Condition that could become a finding if confirmed.
-```
-
-Use these severities:
+`path:line - Issue. Impact. Suggested fix.`
 
 - **Critical:** Direct path to system compromise, credential compromise,
   remote code execution, destructive device control, signed-update bypass,
