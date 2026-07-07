@@ -35,9 +35,9 @@ Determine the target from the user request:
 - Branch or changes: audit tests for staged and unstaged changes.
 - Behavior or bug description: find related source and tests.
 
-For changed-code targets, inspect both staged and unstaged changes. Use
-`git diff --name-only`, `git diff --cached --name-only`, and
-`git status --short` when available.
+For changed-code targets, inspect both staged and unstaged changes
+(`git diff --name-only`, `git diff --cached --name-only`,
+`git status --short`).
 
 Prefer `rg --files` to find test files and source files. Common test
 locations include `test`, `tests`, `spec`, `__tests__`, `fixtures`,
@@ -146,18 +146,14 @@ branch.
 
 ## Output Format
 
-For audit-only use, lead with findings grouped by severity:
+For audit-only use, lead with findings grouped by severity (High,
+Medium, Low), one bullet per finding:
 
-```text
-High
-- path:line - Behavior is unprotected. Add ...
+`path:line - Gap. Suggested test or assertion.`
 
-Medium
-- path:line - Assertion is too weak. Strengthen by ...
-
-Low
-- path:line - Coverage or reliability improvement.
-```
+- **High:** behavior is unprotected; name the test to add.
+- **Medium:** an assertion is too weak; say how to strengthen it.
+- **Low:** coverage or reliability improvement.
 
 After findings, include:
 
@@ -165,18 +161,9 @@ After findings, include:
 - Commands or coverage reports checked, if any.
 - Residual risk and tests not run.
 
-For edit mode, summarize:
-
-```text
-Added
-- path - Test behavior covered.
-
-Updated
-- path - Assertion or fixture improvement.
-
-Verification
-- Command run, or why none was run.
-```
+For edit mode, summarize the tests added and updated (one bullet per
+path, stating the behavior covered or the assertion improved) and the
+verification command run, or why none was run.
 
 If tests are already adequate, say that clearly and state what was
 inspected.
