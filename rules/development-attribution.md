@@ -4,31 +4,38 @@ load: always
 ---
 # Development Attribution Rules
 
-- Do not include `Co-Authored-By` lines referencing AI tools, code
-  assistants, or automation tools in commit messages
+## Hard Constraints
+
+- Never add authorship trailers (`Co-Authored-By`, `Generated-by`, or
+  similar) to commit messages or committed content.
+- Never present AI tools, LLMs, code assistants, or automation tools
+  as having developed, written, generated, reviewed, or planned any
+  part of the project.
+- Never name agent or assistant tooling in any tracked file — ignore
+  files, build configs, and paths included, not just prose.
+- Never hardcode model or vendor names in source code, comments,
+  docstrings, or committed documentation.
+- References to AI as user-facing project functionality are allowed;
+  references to AI as a development author or contributor are not.
+- When in doubt, ask.
+
+## Details and Rationale
+
+- The trailer ban covers commit messages and all committed files: code
+  comments, documentation, README content, changelog entries, and any
+  other tracked content.
 - The hooks installed by `project-setup.sh` enforce this by rejecting
   authorship trailers (`Co-Authored-By`, `Generated-by`, and similar)
   in commit messages and staged content regardless of who is named,
   since a pattern cannot tell tool names from human names. Credit
-  human collaborators in commit body prose rather than trailers
-- Do not reference AI tools, LLMs, code assistants, or automation tools
-  as having developed, written, generated, reviewed, or planned any part
-  of the project
-- This applies to code comments, documentation, commit messages, README
-  content, changelog entries, and all other committed files
+  human collaborators in commit body prose rather than trailers.
 - References to AI or automation are allowed when they describe project
-  functionality, integrations, APIs, or user-facing behavior
-- Functional references must not imply that a tool was used as a
-  development author or contributor
-- Do not name agent or assistant tooling in tracked files at all — this
-  includes ignore files, build configs, and paths, not just prose. If a
-  build or packaging step would otherwise sweep in local tooling files,
-  exclude them with an allowlist of the project's own files rather than by
-  naming the tooling
-- Do not hardcode specific model or vendor names — product names, model
-  identifiers, or versioned model strings — in source code, comments,
-  docstrings, or committed documentation. Model names change, tie the code
-  to one vendor, and go stale; keep model selection in configuration and
-  use generic language ("the configured model", "the provider/model
-  identifier") in code and docs
-- When in doubt, ask
+  functionality, integrations, APIs, or user-facing behavior, but such
+  functional references must not imply that a tool was used as a
+  development author or contributor.
+- If a build or packaging step would otherwise sweep in local tooling
+  files, exclude them with an allowlist of the project's own files
+  rather than by naming the tooling.
+- Model names change, tie the code to one vendor, and go stale; keep
+  model selection in configuration and use generic language ("the
+  configured model", "the provider/model identifier") in code and docs.
