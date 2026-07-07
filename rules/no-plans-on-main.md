@@ -4,7 +4,21 @@ load: always
 ---
 # No Plans in Permanent History
 
-Permanent project history — every commit message, every file on the
+## Hard Constraints
+
+- Never let forward-looking content — roadmaps, TODO lists, "phase N"
+  plans, "what's next" notes, promises of later work — reach any
+  tracked file, commit message, pull/merge request description, merge
+  commit body, or branch name.
+- Scan those five artifacts against the banned-phrase list below
+  before the first commit, every time.
+- Keep plans in a durable agent memory store, an untracked `local/`
+  file, or a scratch branch that never merges.
+- Write tracked documentation in the present tense, describing only
+  behavior that exists.
+
+The sections below give the rationale and the details behind each
+constraint. Permanent project history — every commit message, every file on the
 default branch, every release artifact — must read as a record of
 work that *happened*, not work that is *intended*. Speculative
 content (roadmaps, TODO lists, "phase N" plans, "what's next" notes,

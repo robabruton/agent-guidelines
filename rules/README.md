@@ -28,7 +28,10 @@ cover situational expectations the model reads only when needed.
 
 These rules are inlined into the assembled global context file
 (`~/.claude/CLAUDE.md` and equivalents). The model reads them on
-every conversation.
+every conversation. Each opens with a Hard Constraints block — the
+binding imperatives stated tersely up front — followed by the
+rationale and detail sections, so models that weight early tokens
+heavily still see every requirement.
 
 ### `agent-conduct`
 

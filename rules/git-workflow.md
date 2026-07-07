@@ -4,6 +4,31 @@ load: always
 ---
 # Git Workflow Rules
 
+## Hard Constraints
+
+- Never author work commits directly on `main`; only `--no-ff` merge
+  commits originate there, with no bookkeeping exceptions.
+- Create a slash-prefixed branch (`feat/`, `fix/`, `chore/`) for every
+  change, named from the work being done.
+- Merge only when the branch's work is fully complete, always with
+  `--no-ff`.
+- Commit each meaningful change as it lands; never leave more than 3-4
+  modified files uncommitted.
+- One scope per commit; every commit must be independently revertable.
+- Keep changelog edits on the branch that made the work, never as a
+  follow-up commit on `main`.
+- Run the project's checks and resolve hook failures before merging;
+  do not bypass hooks unilaterally.
+- When `main` is protected, push the branch and merge through a
+  pull/merge request; never merge locally and push.
+- After merge, delete the branch with `git branch -d` and verify
+  status and history.
+- Never commit local scratch or generated files that are not part of
+  the project contract.
+
+The sections below give the rationale and the details behind each
+constraint.
+
 ## How Work Builds Up
 
 Development composes bottom-up from small pieces:
