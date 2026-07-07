@@ -1,6 +1,13 @@
 ---
 when: maintaining a versioned CHANGELOG.md, including the Unreleased to release cut
 load: recall
+summary: >-
+  Versioned changelog sections for projects that publish releases.
+  An `[Unreleased]` section accumulates entries as branch work
+  lands; the cut from `[Unreleased]` to a release section happens on
+  the release branch as part of `chore: bump version to X.Y.Z`,
+  never as a direct commit on `main`. Includes link-to-diff
+  conventions when a remote exists.
 ---
 # Versioned Changelog Rules
 

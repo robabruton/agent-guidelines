@@ -1,6 +1,12 @@
 ---
 when: maintaining a date-based CHANGELOG.md for an unversioned project
 load: recall
+summary: >-
+  Date-based changelog sections for projects without versioned
+  releases. Heading format `## YYYY-MM-DD`, no `[Unreleased]`
+  section, multiple changes on the same day append to the existing
+  dated section, and entries are written into today's section as
+  branch work completes rather than retroactively at branch end.
 ---
 # Date-Based Changelog Rules
 

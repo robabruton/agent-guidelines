@@ -1,6 +1,13 @@
 ---
 when: tagging releases, deciding a version bump, or shipping versioned artifacts
 load: recall
+summary: >-
+  Semantic Versioning for projects with releases, packages, APIs, or
+  other versioned artifacts. Defines `PATCH`, `MINOR`, `MAJOR`
+  triggers and when to recommend a release versus defer it; covers
+  annotated-tag conventions, the tag message format (a release
+  summary for humans, not a commit log dump), and how to backfill a
+  retroactive tag with the intended committer date.
 ---
 # Semantic Versioning Rules
 
