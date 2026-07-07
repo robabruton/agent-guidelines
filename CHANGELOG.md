@@ -20,6 +20,11 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
   flagged patterns are assembled from adjacent fragments so the guard
   and its tests never match themselves, and `tests/hooks-smoke.sh`
   covers the rejections and the exemptions.
+- `rules/README.md` is generated from each rule's frontmatter by
+  `scripts/generate-rules-readme.sh`: every rule declares a
+  `summary:` field alongside `when:` and `load:`, the script
+  assembles the catalog from those fields, and CI runs its `--check`
+  mode so the catalog cannot drift from the rule files.
 - `tests/hooks-smoke.sh` verifies the installed hook snippets in a
   temporary repository: guard rejections and passes, merge
   exemptions, and pre-push ref handling including deletions and
