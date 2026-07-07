@@ -52,6 +52,24 @@ jobs:
       - name: Verify rules README matches rule frontmatter
         run: bash scripts/generate-rules-readme.sh --check
 
+      # The always-tier rule bodies load into every conversation's
+      # context; growth here must be a deliberate, reviewed decision.
+      # Raise the budget in the same change that justifies the growth.
+      - name: Enforce always-tier context budget
+        run: |
+          budget=3300
+          total=0
+          for f in rules/*.md; do
+            grep -q '^load: always$' "$f" || continue
+            words=$(awk 'NR==1&&/^---[[:space:]]*$/{fm=1;next}
+                         fm&&/^---[[:space:]]*$/{fm=0;next}
+                         !fm{print}' "$f" | wc -w)
+            echo "$f: $words words"
+            total=$((total + words))
+          done
+          echo "always-tier body total: $total words (budget $budget)"
+          test "$total" -le "$budget"
+
       - name: Verify rule and skill names referenced by scripts exist
         run: |
           eval "$(sed -n '/^MINIMAL_RULES=(/,/^)/p;
