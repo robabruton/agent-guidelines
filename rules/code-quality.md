@@ -1,6 +1,13 @@
 ---
 when: writing or modifying production code, including comments, sample data, and inline annotations
 load: recall
+summary: >-
+  Conventions that the language's own style tooling does not enforce:
+  read a project version from package metadata rather than
+  hardcoding, never silence type-checker or linter errors with inline
+  ignores, pick one term per concept and use it everywhere, keep
+  sample and fixture data internally coherent rather than templated,
+  and keep inline-annotation alignment consistent across a block.
 ---
 # Code Quality Rules
 

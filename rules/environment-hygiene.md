@@ -1,6 +1,14 @@
 ---
 when: installing dependencies, moving or regenerating envs, or working across target platforms
 load: recall
+summary: >-
+  Environment-level pitfalls that produce "works on my machine"
+  failures. Never install dependencies into a location at or above
+  the project (parent-walking resolvers pick them up silently and
+  duplicate-instance errors follow); regenerate virtual environments
+  after moving or renaming package directories so entry-point scripts
+  get correct paths; committed files must work on every target
+  platform; prefer high-level platform CLIs over raw API calls.
 ---
 # Environment Hygiene Rules
 
