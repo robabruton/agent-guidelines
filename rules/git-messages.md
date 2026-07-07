@@ -32,10 +32,9 @@ summary: >-
 - Merge commits: subject `Merge branch '<branch-name>'`, one-paragraph
   body wrapped at 72, written with a message file.
 
-The sections below give the rationale and the details behind each
-constraint. Use clear, structured Git messages so history remains
-readable from `git log`, hosting platforms, release tooling, and
-revert workflows.
+Clear messages keep history readable from `git log`, hosting
+platforms, release tooling, and revert workflows. The rationale and
+detail behind each constraint:
 
 ## Commit Message Format
 
@@ -53,35 +52,30 @@ standard:
   codebase, in parentheses
 - **`!`** (optional): appended after type/scope to flag a breaking
   change
-- **description**: imperative mood, lowercase, no period, target <=50
-  characters; a few characters over is acceptable when it improves
-  clarity. The `commit-msg` hook installed by `project-setup.sh`
-  enforces a hard limit of 60 characters on the total subject line
-  and rejects anything over that limit. Merge commits — which use
-  git's `Merge branch '<branch-name>'` subject — are exempt from
-  both the Conventional Commits format check and the length cap.
-- **body**: see Commit Message Bodies below
+- **description**: a few characters over the 50-character target is
+  acceptable when it improves clarity. The `commit-msg` hook installed
+  by `project-setup.sh` enforces the 60-character cap on the total
+  subject line. Merge commits — which use git's
+  `Merge branch '<branch-name>'` subject — are exempt from both the
+  format check and the length cap.
 - **footer** (optional): `BREAKING CHANGE:`, `DEPRECATED:`,
   `Fixes #<issue>`, `Refs:`
 
 ## Commit Message Bodies
 
-- For a rename, a file move, a typo fix, a comment correction, or a
-  narrowly scoped mechanical edit, write the subject only. The diff
-  is the explanation; if you find yourself writing a body for one of
-  these, it is wrong-scoped — delete it before committing.
-- Include a short body for anything with non-obvious intent, policy
-  changes, workflow changes, cross-file edits, or user-visible
-  behavior changes: WHAT changed and WHY, imperative mood, wrapped at
-  72 characters, not a line-by-line restatement of the diff. When in
-  doubt for these cases, two or three lines of useful rationale beat
-  a subject that leaves future readers guessing.
-- Write multiline commit, merge, tag, and release messages with a
-  message file (`git commit -F <message-file>`), not repeated `-m`
-  flags, so wrapped lines stay in their intended paragraphs. Use a
-  unique filename per message, chain its removal onto the command
-  that consumes it (`git commit -F msg.txt && rm -f msg.txt`), and
-  sweep for leftovers at the end of the work.
+- For a mechanical edit, the diff is the explanation; if you find
+  yourself writing a body for one, it is wrong-scoped — delete it
+  before committing.
+- Non-obvious intent, policy changes, workflow changes, cross-file
+  edits, and user-visible behavior changes warrant a body — not a
+  line-by-line restatement of the diff. When in doubt for these
+  cases, two or three lines of useful rationale beat a subject that
+  leaves future readers guessing.
+- The message file keeps wrapped lines in their intended paragraphs.
+  Use a unique filename per message, chain its removal onto the
+  command that consumes it (`git commit -F msg.txt && rm -f msg.txt`),
+  and sweep for leftovers at the end of the work. This applies to
+  commit, merge, tag, and release messages alike.
 
 ## History Describes What Is
 
@@ -89,55 +83,47 @@ Commit bodies and changelog entries are permanent history. They
 describe the state being committed, not the process that produced it.
 Keep them self-contained and free of provenance.
 
-- Do NOT reference absent or reverted work. If an alternative was
-  tried and discarded before committing, write the message as if it
-  was never considered.
+- If an alternative was tried and discarded before committing, write
+  the message as if it was never considered.
 - Do NOT frame an issue as pre-existing. Describe the issue and the
   fix, not when or how the bug was introduced.
 - Do NOT reference tag moves or rewrites. The result should read as
   intentional.
-- Do NOT reference other repositories' needs. A commit describes what
-  changed in its own repository's terms; cross-repo justification
-  belongs in the pull/merge request description, not in permanent
-  history.
-- Do NOT narrate before/after comparisons ("the docs said X but the
-  code does Y"). State what the change does and why.
+- A commit describes what changed in its own repository's terms;
+  cross-repo justification belongs in the pull/merge request
+  description, not in permanent history.
+- State what the change does and why, not how it compares to what the
+  old text said.
 
 Before writing a body, check whether it references anything the
-reader would not know about — iteration history, a reverted attempt,
-another repository's behavior, what the old text said — and rewrite
-it to describe the present. The matching discipline for
-forward-looking content is `no-plans-on-main.md`.
+reader would not know about, and rewrite it to describe the present.
+The matching discipline for forward-looking content is
+`no-plans-on-main.md`.
 
 ## Consistent Level of Detail
 
-When a feature is extended after its first implementation (one option
-added to a set, one field added to a model), do not single out the
-new piece in the commit message, merge message, description, or
-changelog. Describe the feature at one consistent level of
-abstraction — enumerate all the peers or none — so the permanent
-record does not reveal that the work was developed iteratively in
-response to feedback.
+When one option is added to a set or one field to a model after the
+first implementation, singling out the new piece in the message,
+description, or changelog reveals that the work was developed
+iteratively in response to feedback. Describe the feature at one
+level of abstraction instead.
 
 ## Amendments
 
-- Amending local, unpushed commits is allowed when it improves branch
-  quality: fixing a commit message, adding a missed file, removing
-  accidental debug output, or keeping a small change with the commit
-  it belongs to
-- Do not amend commits that have already been pushed or shared unless
-  the team explicitly agrees to rewrite that history
+- Amending unpushed commits is good when it improves branch quality:
+  fixing a commit message, adding a missed file, removing accidental
+  debug output, or keeping a small change with the commit it belongs
+  to.
+- Amending pushed or shared commits requires the team's explicit
+  agreement to rewrite that history.
 - Do not use amend to hide meaningful intermediate work that should
-  remain as its own independently understandable commit
+  remain as its own independently understandable commit.
 
 ## Merge Commit Messages
 
-- Subject: Git's explicit branch-grouping form,
-  `Merge branch '<branch-name>'`
-- Body: one paragraph wrapped at 72 characters, written with a
-  message file, summarizing the branch as one completed unit of work
-  for humans reviewing project history — not a dump of every commit.
-  Use multiple paragraphs only when the branch genuinely combines
+- The body summarizes the branch as one completed unit of work for
+  humans reviewing project history — not a dump of every commit. Use
+  multiple paragraphs only when the branch genuinely combines
   distinct units of work, and bullet lists only when the branch is
   unusually broad and a prose summary would hide important context.
 - Example:
