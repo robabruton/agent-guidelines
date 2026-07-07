@@ -49,6 +49,8 @@ CODEBASE_EXTRA_RULES=(
   dependencies
   scripts
   code-quality
+  debugging
+  error-handling
   engineering-judgment
   environment-hygiene
 )
@@ -70,6 +72,8 @@ CANONICAL_RULE_ORDER=(
   docstrings
   scripts
   code-quality
+  debugging
+  error-handling
   engineering-judgment
   environment-hygiene
   dependencies
