@@ -160,6 +160,17 @@ done
 assert_agent_preamble "${TRIMMED_REPO}/CLAUDE.md"
 assert_agent_preamble "${TRIMMED_REPO}/AGENTS.md"
 
+# Auto profile inference: a repository containing source files
+# resolves to the codebase profile.
+INFER_REPO="${TMP_ROOT}/infer-repo"
+mkdir -p "$INFER_REPO"
+printf 'print("hi")\n' > "$INFER_REPO/app.py"
+"${ROOT_DIR}/project-setup.sh" \
+  --changelog none \
+  --context-rules trimmed \
+  "$INFER_REPO" > "${TMP_ROOT}/infer.out"
+grep -Fq "Profile: codebase" "${TMP_ROOT}/infer.out"
+
 mkdir -p "$DRY_REPO"
 git -C "$DRY_REPO" init --quiet --initial-branch=main
 "${ROOT_DIR}/project-setup.sh" \
