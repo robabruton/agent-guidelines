@@ -137,6 +137,23 @@ git init --initial-branch=main
 - If the marker block does not exist, append it to the end of the file
   after one blank line
 - If the file does not exist, create it with only the managed block
+- The managed block has two forms, selected by `--context-rules`:
+  - `full`: every selected rule body is inlined into the block
+  - `trimmed`: the block carries a rule selection header, one line
+    stating the profile, changelog, and versioning modes, and a router
+    table mapping each selected rule's trigger to its
+    `.agent-guidelines/rules/<rule>.md` path; rule bodies are read on
+    demand from those paths, and the always-tier rule text comes from
+    the global context file installed by `setup.sh`
+  - `auto` (default): per file — `CLAUDE.md` is trimmed when the
+    global `~/.claude/CLAUDE.md` carries the managed block marker,
+    and `AGENTS.md` is trimmed when any global `AGENTS.md` installed
+    by `setup.sh` does; otherwise the file gets the full form. This
+    keeps rules from loading twice in harnesses that read both a
+    global and a project context file, while machines without the
+    global install still get self-contained project files
+- Record the requested mode as `context_rules=` in
+  `.agent-guidelines/config`
 - Keep rule source files separate from generated agent instruction files
 - Prefer a symlinked rule source so projects can refresh generated
   instructions from updated central rules
