@@ -1,6 +1,15 @@
 ---
 when: always
 load: always
+summary: >-
+  Composition model for development: a commit is the smallest
+  meaningful change, a branch is a complete unit of work made up of
+  many small commits, the project is the sum of all merged branches
+  on `main`. Covers branch naming, the commit rhythm (interface
+  first, implementation in logical groups, tests as their own units),
+  merge-readiness, the always-merge-with-`--no-ff` convention, and
+  cleanup after merge. The rule exists so history reflects how work
+  actually built up rather than collapsing into monolithic commits.
 ---
 # Git Workflow Rules
 

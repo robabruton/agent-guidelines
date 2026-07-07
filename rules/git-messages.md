@@ -1,6 +1,15 @@
 ---
 when: always
 load: always
+summary: >-
+  Conventional Commits format with a 50-character target on the
+  subject and a 60-character hard cap enforced by the project-setup
+  commit-msg hook. Spells out when a body is warranted, when
+  subject-only is required (renames, file moves, typo fixes, comment
+  corrections, narrowly scoped mechanical edits), the merge commit
+  format, and the "history describes what is" discipline — commit
+  bodies must not reference reverted work, iteration history, or
+  another repository's needs.
 ---
 # Git Message Rules
 

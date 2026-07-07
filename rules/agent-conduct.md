@@ -1,6 +1,14 @@
 ---
 when: always
 load: always
+summary: >-
+  Operating discipline for an agent acting on a real project: back up
+  before destroying, confirm irreversible and outward-facing actions,
+  treat approved assets as read-only, verify point-in-time knowledge
+  before asserting it, and report outcomes honestly. The rule exists
+  because these failure modes — accidental deletion, unauthorized
+  external action, stale-memory assertion — are independently
+  expensive to recover from and hold regardless of task or model.
 ---
 # Agent Conduct Rules
 

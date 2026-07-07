@@ -1,6 +1,13 @@
 ---
 when: always
 load: always
+summary: >-
+  Excludes AI-tool authorship from the project record. No trailer
+  lines naming AI tools or code assistants, no references to AI tools
+  as authors of committed work, no naming of agent tooling in ignore
+  files or build configs, and no hardcoded model or vendor names in
+  source. Functional references to AI as a user-facing feature are
+  allowed; references to AI as a developer or contributor are not.
 ---
 # Development Attribution Rules
 
