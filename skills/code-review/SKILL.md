@@ -28,9 +28,9 @@ Determine the target from the user request:
 - `project`: review primary source surfaces, entry points, and high-risk
   workflows.
 
-For changed-code reviews, inspect both staged and unstaged changes. Use
-`git diff --name-only`, `git diff --cached --name-only`, and
-`git status --short` when available.
+For changed-code reviews, inspect both staged and unstaged changes
+(`git diff --name-only`, `git diff --cached --name-only`,
+`git status --short`).
 
 Prefer `rg --files` to find source, tests, scripts, configuration, and
 docs that define the behavior under review. Read enough surrounding
@@ -129,20 +129,10 @@ sound, say so and focus the remainder on scope and residual risk.
 
 ## Output Format
 
-Lead with findings ordered by severity:
+Lead with findings grouped by severity (High, Medium, Low), one
+bullet per finding:
 
-```text
-High
-- path:line - Issue. Impact. Suggested fix.
-
-Medium
-- path:line - Issue. Impact. Suggested fix.
-
-Low
-- path:line - Issue. Impact. Suggested fix.
-```
-
-Use these severities:
+`path:line - Issue. Impact. Suggested fix.`
 
 - **High:** Likely incorrect behavior, data loss, broken workflow,
   serious regression, or unsafe state under realistic use.

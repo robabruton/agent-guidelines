@@ -29,8 +29,8 @@ Determine the target from the user request:
 - Branch or changes: audit staged and unstaged dependency changes.
 
 For changed-dependency targets, inspect both staged and unstaged
-changes. Use `git diff --name-only`, `git diff --cached --name-only`,
-and `git status --short` when available.
+changes (`git diff --name-only`, `git diff --cached --name-only`,
+`git status --short`).
 
 Prefer `rg --files` to find dependency files. Common surfaces include
 package manifests, lockfiles, vendored directories, generated clients,
@@ -142,25 +142,11 @@ constraints, or unrelated to the dependency decision.
 
 ## Output Format
 
-Lead with a recommendation:
+Lead with a recommendation — accept, accept with conditions, replace,
+remove, defer, or investigate further — then list findings grouped by
+severity (High, Medium, Low), one bullet per finding:
 
-```text
-Recommendation: accept | accept with conditions | replace | remove |
-defer | investigate further
-```
-
-Then list findings by severity:
-
-```text
-High
-- package/file - Risk. Evidence. Recommended action.
-
-Medium
-- package/file - Risk. Evidence. Recommended action.
-
-Low
-- package/file - Risk. Evidence. Recommended action.
-```
+`package/file - Risk. Evidence. Recommended action.`
 
 After findings, include:
 

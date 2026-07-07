@@ -25,9 +25,9 @@ Determine the review target from the user request:
 - Directory path: review documentation under that directory.
 - `project`: review primary project documentation.
 
-For changed-doc reviews, inspect both staged and unstaged changes. Use
-`git diff --name-only`, `git diff --cached --name-only`, and
-`git status --short` when available.
+For changed-doc reviews, inspect both staged and unstaged changes
+(`git diff --name-only`, `git diff --cached --name-only`,
+`git status --short`).
 
 Prefer `rg --files` to find documentation. Likely targets include README
 files, guides, rule files, skill files, changelog guidance, docs
@@ -132,23 +132,10 @@ reader can distinguish diagnosis from proposed text.
 
 ## Output Format
 
-Lead with findings grouped by priority:
+Lead with findings grouped by priority (Must Fix, Should Improve,
+Optional, Verify), one bullet per finding:
 
-```text
-Must Fix
-- path:line - Issue. Why it matters. Suggested edit.
-
-Should Improve
-- path:line - Issue. Why it matters. Suggested edit.
-
-Optional
-- path:line - Issue. Why it matters. Suggested edit.
-
-Verify
-- path:line - Factual question that needs docs-audit or source checking.
-```
-
-Use these priorities:
+`path:line - Issue. Why it matters. Suggested edit.`
 
 - **Must Fix:** The issue can mislead readers, block task completion, or
   materially damage professionalism.

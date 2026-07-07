@@ -21,9 +21,9 @@ Determine the audit target from the user request:
 - `project`: audit repository automation surfaces such as setup scripts,
   hooks, CI scripts, and documented command examples.
 
-For changed-file audits, inspect both staged and unstaged changes. Use
-`git diff --name-only`, `git diff --cached --name-only`, and
-`git status --short` when available.
+For changed-file audits, inspect both staged and unstaged changes
+(`git diff --name-only`, `git diff --cached --name-only`,
+`git status --short`).
 
 Prefer `rg --files` to find likely targets. Include files with shell
 shebangs, `.sh`, `.bash`, `.zsh`, and `.envrc` files, extensionless git
@@ -166,23 +166,10 @@ the section or command block and explain the limitation.
 
 ## Output Format
 
-Lead with findings grouped by severity:
+Lead with findings grouped by severity (Critical, High, Medium, Low),
+one bullet per finding:
 
-```text
-Critical
-- path:line - Issue. Suggested fix.
-
-High
-- path:line - Issue. Suggested fix.
-
-Medium
-- path:line - Issue. Suggested fix.
-
-Low
-- path:line - Issue. Suggested fix.
-```
-
-Use these severities:
+`path:line - Issue. Suggested fix.`
 
 - **Critical:** Likely data loss, unsafe deletion, credential exposure, or
   command execution from realistic input.

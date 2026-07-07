@@ -27,9 +27,9 @@ Determine the audit target from the user request:
 - `project`: audit primary project documentation and generated-reference
   surfaces.
 
-For changed-doc audits, inspect both staged and unstaged changes. Use
-`git diff --name-only`, `git diff --cached --name-only`, and
-`git status --short` when available.
+For changed-doc audits, inspect both staged and unstaged changes
+(`git diff --name-only`, `git diff --cached --name-only`,
+`git status --short`).
 
 Prefer `rg --files` to find documentation and referenced artifacts.
 Likely targets include README files, `SKILLS.md`, rule files, skill
@@ -150,23 +150,11 @@ the project source of truth confirms the mismatch.
 
 ## Output Format
 
-Lead with findings grouped by severity:
+Lead with findings grouped by severity (High, Medium, Low), one
+bullet per finding, and close the list with an `Assumptions To
+Verify` group for claims that need environment-specific confirmation:
 
-```text
-High
-- path:line - Issue. Source of truth. Suggested fix.
-
-Medium
-- path:line - Issue. Source of truth. Suggested fix.
-
-Low
-- path:line - Issue. Source of truth. Suggested fix.
-
-Assumptions To Verify
-- path:line - Claim that needs environment-specific confirmation.
-```
-
-Use these severities:
+`path:line - Issue. Source of truth. Suggested fix.`
 
 - **High:** A documented command, option, path, setup step, or safety
   claim is wrong and likely to break user workflow or cause risky action.

@@ -45,6 +45,12 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
   each have a single home, with cross-references where two rules
   meet. Every requirement is retained at a lower standing context
   cost.
+- The eight review-family skills state their output conventions
+  compactly: one line for the finding shape, the severity ladder as
+  definition bullets, and a single changed-target inspection
+  sentence, replacing the fenced example blocks each skill repeated.
+  The skill-specific severity meanings and report contents are
+  unchanged.
 - `development-attribution.md` states that the installed hooks
   reject every authorship trailer regardless of who is named and
   that human collaborators are credited in commit body prose, so the
