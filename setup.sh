@@ -16,6 +16,7 @@ SKILLS_DIR="${REPO_DIR}/skills"
 GLOBAL_SKILLS=(
   agent-memory
   code-review
+  debug
   explain
   project-setup
 )

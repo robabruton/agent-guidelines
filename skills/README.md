@@ -46,6 +46,16 @@ Use this skill when the user asks for a general code review, quality
 check, bug hunt, pre-commit review, branch review, or review of local
 software work.
 
+### `debug`
+
+Drives a live failure to a verified root-cause fix: reproduce the
+failure, isolate it systematically, diagnose the cause, fix it at its
+origin, and land the regression test in the same branch.
+
+Use this skill when something concretely misbehaves — a failing test,
+an error message, a crash, a wrong result, or a regression — and the
+goal is a fix rather than a review of code at rest.
+
 ### `dependency-audit`
 
 Audits dependency additions, updates, removals, manifests, and lockfiles
