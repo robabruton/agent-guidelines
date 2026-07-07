@@ -885,6 +885,7 @@ install_hooks() {
   fi
   install_hook_snippet pre-commit pre-commit-main-branch
   install_hook_snippet pre-commit pre-commit-attribution
+  install_hook_snippet pre-commit pre-commit-banned-phrases
   install_hook_snippet commit-msg commit-msg-attribution
   install_hook_snippet commit-msg commit-msg-conventional
   install_hook_snippet pre-push pre-push-branch-name

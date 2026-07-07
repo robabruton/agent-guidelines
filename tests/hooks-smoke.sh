@@ -1,9 +1,10 @@
 #!/usr/bin/env bash
 # Verifies the git hook snippets installed by project-setup.sh in a
 # temporary repository: main-branch guard, conventional commit guard,
-# attribution guards, merge exemptions, and the pre-push branch-name
-# guard. Flagged phrases used as negative fixtures are assembled from
-# fragments at runtime so this file never trips the staged guard.
+# attribution guards, banned-phrase guard, merge exemptions, and the
+# pre-push branch-name guard. Flagged phrases used as negative
+# fixtures are assembled from fragments at runtime so this file never
+# trips the staged guards.
 
 set -euo pipefail
 
@@ -82,6 +83,37 @@ git add file-d.txt
 expect_fail git commit -m "feat: add file d"
 git reset -q -- file-d.txt
 rm -f file-d.txt
+
+# Banned-phrase guard (staged content): forward-looking phrasing
+# fails, both as prose and as an unimplemented-work marker.
+printf 'support %s soon\n' "coming" > file-e.txt
+git add file-e.txt
+expect_fail git commit -m "feat: add file e"
+git reset -q -- file-e.txt
+rm -f file-e.txt
+
+printf '%s: implement parser\n' "TO""DO" > file-f.txt
+git add file-f.txt
+expect_fail git commit -m "feat: add file f"
+git reset -q -- file-f.txt
+rm -f file-f.txt
+
+# The marker word without its colon is prose about markers, and
+# passes.
+printf '%s lists are banned in tracked source\n' "TO""DO" > file-g.txt
+git add file-g.txt
+git commit -q -m "docs: add file g"
+
+# The rule file that defines the phrase list is exempt, at the
+# repository root and at an installed rules path.
+printf 'banned: %s soon\n' "coming" > no-plans-on-main.md
+git add no-plans-on-main.md
+git commit -q -m "docs: add phrase list file"
+
+mkdir -p rules
+printf 'banned: %s work\n' "future" > rules/no-plans-on-main.md
+git add rules/no-plans-on-main.md
+git commit -q -m "docs: add nested phrase list file"
 
 # Merge exemption: a --no-ff merge into main passes both the
 # main-branch guard and the conventional guard.

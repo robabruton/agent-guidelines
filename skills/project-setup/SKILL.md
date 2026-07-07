@@ -332,6 +332,7 @@ chore: initialize repository
   these hook files:
   - `pre-commit`: `pre-commit-main-branch`
   - `pre-commit`: `pre-commit-attribution`
+  - `pre-commit`: `pre-commit-banned-phrases`
   - `commit-msg`: `commit-msg-attribution`
   - `commit-msg`: `commit-msg-conventional`
   - `pre-push`: `pre-push-branch-name`
