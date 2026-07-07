@@ -192,6 +192,8 @@ git init --initial-branch=main
     - `dependencies.md`
     - `scripts.md`
     - `code-quality.md`
+    - `debugging.md`
+    - `error-handling.md`
     - `engineering-judgment.md`
     - `environment-hygiene.md`
   - `released`:
@@ -227,6 +229,8 @@ git init --initial-branch=main
   - `docstrings.md`
   - `scripts.md`
   - `code-quality.md`
+  - `debugging.md`
+  - `error-handling.md`
   - `engineering-judgment.md`
   - `environment-hygiene.md`
   - `dependencies.md`

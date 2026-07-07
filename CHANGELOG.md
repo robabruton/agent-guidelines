@@ -22,6 +22,11 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
   fragments so the guards and their tests never match themselves,
   and `tests/hooks-smoke.sh` covers the rejections and the
   exemptions for each artifact.
+- `debugging.md` and `error-handling.md` recall-tier rules cover the
+  two failure-path disciplines the catalog lacked: driving a failure
+  to a root-cause fix with a landed regression test, and failure
+  paths that fail loudly with actionable, secret-free messages. Both
+  are part of the codebase and released profiles.
 - CI enforces a word budget on the always-tier rule bodies, the text
   loaded into every conversation's context, so growth in the standing
   payload is a deliberate, reviewed decision rather than drift.

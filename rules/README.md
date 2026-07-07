@@ -29,7 +29,7 @@ Every rule file declares YAML frontmatter with three fields:
   the sections below.
 
 5 rules are tiered `always`. They form the baseline a
-model follows on every conversation. The remaining 15 are
+model follows on every conversation. The remaining 17 are
 tiered `recall` and cover situational expectations the model reads
 only when needed.
 
@@ -153,6 +153,15 @@ editor, credential, and machine-specific files out of git via local
 excludes; never commit secrets, and treat any that slip through as
 compromised and in need of rotation.
 
+### `debugging`
+
+Discipline for driving a failure to a fix: reproduce before
+changing code, minimize the reproduction, fix the root cause
+rather than the symptom, land the regression test in the same
+branch as the fix, and rerun the original reproduction to confirm
+it. Exists because symptom patches and unreproduced "fixes" let
+the same defect resurface later in a harder-to-trace form.
+
 ### `dependencies`
 
 Adding, updating, and removing project dependencies. Prefer
@@ -199,6 +208,16 @@ duplicate-instance errors follow); regenerate virtual environments
 after moving or renaming package directories so entry-point scripts
 get correct paths; committed files must work on every target
 platform; prefer high-level platform CLIs over raw API calls.
+
+### `error-handling`
+
+Failure paths fail loudly and say something actionable: no
+swallowed exceptions or accidental silent fallbacks, messages name
+what failed and what to do about it, no secrets or personal data
+in logs or error output, and exit codes and error types stay
+consistent with the surrounding surface. Exists because a silently
+absorbed error resurfaces later as an unrelated-looking failure
+that is far harder to trace.
 
 ### `merge-requests`
 
