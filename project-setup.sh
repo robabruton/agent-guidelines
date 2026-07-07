@@ -291,11 +291,11 @@ infer_profile() {
     [ -f "$TARGET_DIR/Cargo.toml" ] || [ -f "$TARGET_DIR/go.mod" ] ||
     [ -f "$TARGET_DIR/VERSION" ]; then
     PROFILE="released"
-  elif find "$TARGET_DIR" -maxdepth 3 -type f \( \
+  elif [ -n "$(find "$TARGET_DIR" -maxdepth 3 -type f \( \
     -name '*.c' -o -name '*.cpp' -o -name '*.h' -o -name '*.hpp' -o \
     -name '*.go' -o -name '*.js' -o -name '*.jsx' -o -name '*.ts' -o \
     -name '*.tsx' -o -name '*.py' -o -name '*.rs' -o -name '*.java' -o \
-    -name '*.sh' \) | sed -n '1q' | grep -q .; then
+    -name '*.sh' \) | sed -n '1p')" ]; then
     PROFILE="codebase"
   else
     PROFILE="minimal"
