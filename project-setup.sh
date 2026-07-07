@@ -13,6 +13,7 @@ CANONICAL_SKILLS_DIR="${SCRIPT_DIR}/skills"
 
 PROFILE="auto"
 CHANGELOG_MODE="auto"
+CONTEXT_RULES_MODE="auto"
 RULE_SOURCE_MODE="symlink"
 SKILL_SOURCE_MODE=""
 TARGET_DIR="."
@@ -87,6 +88,15 @@ Options:
   --profile minimal|codebase|released
   --changelog none|date|version
                   aliases: dated, dates, versioned, versions
+  --context-rules full|trimmed|auto
+                  full: inline every selected rule body into the
+                  project CLAUDE.md/AGENTS.md blocks
+                  trimmed: emit the selection header and a router
+                  table pointing at .agent-guidelines/rules instead,
+                  relying on the global context for always-tier rules
+                  auto (default): trimmed per file when the matching
+                  global context file installed by setup.sh is
+                  present, full otherwise
   --rules-source symlink|copy
   --skills-source symlink|copy   (defaults to --rules-source)
   --include-rule <id>            (repeatable)
@@ -151,6 +161,11 @@ parse_args() {
         CHANGELOG_MODE="$2"
         shift 2
         ;;
+      --context-rules)
+        [ "$#" -ge 2 ] || die "--context-rules requires a value"
+        CONTEXT_RULES_MODE="$2"
+        shift 2
+        ;;
       --rules-source)
         [ "$#" -ge 2 ] || die "--rules-source requires a value"
         RULE_SOURCE_MODE="$2"
@@ -209,6 +224,7 @@ parse_args() {
       ;;
   esac
   case "$CHANGELOG_MODE" in auto|none|date|version) ;; *) die "invalid changelog mode: $CHANGELOG_MODE" ;; esac
+  case "$CONTEXT_RULES_MODE" in auto|full|trimmed) ;; *) die "invalid context rules mode: $CONTEXT_RULES_MODE" ;; esac
   case "$RULE_SOURCE_MODE" in symlink|copy) ;; *) die "invalid rules source mode: $RULE_SOURCE_MODE" ;; esac
   if [ -z "$SKILL_SOURCE_MODE" ]; then
     SKILL_SOURCE_MODE="$RULE_SOURCE_MODE"
@@ -545,6 +561,74 @@ selected_rules_ordered() {
     sort
 }
 
+# Reports whether a global context file installed by setup.sh carries
+# the managed rule block, meaning the always-tier rules and the full
+# rule router are already loaded from there.
+global_context_has_marker() {
+  local path="$1"
+
+  [ -f "$path" ] && grep -Fxq "$AGENT_GUIDELINES_MARKER_BEGIN" "$path"
+}
+
+# Resolves the context rules mode for one project file. In auto mode
+# the project CLAUDE.md is trimmed when the Claude global context
+# carries the managed block, and the project AGENTS.md is trimmed when
+# any AGENTS-consuming global context does.
+context_rules_mode_for() {
+  local target="$1"
+
+  if [ "$CONTEXT_RULES_MODE" != "auto" ]; then
+    printf '%s' "$CONTEXT_RULES_MODE"
+    return
+  fi
+
+  case "$target" in
+    claude)
+      if global_context_has_marker "${HOME}/.claude/CLAUDE.md"; then
+        printf 'trimmed'
+      else
+        printf 'full'
+      fi
+      ;;
+    agents)
+      if global_context_has_marker "${HOME}/.config/opencode/AGENTS.md" ||
+        global_context_has_marker "${HOME}/.pi/agent/AGENTS.md" ||
+        global_context_has_marker "${HOME}/.codex/AGENTS.md"; then
+        printf 'trimmed'
+      else
+        printf 'full'
+      fi
+      ;;
+  esac
+}
+
+# Writes a trimmed managed block: the project's rule selection as a
+# router table over .agent-guidelines/rules instead of inlined rule
+# bodies. The always-tier rule text comes from the global context.
+assemble_trimmed_rules_block() {
+  local block_file="$1"
+  local rules=()
+  local rule
+
+  while IFS= read -r rule; do
+    [ -n "$rule" ] && rules+=("$rule")
+  done < <(selected_rules_ordered)
+
+  {
+    printf '%s\n\n' "$AGENT_GUIDELINES_MARKER_BEGIN"
+    printf '## Agent Guidelines Rule Selection\n\n'
+    printf 'The always-loaded rules and the full rule router come from the\n'
+    printf 'global context file installed by setup.sh. This project applies\n'
+    printf 'the rules below; read a rule from its path when its trigger\n'
+    printf 'matches the current task.\n\n'
+    printf 'Profile: %s. Changelog mode: %s. Versioning mode: %s.\n\n' \
+      "$PROFILE" "$CHANGELOG_MODE" "$(versioning_mode)"
+    agent_guidelines_build_router_table \
+      "$RULE_SOURCE_DIR" ".agent-guidelines/rules" "${rules[@]}"
+    printf '\n%s\n' "$AGENT_GUIDELINES_MARKER_END"
+  } > "$block_file"
+}
+
 assemble_rules_block() {
   local block_file="$1"
   local rules=()
@@ -642,25 +726,50 @@ update_managed_block_with_preamble() {
 }
 
 assemble_agent_files() {
-  local block_file preamble_file
-  block_file="$(mktemp)"
+  local full_block trimmed_block preamble_file
+  local claude_mode agents_mode claude_block agents_block
+  full_block=""
+  trimmed_block=""
   preamble_file="$(mktemp)"
-  assemble_rules_block "$block_file"
   write_agent_file_preamble > "$preamble_file"
+
+  claude_mode="$(context_rules_mode_for claude)"
+  agents_mode="$(context_rules_mode_for agents)"
+  CLAUDE_CONTEXT_MODE="$claude_mode"
+  AGENTS_CONTEXT_MODE="$agents_mode"
+
+  if [ "$claude_mode" = "full" ] || [ "$agents_mode" = "full" ]; then
+    full_block="$(mktemp)"
+    assemble_rules_block "$full_block"
+  fi
+  if [ "$claude_mode" = "trimmed" ] || [ "$agents_mode" = "trimmed" ]; then
+    trimmed_block="$(mktemp)"
+    assemble_trimmed_rules_block "$trimmed_block"
+  fi
+
+  claude_block="$full_block"
+  [ "$claude_mode" = "trimmed" ] && claude_block="$trimmed_block"
+  agents_block="$full_block"
+  [ "$agents_mode" = "trimmed" ] && agents_block="$trimmed_block"
 
   if should_mutate; then
     update_managed_block_with_preamble \
-      "$TARGET_DIR/CLAUDE.md" "$block_file" "$preamble_file" \
-      "CLAUDE.md project rules"
+      "$TARGET_DIR/CLAUDE.md" "$claude_block" "$preamble_file" \
+      "CLAUDE.md project rules ($claude_mode)"
     update_managed_block_with_preamble \
-      "$TARGET_DIR/AGENTS.md" "$block_file" "$preamble_file" \
-      "AGENTS.md project rules"
+      "$TARGET_DIR/AGENTS.md" "$agents_block" "$preamble_file" \
+      "AGENTS.md project rules ($agents_mode)"
   else
-    preview_managed_block "$TARGET_DIR/CLAUDE.md" "CLAUDE.md project rules"
-    preview_managed_block "$TARGET_DIR/AGENTS.md" "AGENTS.md project rules"
+    preview_managed_block "$TARGET_DIR/CLAUDE.md" \
+      "CLAUDE.md project rules ($claude_mode)"
+    preview_managed_block "$TARGET_DIR/AGENTS.md" \
+      "AGENTS.md project rules ($agents_mode)"
   fi
 
-  rm -f "$block_file" "$preamble_file"
+  rm -f "$preamble_file"
+  [ -n "$full_block" ] && rm -f "$full_block"
+  [ -n "$trimmed_block" ] && rm -f "$trimmed_block"
+  return 0
 }
 
 skill_excluded() {
@@ -778,6 +887,7 @@ write_local_config() {
     printf 'profile=%s\n' "$PROFILE"
     printf 'changelog=%s\n' "$CHANGELOG_MODE"
     printf 'versioning=%s\n' "$(versioning_mode)"
+    printf 'context_rules=%s\n' "$CONTEXT_RULES_MODE"
     printf 'rules_source=%s\n' "$RULE_SOURCE_MODE"
     printf 'skills_source=%s\n' "$SKILL_SOURCE_MODE"
     printf 'include_rules=%s\n' "${INCLUDE_RULES[*]:-}"
@@ -974,6 +1084,9 @@ print_summary() {
   printf 'Profile: %s\n' "$PROFILE"
   printf 'Changelog mode: %s\n' "$CHANGELOG_MODE"
   printf 'Versioning mode: %s\n' "$(versioning_mode)"
+  printf 'Context rules mode: %s (CLAUDE.md %s, AGENTS.md %s)\n' \
+    "$CONTEXT_RULES_MODE" \
+    "${CLAUDE_CONTEXT_MODE:-unresolved}" "${AGENTS_CONTEXT_MODE:-unresolved}"
   printf 'Rule source mode: %s\n' "$RULE_SOURCE_MODE"
   printf 'Skill source mode: %s\n\n' "$SKILL_SOURCE_MODE"
 
