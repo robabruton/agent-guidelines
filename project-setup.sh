@@ -11,6 +11,7 @@ CANONICAL_SKILLS_DIR="${SCRIPT_DIR}/skills"
 # shellcheck source=lib/assemble-rules.sh
 . "${SCRIPT_DIR}/lib/assemble-rules.sh"
 
+MODE="install"
 PROFILE="auto"
 CHANGELOG_MODE="auto"
 CONTEXT_RULES_MODE="auto"
@@ -103,6 +104,10 @@ Options:
                   present, full otherwise
   --rules-source symlink|copy
   --skills-source symlink|copy   (defaults to --rules-source)
+  --remove        remove the managed hook snippets, exclude lines,
+                  context blocks, and .agent-guidelines state this
+                  script installed, leaving project artifacts and
+                  user content in place
   --include-rule <id>            (repeatable)
   --exclude-rule <id>            (repeatable)
   --include-skill <id>           (repeatable)
@@ -199,6 +204,10 @@ parse_args() {
         [ "$#" -ge 2 ] || die "--exclude-skill requires a value"
         EXCLUDE_SKILLS+=("$2")
         shift 2
+        ;;
+      --remove)
+        MODE="remove"
+        shift
         ;;
       --dry-run)
         DRY_RUN=true
@@ -1006,6 +1015,278 @@ install_hooks() {
   install_hook_snippet pre-push pre-push-branch-name
 }
 
+# Managed exclude lines the removal flow may strip from
+# .git/info/exclude; mirrors what configure_local_excludes and
+# install_per_project_skills append.
+MANAGED_EXCLUDE_LINES=(
+  "CLAUDE.md"
+  "CLAUDE.local.md"
+  "AGENTS.md"
+  ".claude/"
+  ".codex/"
+  ".agent-guidelines/config"
+  ".agent-guidelines/rules"
+  "opencode.json"
+  ".mcp.json"
+  ".agents/skills/"
+)
+
+# Managed hook snippets the removal flow strips; mirrors
+# install_hooks.
+MANAGED_HOOK_SNIPPETS=(
+  "pre-commit|pre-commit-main-branch"
+  "pre-commit|pre-commit-attribution"
+  "pre-commit|pre-commit-banned-phrases"
+  "commit-msg|commit-msg-attribution"
+  "commit-msg|commit-msg-banned-phrases"
+  "commit-msg|commit-msg-conventional"
+  "pre-push|pre-push-branch-name"
+)
+
+remove_hook_snippet() {
+  local hook_name="$1"
+  local snippet_name="$2"
+  local hook_path snippet_path begin_marker end_marker temp_file
+
+  hook_path="$(git_path "hooks/$hook_name")"
+  snippet_path="$ASSET_DIR/hooks/$snippet_name"
+
+  if [ ! -e "$hook_path" ]; then
+    add_status unchanged "$hook_name $snippet_name (not installed)"
+    return 0
+  fi
+
+  begin_marker="$(sed -n '1p' "$snippet_path")"
+  end_marker="$(sed -n '$p' "$snippet_path")"
+
+  if ! grep -Fxq "$begin_marker" "$hook_path"; then
+    add_status unchanged "$hook_name $snippet_name (not installed)"
+    return 0
+  fi
+
+  if should_mutate; then
+    temp_file="$(mktemp)"
+    awk -v begin="$begin_marker" -v end="$end_marker" '
+      $0 == begin { in_block = 1; next }
+      $0 == end { in_block = 0; next }
+      !in_block { print }
+    ' "$hook_path" > "$temp_file"
+    cp "$temp_file" "$hook_path"
+    rm -f "$temp_file"
+  fi
+  add_status updated "$hook_name $snippet_name removed"
+}
+
+# Deletes a hook file that holds nothing but a shebang and blank
+# lines after the managed snippets are gone; foreign content keeps
+# the file in place.
+prune_empty_hook() {
+  local hook_name="$1"
+  local hook_path
+
+  hook_path="$(git_path "hooks/$hook_name")"
+  [ -e "$hook_path" ] || return 0
+
+  if grep -Evq '^#!|^[[:space:]]*$' "$hook_path"; then
+    return 0
+  fi
+
+  if should_mutate; then
+    rm -f "$hook_path"
+  fi
+  add_status updated "$hook_name hook removed (only managed content)"
+}
+
+remove_managed_excludes() {
+  local exclude_file managed_list temp_file line
+
+  if ! target_has_git_repo; then
+    add_status skipped "git info/exclude (target has no git repo)"
+    return 0
+  fi
+
+  exclude_file="$(git_path info/exclude)"
+  if [ ! -e "$exclude_file" ]; then
+    add_status unchanged "git info/exclude (absent)"
+    return 0
+  fi
+
+  managed_list="$(mktemp)"
+  for line in "${MANAGED_EXCLUDE_LINES[@]}"; do
+    printf '%s\n' "$line"
+  done > "$managed_list"
+
+  temp_file="$(mktemp)"
+  grep -Fvxf "$managed_list" "$exclude_file" > "$temp_file" || true
+
+  if cmp -s "$exclude_file" "$temp_file"; then
+    add_status unchanged "git info/exclude"
+  else
+    if should_mutate; then
+      cp "$temp_file" "$exclude_file"
+    fi
+    add_status updated "managed exclude lines removed"
+  fi
+  rm -f "$managed_list" "$temp_file"
+}
+
+remove_commit_template_config() {
+  if ! target_has_git_repo; then
+    return 0
+  fi
+
+  local current
+  current="$(git -C "$TARGET_DIR" config --local --get commit.template || true)"
+  if [ "$current" != ".gittemplate" ]; then
+    add_status unchanged "git commit.template"
+    return 0
+  fi
+
+  if should_mutate; then
+    git -C "$TARGET_DIR" config --local --unset commit.template
+  fi
+  add_status updated "git commit.template unset"
+}
+
+# Strips the managed block from one context file; deletes the file
+# when nothing but the generated preamble remains.
+remove_context_file_block() {
+  local target_file="$1"
+  local label="$2"
+  local preamble_file status
+
+  if [ ! -e "$target_file" ]; then
+    add_status unchanged "$label (absent)"
+    return 0
+  fi
+
+  if ! grep -Fxq "$AGENT_GUIDELINES_MARKER_BEGIN" "$target_file"; then
+    add_status skipped "$label has no managed block"
+    return 0
+  fi
+
+  if ! should_mutate; then
+    add_status updated "$label managed block would be removed"
+    return 0
+  fi
+
+  status="$(agent_guidelines_remove_managed_block "$target_file")"
+  if [ "$status" = "cleared" ]; then
+    preamble_file="$(mktemp)"
+    write_agent_file_preamble > "$preamble_file"
+    if cmp -s <(sed -e 's/[[:space:]]*$//' "$target_file" |
+        grep -v '^$') \
+      <(sed -e 's/[[:space:]]*$//' "$preamble_file" | grep -v '^$'); then
+      rm -f "$target_file"
+      status="removed"
+    fi
+    rm -f "$preamble_file"
+  fi
+  add_status updated "$label managed block $status"
+}
+
+remove_rule_source_state() {
+  local state_dir="$TARGET_DIR/.agent-guidelines"
+  local rules_path="$state_dir/rules"
+  local config_path="$state_dir/config"
+
+  if [ -L "$rules_path" ]; then
+    if should_mutate; then
+      rm -f "$rules_path"
+    fi
+    add_status updated ".agent-guidelines/rules symlink removed"
+  elif [ -d "$rules_path" ]; then
+    add_status skipped ".agent-guidelines/rules snapshot left in place"
+  fi
+
+  if [ -e "$config_path" ]; then
+    if should_mutate; then
+      rm -f "$config_path"
+    fi
+    add_status updated ".agent-guidelines/config removed"
+  fi
+
+  if should_mutate && [ -d "$state_dir" ]; then
+    rmdir "$state_dir" 2>/dev/null || true
+  fi
+}
+
+remove_project_skill_links() {
+  local skills_dir="$TARGET_DIR/.agents/skills"
+  local entry link_target
+
+  [ -d "$skills_dir" ] || return 0
+
+  for entry in "$skills_dir"/*; do
+    [ -e "$entry" ] || [ -L "$entry" ] || continue
+    if [ -L "$entry" ]; then
+      link_target="$(readlink "$entry")"
+      case "$link_target" in
+        "$CANONICAL_SKILLS_DIR"/*)
+          if should_mutate; then
+            rm -f "$entry"
+          fi
+          add_status updated ".agents/skills/$(basename "$entry") link removed"
+          ;;
+        *)
+          add_status skipped ".agents/skills/$(basename "$entry") points elsewhere"
+          ;;
+      esac
+    else
+      add_status skipped ".agents/skills/$(basename "$entry") is a copy"
+    fi
+  done
+
+  if should_mutate; then
+    rmdir "$skills_dir" "$TARGET_DIR/.agents" 2>/dev/null || true
+  fi
+}
+
+print_remove_summary() {
+  printf '\nProject removal summary\n'
+  if [ "$DRY_RUN" = true ]; then
+    printf 'Mode: dry-run (no files modified)\n'
+  fi
+  printf 'Repository: %s\n' "$TARGET_DIR"
+
+  local updated_label="Removed or updated:"
+  if [ "$DRY_RUN" = true ]; then
+    updated_label="Would remove or update:"
+  fi
+  print_list "$updated_label" "${UPDATED[@]}"
+  print_list "Unchanged:" "${UNCHANGED[@]}"
+  print_list "Skipped:" "${SKIPPED[@]}"
+  print_list "Warnings:" "${WARNINGS[@]}"
+}
+
+run_remove() {
+  [ -d "$TARGET_DIR" ] || die "target directory does not exist: $TARGET_DIR"
+  TARGET_DIR="$(cd "$TARGET_DIR" && pwd -P)"
+
+  local pair hook_name snippet_name
+  if target_has_git_repo; then
+    for pair in "${MANAGED_HOOK_SNIPPETS[@]}"; do
+      hook_name="${pair%%|*}"
+      snippet_name="${pair##*|}"
+      remove_hook_snippet "$hook_name" "$snippet_name"
+    done
+    for hook_name in pre-commit commit-msg pre-push; do
+      prune_empty_hook "$hook_name"
+    done
+  else
+    add_status skipped "git hooks (target has no git repo)"
+  fi
+
+  remove_managed_excludes
+  remove_commit_template_config
+  remove_context_file_block "$TARGET_DIR/CLAUDE.md" "CLAUDE.md"
+  remove_context_file_block "$TARGET_DIR/AGENTS.md" "AGENTS.md"
+  remove_rule_source_state
+  remove_project_skill_links
+
+  print_remove_summary
+}
+
 create_initial_commit_if_needed() {
   if ! target_has_git_repo; then
     # Dry-run may report a planned init without creating .git/, in
@@ -1126,6 +1407,12 @@ print_summary() {
 
 main() {
   parse_args "$@"
+
+  if [ "$MODE" = "remove" ]; then
+    run_remove
+    return 0
+  fi
+
   resolve_target
   require_git_identity
   init_git_if_needed
