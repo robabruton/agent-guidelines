@@ -1,0 +1,17 @@
+# BEGIN agent-guidelines message banned-phrase guard
+# Rejects forward-looking, planned-work phrasing in commit and merge
+# messages, enforcing the no-plans-on-main rule for the message
+# artifacts (merge bodies included, since git runs commit-msg for
+# merges). The pattern is assembled from adjacent quoted fragments so
+# this snippet does not match the staged guard when it is itself
+# committed. Plain POSIX sh.
+msg_file="$1"
+msg_banned_pattern='(will be'' added|will'' land|will'' follow|coming'' soon|next'' session|future'' work|road''map|follow''-?ups?|next''-steps?|to''-do|up''coming|not'' yet|first'' (caller|migration|concrete)|(TO''DO|FIX''ME):)'
+
+if grep -v '^#' "$msg_file" | grep -Ei "$msg_banned_pattern" >/dev/null; then
+  echo "Forward-looking (planned-work) phrasing found in the commit message:" >&2
+  grep -v '^#' "$msg_file" | grep -Ei "$msg_banned_pattern" | sed 's/^/  /' >&2
+  echo "Rewrite the message to describe the present (see the no-plans-on-main rule)." >&2
+  exit 1
+fi
+# END agent-guidelines message banned-phrase guard
