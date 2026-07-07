@@ -8,6 +8,12 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ### Added
 
+- `project-setup.sh --remove` uninstalls the managed state the
+  script created — hook snippet blocks, exclude lines, the commit
+  template config, context-file managed blocks, and the
+  `.agent-guidelines` and `.agents/skills` links — while leaving
+  project artifacts, tracked copies, and user content in place. It
+  honors `--dry-run` and reruns cleanly.
 - `debug` skill drives a live failure to a verified root-cause fix —
   reproduce, isolate, diagnose, fix, verify — filling the workflow
   the review-family skills do not cover: chasing a concrete failing
