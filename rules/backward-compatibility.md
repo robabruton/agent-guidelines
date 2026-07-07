@@ -1,6 +1,13 @@
 ---
 when: replacing, removing, or migrating existing user-visible behavior, APIs, or formats
 load: recall
+summary: >-
+  Preserves existing behavior unless the branch explicitly replaces
+  it. Identifies what counts as a breaking change (public APIs, CLI
+  flags, configuration, file formats, install behavior, documented
+  workflows), how to handle replacements and migrations, and the
+  release impact under semver — breaking changes warrant a `MAJOR`
+  version recommendation.
 ---
 # Backward Compatibility Rules
 

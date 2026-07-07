@@ -1,6 +1,14 @@
 ---
 when: writing tests, modifying existing tests, or verifying a branch before merge or push
 load: recall
+summary: >-
+  Verify every branch before it merges, sized to the risk and scope
+  of the change. Test selection (smallest reliable check, prefer
+  existing project conventions), what to verify (new behavior,
+  existing behavior touched, error paths, documentation examples),
+  running the project's full check suite before pushing, no
+  hardcoded dates in tests, and reproducing expensive remote
+  pipeline steps locally first.
 ---
 # Testing Rules
 
