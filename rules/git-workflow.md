@@ -35,8 +35,7 @@ summary: >-
 - Never commit local scratch or generated files that are not part of
   the project contract.
 
-The sections below give the rationale and the details behind each
-constraint.
+The rationale and detail behind each constraint:
 
 ## How Work Builds Up
 
@@ -44,7 +43,7 @@ Development composes bottom-up from small pieces:
 
 1. **A commit** is the smallest meaningful change — one function
    implemented, one bug fixed, one config option added. It should be
-   describable in a single sentence and independently revertable.
+   describable in a single sentence.
 2. **A branch** is a complete unit of work made up of many small
    commits — a feature, a component, a fix — merged only when its
    goal is fully achieved.
@@ -53,30 +52,23 @@ Development composes bottom-up from small pieces:
 
 ## Branching
 
-- NEVER author work commits directly on the `main` branch — there are
-  NO exceptions for changelog cuts, version bumps, or other
-  "bookkeeping" commits. `--no-ff` merge commits are the only commits
-  that originate on `main`, and the pre-commit main-branch guard
-  installed by `project-setup.sh` allows them while blocking every
-  other commit on `main`.
-- Create a new branch for every feature, fix, or change, with a
-  descriptive slash-prefixed name: `feat/description`,
-  `fix/description`, `chore/description`
+- "No bookkeeping exceptions" includes changelog cuts and version
+  bumps. The pre-commit main-branch guard installed by
+  `project-setup.sh` allows merge commits on `main` while blocking
+  every other commit.
 - Name the branch from the work being done, not from where the
   repository happens to be checked out, and verify the name matches
   the documented pattern before creating it. Before starting new
   work, confirm the current branch's scope covers it; if not, create
   a new branch rather than piling distinct work onto a branch named
   for a different scope.
-- Merge back to `main` only when the branch's work is fully complete,
-  and always with `--no-ff`, even when a fast-forward is possible.
-  The explicit merge commit preserves the branch as a visible
-  grouping in history and makes a whole feature revertable with a
-  single `git revert`.
-- If the project maintains a `CHANGELOG.md`, keep changelog edits on
-  the branch that made the work — never as a follow-up commit on
-  main. See `changelog-common.md`, `changelog-date.md`, and
-  `changelog-version.md` for section formats and the release cut.
+- `--no-ff` applies even when a fast-forward is possible: the
+  explicit merge commit preserves the branch as a visible grouping in
+  history and makes a whole feature revertable with a single
+  `git revert`.
+- See `changelog-common.md`, `changelog-date.md`, and
+  `changelog-version.md` for changelog section formats and the
+  release cut.
 
 ## Commits
 
@@ -108,17 +100,16 @@ pre-plan a numbered commit list ("commit 1 will be X, six total") —
 the count falls out of the work naturally, and a counted list fights
 letting history reflect what actually happened.
 
-### What NOT to do
+### Commit scope
 
-- NEVER have more than 3-4 modified files uncommitted at once
 - Do NOT batch unrelated changes into a single commit. If a change
   belongs to a different scope than the current branch, put it on a
   separate branch unless it is required to complete this branch
   safely.
 - If you find yourself writing "and" in a commit message subject, it
-  should probably be two commits
-- The revert test: every commit should be independently revertable
-  without undoing unrelated work
+  should probably be two commits.
+- The revert test: reverting any one commit must not undo unrelated
+  work.
 
 ## Merge Readiness
 
@@ -127,11 +118,10 @@ letting history reflect what actually happened.
   replacement before it is merged
 - Documentation must describe behavior that exists on the branch
   being merged, not planned future behavior
-- Run the relevant checks for the project before merging; if no
-  automated checks exist yet, review the changed files manually
-- Treat project hooks as part of the workflow. Understand and resolve
-  hook failures before continuing; do not bypass hooks unless the
-  team has agreed that the hook is wrong for the current change.
+- If no automated checks exist yet, review the changed files manually
+- Bypassing a hook is a team decision that the hook is wrong for the
+  current change, never a way around a failure you have not
+  understood
 - Before merging, review the branch diff against the branch goal:
   the diff is scoped, changelog entries are correct, temporary files
   are removed, generated files are intentional, and no unrelated
@@ -144,19 +134,16 @@ letting history reflect what actually happened.
 
 ## When the Default Branch Is Protected
 
-If `main` is protected so direct pushes are rejected, never merge
-locally and then try to push. Push the branch, open a pull/merge
-request, wait for required checks to pass, and merge through the
-platform. Afterwards, confirm the merge landed with the intended
-commit body — a body lost at merge time is on permanent, protected
-history and is costly to correct.
+Push the branch, open a pull/merge request, wait for required checks
+to pass, and merge through the platform. Afterwards, confirm the
+merge landed with the intended commit body — a body lost at merge
+time is on permanent, protected history and is costly to correct.
 
 ## After Merge
 
-- Delete the local feature branch with safe deletion
-  (`git branch -d <branch>`) so Git refuses if it was not fully
-  merged; use force deletion (`-D`) only to intentionally discard
-  unmerged branch history
+- Safe deletion (`git branch -d`) makes Git refuse if the branch was
+  not fully merged; use force deletion (`-D`) only to intentionally
+  discard unmerged branch history
 - Verify `git status`, confirm the merged branch was deleted, remove
   temporary files, and check recent history to ensure the merge
   commit represents the intended branch
@@ -170,8 +157,7 @@ history and is costly to correct.
 ## Local and Generated Files
 
 - Local scratch files, generated candidate lists, temporary exports,
-  and machine-specific artifacts must not be committed unless they
-  are part of the project contract
+  and machine-specific artifacts are not part of the project contract
 - Add local-only ignore rules to `.git/info/exclude` when they are
   personal to one checkout; use a tracked ignore file only for
   patterns that should apply to everyone
