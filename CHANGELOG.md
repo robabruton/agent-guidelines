@@ -93,6 +93,10 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ### Fixed
 
+- Auto profile inference detects source files again: the check that
+  should promote a repository with code to the codebase profile
+  never produced output, so every repository without a version
+  manifest fell back to the minimal profile.
 - The pre-push branch-name guard validates the branches actually
   being pushed, read from the ref list git supplies on stdin,
   instead of the currently checked-out branch. Deletions and tag
