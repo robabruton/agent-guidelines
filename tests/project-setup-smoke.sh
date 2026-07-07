@@ -10,12 +10,15 @@ trap 'rm -rf "$TMP_ROOT"' EXIT
 
 SYMLINK_REPO="${TMP_ROOT}/symlink-repo"
 COPY_REPO="${TMP_ROOT}/copy-repo"
+TRIMMED_REPO="${TMP_ROOT}/trimmed-repo"
 DRY_REPO="${TMP_ROOT}/dry-repo"
 SYMLINK_FIRST_OUT="${TMP_ROOT}/symlink-first.out"
 SYMLINK_SECOND_OUT="${TMP_ROOT}/symlink-second.out"
 SYMLINK_STATUS_OUT="${TMP_ROOT}/symlink-status.out"
 COPY_OUT="${TMP_ROOT}/copy.out"
 COPY_STATUS_OUT="${TMP_ROOT}/copy-status.out"
+TRIMMED_OUT="${TMP_ROOT}/trimmed.out"
+TRIMMED_STATUS_OUT="${TMP_ROOT}/trimmed-status.out"
 DRY_OUT="${TMP_ROOT}/dry.out"
 
 assert_agent_rules() {
@@ -52,6 +55,7 @@ assert_agent_preamble() {
 "${ROOT_DIR}/project-setup.sh" \
   --profile codebase \
   --changelog dated \
+  --context-rules full \
   --include-skill explain \
   --include-skill test-audit \
   --exclude-skill test-audit \
@@ -79,6 +83,7 @@ grep -Fq ".agents/skills/" "${SYMLINK_REPO}/.git/info/exclude"
 "${ROOT_DIR}/project-setup.sh" \
   --profile codebase \
   --changelog dates \
+  --context-rules full \
   "${SYMLINK_REPO}" > "$SYMLINK_SECOND_OUT"
 
 git -C "$SYMLINK_REPO" status --short > "$SYMLINK_STATUS_OUT"
@@ -97,6 +102,7 @@ assert_agent_preamble "${SYMLINK_REPO}/AGENTS.md"
 "${ROOT_DIR}/project-setup.sh" \
   --profile released \
   --changelog versions \
+  --context-rules full \
   --rules-source copy \
   --include-skill firmware-review \
   "${COPY_REPO}" > "$COPY_OUT"
@@ -120,6 +126,39 @@ test ! -L "${COPY_REPO}/.agents/skills/firmware-review"
 test -f "${COPY_REPO}/.agents/skills/firmware-review/SKILL.md"
 git -C "$COPY_REPO" ls-files --error-unmatch \
   .agents/skills/firmware-review/SKILL.md >/dev/null
+
+# Trimmed context mode: the managed block is a rule selection router
+# instead of inlined rule bodies.
+"${ROOT_DIR}/project-setup.sh" \
+  --profile codebase \
+  --changelog dated \
+  --context-rules trimmed \
+  "${TRIMMED_REPO}" > "$TRIMMED_OUT"
+
+git -C "$TRIMMED_REPO" status --short > "$TRIMMED_STATUS_OUT"
+if [ -s "$TRIMMED_STATUS_OUT" ]; then
+  cat "$TRIMMED_STATUS_OUT" >&2
+  echo "trimmed mode left uncommitted project changes" >&2
+  exit 1
+fi
+
+grep -Fq "Context rules mode: trimmed (CLAUDE.md trimmed, AGENTS.md trimmed)" \
+  "$TRIMMED_OUT"
+for agent_file in CLAUDE.md AGENTS.md; do
+  file="${TRIMMED_REPO}/${agent_file}"
+  grep -Fq "<!-- BEGIN agent-guidelines project rules -->" "$file"
+  grep -Fq "<!-- END agent-guidelines project rules -->" "$file"
+  grep -Eq "^## Agent Guidelines Rule Selection$" "$file"
+  grep -Fq "Profile: codebase. Changelog mode: date. Versioning mode: none." "$file"
+  grep -Fq "| changelog-date |" "$file"
+  grep -Fq '`.agent-guidelines/rules/git-workflow.md`' "$file"
+  if grep -Eq "^## Git Workflow Rules$" "$file"; then
+    echo "trimmed mode inlined a rule body in $agent_file" >&2
+    exit 1
+  fi
+done
+assert_agent_preamble "${TRIMMED_REPO}/CLAUDE.md"
+assert_agent_preamble "${TRIMMED_REPO}/AGENTS.md"
 
 mkdir -p "$DRY_REPO"
 git -C "$DRY_REPO" init --quiet --initial-branch=main
