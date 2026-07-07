@@ -1,6 +1,13 @@
 ---
 when: writing or modifying functions, types, modules, macros, or other documented code symbols
 load: recall
+summary: >-
+  Mandatory documentation for every function, type, constant, macro,
+  and module-scoped variable you write or materially change, with a
+  small list of trivial exceptions. Specifies voice (third-person
+  declarative), what to document, what to skip, and the idiomatic
+  doc format per language — Doxygen, Google-style, JSDoc, Rustdoc,
+  Godoc, Javadoc, LDoc.
 ---
 # Docstring Rules
 

@@ -1,6 +1,14 @@
 ---
 when: making design, abstraction, auto-detection, or single-source-of-truth decisions
 load: recall
+summary: >-
+  Recurring design decisions: prefer explicit choices over clever
+  auto-detection, do not design abstractions against a single
+  instance, single source of truth per datum with derived views
+  rebuildable from the source, one writer per fact (many readers
+  are fine), decide each surface's exposure explicitly rather than
+  by default, and use prior implementations as a source of
+  requirements rather than code to bulk-port.
 ---
 # Engineering Judgment Rules
 

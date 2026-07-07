@@ -1,6 +1,12 @@
 ---
 when: writing or modifying shell scripts, git hooks, installers, or command automation
 load: recall
+summary: >-
+  Predictability and safety for shell scripts, git hooks, installers,
+  and command automation. Strict error handling appropriate to the
+  scripting language, validated inputs, dry-run or preview modes for
+  destructive scripts, idempotency so re-runs are safe, and
+  portability across the platforms the project targets.
 ---
 # Script Rules
 

@@ -1,6 +1,16 @@
 ---
 when: always
 load: always
+summary: >-
+  Permanent project history must read as a record of work that
+  happened, not work that is intended. Forbids speculative planning
+  content — plans for later phases, lists of unfinished work,
+  forward-looking promises — in any tracked file, commit message,
+  pull request description, merge commit body, or branch name.
+  Includes a banned-phrase checklist run before staging, a matching
+  pre-commit guard installed by `project-setup.sh`, and a pointer to
+  where plans legitimately belong (durable agent memory, untracked
+  `local/` files, scratch branches).
 ---
 # No Plans in Permanent History
 

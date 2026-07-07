@@ -1,6 +1,13 @@
 ---
 when: opening, writing, or reviewing a pull/merge request, or publishing a branch for review
 load: recall
+summary: >-
+  What a pull or merge request description must contain: Summary,
+  optional Changes, Test Evidence, optional Notes. Every commit in
+  the branch must stand on its own — no `fix`/`fixup` commits
+  patching earlier commits in the same branch. Cross-repository
+  context belongs in the description rather than in commit history,
+  which the git-messages rule keeps self-contained per repo.
 ---
 # Pull / Merge Request Rules
 

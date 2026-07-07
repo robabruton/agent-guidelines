@@ -1,6 +1,12 @@
 ---
 when: committing config files, example envs, or anything that touches secret handling
 load: recall
+summary: >-
+  Repository, local, and secret configuration handling. Commit what
+  is required for build, test, run, and operation; keep personal
+  editor, credential, and machine-specific files out of git via local
+  excludes; never commit secrets, and treat any that slip through as
+  compromised and in need of rotation.
 ---
 # Configuration Rules
 

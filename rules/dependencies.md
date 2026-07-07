@@ -1,6 +1,13 @@
 ---
 when: adding, updating, or removing project dependencies or lockfiles
 load: recall
+summary: >-
+  Adding, updating, and removing project dependencies. Prefer
+  existing project dependencies, standard libraries, and local
+  utilities before adding something new; follow the ecosystem's
+  lockfile and version-pinning conventions; remove dependencies
+  whose justifying feature has been removed rather than leaving
+  unused tooling in place.
 ---
 # Dependency Rules
 

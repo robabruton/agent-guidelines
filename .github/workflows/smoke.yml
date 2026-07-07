@@ -24,6 +24,7 @@ jobs:
             tests/setup-smoke.sh \
             tests/project-setup-smoke.sh \
             tests/hooks-smoke.sh \
+            scripts/generate-rules-readme.sh \
             skills/agent-memory/scripts/agent-memory-report.sh
 
       - name: Validate rule frontmatter
@@ -47,6 +48,9 @@ jobs:
             fi
           done
           test "$fail" -eq 0
+
+      - name: Verify rules README matches rule frontmatter
+        run: bash scripts/generate-rules-readme.sh --check
 
       - name: Verify rule and skill names referenced by scripts exist
         run: |

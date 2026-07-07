@@ -1,6 +1,13 @@
 ---
 when: writing or updating user-facing documentation, READMEs, guides, or example commands
 load: recall
+summary: >-
+  User-facing documentation must describe behavior that currently
+  exists rather than behavior that is planned. Examples should be
+  runnable or marked illustrative, alternatives listed side by side
+  must use parallel references, one term per concept across the
+  docs, and documentation lives where the project already keeps
+  related documentation rather than being duplicated.
 ---
 # Documentation Rules
 

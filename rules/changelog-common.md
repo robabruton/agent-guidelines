@@ -1,6 +1,13 @@
 ---
 when: creating, editing, or grouping entries in a CHANGELOG.md
 load: recall
+summary: >-
+  Shared format conventions used by both the date-based and versioned
+  changelog variants: Keep a Changelog 1.1.0, the six section
+  headings (`Added`, `Changed`, `Deprecated`, `Removed`, `Fixed`,
+  `Security`), one entry per user-meaningful outcome rather than one
+  entry per commit, and consolidation when a section grows noisy.
+  Initial setup commits a base file without an empty release section.
 ---
 # Changelog Common Rules
 
