@@ -13,6 +13,13 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
   and `--dry-run` previews only the files an install would actually
   change. A stale block previously reported as managed, so an
   out-of-date install was invisible.
+- `project-setup.sh` installs a pre-commit guard that rejects
+  forward-looking, planned-work phrasing in staged content, enforcing
+  the no-plans-on-main rule at commit time. The rule file that
+  defines the phrase list is exempt wherever it is installed, the
+  flagged patterns are assembled from adjacent fragments so the guard
+  and its tests never match themselves, and `tests/hooks-smoke.sh`
+  covers the rejections and the exemptions.
 - `tests/hooks-smoke.sh` verifies the installed hook snippets in a
   temporary repository: guard rejections and passes, merge
   exemptions, and pre-push ref handling including deletions and
