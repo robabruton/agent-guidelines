@@ -160,6 +160,49 @@ done
 assert_agent_preamble "${TRIMMED_REPO}/CLAUDE.md"
 assert_agent_preamble "${TRIMMED_REPO}/AGENTS.md"
 
+# Removal: --remove strips managed hooks, exclude lines, context
+# blocks, and local state while leaving project artifacts alone.
+REMOVE_REPO="${TMP_ROOT}/remove-repo"
+"${ROOT_DIR}/project-setup.sh" \
+  --profile minimal \
+  --changelog none \
+  --context-rules trimmed \
+  --include-skill explain \
+  "$REMOVE_REPO" > "${TMP_ROOT}/remove-setup.out"
+"${ROOT_DIR}/project-setup.sh" --remove "$REMOVE_REPO" \
+  > "${TMP_ROOT}/remove.out"
+
+test ! -e "${REMOVE_REPO}/CLAUDE.md"
+test ! -e "${REMOVE_REPO}/AGENTS.md"
+test ! -e "${REMOVE_REPO}/.agent-guidelines"
+test ! -e "${REMOVE_REPO}/.agents"
+for hook in pre-commit commit-msg pre-push; do
+  if [ -e "${REMOVE_REPO}/.git/hooks/${hook}" ] &&
+    grep -q "agent-guidelines" "${REMOVE_REPO}/.git/hooks/${hook}"; then
+    echo "managed content left in ${hook} after --remove" >&2
+    exit 1
+  fi
+done
+if grep -Fxq "CLAUDE.md" "${REMOVE_REPO}/.git/info/exclude"; then
+  echo "managed exclude line left after --remove" >&2
+  exit 1
+fi
+if git -C "$REMOVE_REPO" config --local --get commit.template >/dev/null; then
+  echo "commit.template still set after --remove" >&2
+  exit 1
+fi
+test -e "${REMOVE_REPO}/.gittemplate"
+test -e "${REMOVE_REPO}/README.md"
+git -C "$REMOVE_REPO" status --short > "${TMP_ROOT}/remove-status.out"
+if [ -s "${TMP_ROOT}/remove-status.out" ]; then
+  cat "${TMP_ROOT}/remove-status.out" >&2
+  echo "--remove left uncommitted project changes" >&2
+  exit 1
+fi
+
+# A second --remove run is a clean no-op.
+"${ROOT_DIR}/project-setup.sh" --remove "$REMOVE_REPO" > /dev/null
+
 # Auto profile inference: a repository containing source files
 # resolves to the codebase profile.
 INFER_REPO="${TMP_ROOT}/infer-repo"
