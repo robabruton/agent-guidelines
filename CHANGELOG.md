@@ -20,6 +20,9 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
   flagged patterns are assembled from adjacent fragments so the guard
   and its tests never match themselves, and `tests/hooks-smoke.sh`
   covers the rejections and the exemptions.
+- CI enforces a word budget on the always-tier rule bodies, the text
+  loaded into every conversation's context, so growth in the standing
+  payload is a deliberate, reviewed decision rather than drift.
 - `rules/README.md` is generated from each rule's frontmatter by
   `scripts/generate-rules-readme.sh`: every rule declares a
   `summary:` field alongside `when:` and `load:`, the script
