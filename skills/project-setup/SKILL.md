@@ -351,6 +351,7 @@ chore: initialize repository
   - `pre-commit`: `pre-commit-attribution`
   - `pre-commit`: `pre-commit-banned-phrases`
   - `commit-msg`: `commit-msg-attribution`
+  - `commit-msg`: `commit-msg-banned-phrases`
   - `commit-msg`: `commit-msg-conventional`
   - `pre-push`: `pre-push-branch-name`
 - Add each snippet only when its exact marker block is missing
