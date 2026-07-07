@@ -4,8 +4,29 @@ load: always
 ---
 # Git Message Rules
 
-Use clear, structured Git messages so history remains readable from
-`git log`, hosting platforms, release tooling, and revert workflows.
+## Hard Constraints
+
+- Write subjects as Conventional Commits `type(scope): description` —
+  imperative, lowercase, no period, target 50 characters, hard cap 60.
+- For renames, moves, typo fixes, and other mechanical edits, write
+  the subject only — no body.
+- For non-obvious changes, add a short body: WHAT and WHY, imperative,
+  wrapped at 72 characters.
+- Write multiline messages with a message file (`-F`), never repeated
+  `-m` flags.
+- Never reference reverted work, iteration history, another
+  repository's needs, or before/after comparisons in bodies or
+  changelog entries.
+- When extending an existing feature, describe it at one consistent
+  level of detail — enumerate all the peers or none.
+- Amend only local, unpushed commits.
+- Merge commits: subject `Merge branch '<branch-name>'`, one-paragraph
+  body wrapped at 72, written with a message file.
+
+The sections below give the rationale and the details behind each
+constraint. Use clear, structured Git messages so history remains
+readable from `git log`, hosting platforms, release tooling, and
+revert workflows.
 
 ## Commit Message Format
 
