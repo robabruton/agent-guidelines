@@ -41,10 +41,11 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
   is present, so the always-tier rules no longer load twice in
   harnesses that read both a global and a project context file.
 - Each always-tier rule opens with a Hard Constraints block: the
-  binding imperatives stated tersely at the top, with the rationale
-  and detail sections following. Small models that weight early
-  tokens heavily see every requirement without parsing the prose;
-  no requirement was removed.
+  binding imperatives stated tersely at the top, with the sections
+  below carrying only the rationale and detail the constraint
+  bullets do not. Small models that weight early tokens heavily see
+  every requirement without parsing the prose, each requirement is
+  stated once, and no requirement was removed.
 - `setup.sh` delivers global rules through the assembled context
   files only and no longer installs per-rule symlinks into
   `~/.claude/rules/`. A harness that reads both channels loaded the
