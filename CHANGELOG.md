@@ -33,6 +33,13 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ### Changed
 
+- `project-setup.sh` assembles project context files in a full or
+  trimmed form, selected by `--context-rules` (default `auto`). The
+  trimmed form replaces inlined rule bodies with a rule selection
+  router over `.agent-guidelines/rules`, and auto mode picks it per
+  file when the matching global context file installed by `setup.sh`
+  is present, so the always-tier rules no longer load twice in
+  harnesses that read both a global and a project context file.
 - Each always-tier rule opens with a Hard Constraints block: the
   binding imperatives stated tersely at the top, with the rationale
   and detail sections following. Small models that weight early
