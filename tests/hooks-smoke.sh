@@ -1,7 +1,8 @@
 #!/usr/bin/env bash
 # Verifies the git hook snippets installed by project-setup.sh in a
 # temporary repository: main-branch guard, conventional commit guard,
-# attribution guards, banned-phrase guard, merge exemptions, and the
+# attribution guards, banned-phrase guards over staged content,
+# messages, merge bodies, and branch names, merge exemptions, and the
 # pre-push branch-name guard. Flagged phrases used as negative
 # fixtures are assembled from fragments at runtime so this file never
 # trips the staged guards.
@@ -115,10 +116,32 @@ printf 'banned: %s work\n' "future" > rules/no-plans-on-main.md
 git add rules/no-plans-on-main.md
 git commit -q -m "docs: add nested phrase list file"
 
+# Banned-phrase guard (commit message): forward-looking message text
+# fails; a clean message for the same staged content passes.
+printf 'h\n' > file-h.txt
+git add file-h.txt
+bad_msg_phrase="coming"" soon"
+expect_fail git commit -m "docs: support ${bad_msg_phrase}"
+git commit -q -m "docs: add file h"
+
 # Merge exemption: a --no-ff merge into main passes both the
 # main-branch guard and the conventional guard.
 git checkout -q main
 git merge -q --no-ff -m "Merge branch 'feat/hook-check'" feat/hook-check
+
+# Banned-phrase guard (merge body): commit-msg runs for merges, so a
+# forward-looking merge body fails; a clean body then passes.
+git checkout -q -b feat/merge-body-check
+printf 'i\n' > file-i.txt
+git add file-i.txt
+git commit -q -m "feat: add file i"
+git checkout -q main
+expect_fail git merge --no-ff \
+  -m "Merge branch 'feat/merge-body-check'" \
+  -m "More work ${bad_msg_phrase}." feat/merge-body-check
+git merge --abort 2>/dev/null || true
+git merge -q --no-ff -m "Merge branch 'feat/merge-body-check'" \
+  feat/merge-body-check
 
 # Branch-name guard: pushes are validated against the pushed refs.
 git init -q --bare "$REMOTE"
@@ -128,6 +151,13 @@ git push -q origin main
 
 git branch badname
 expect_fail git push origin badname
+
+# A branch name that passes the type-prefix pattern but carries a
+# banned phrase is rejected; the name is assembled from fragments.
+phrase_branch="feat/handle-fol""lowup"
+git branch "$phrase_branch"
+expect_fail git push origin "$phrase_branch"
+git branch -q -d "$phrase_branch"
 
 # The pushed ref is what matters, not the checked-out branch.
 git checkout -q badname

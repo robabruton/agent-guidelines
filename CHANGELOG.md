@@ -13,13 +13,15 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
   and `--dry-run` previews only the files an install would actually
   change. A stale block previously reported as managed, so an
   out-of-date install was invisible.
-- `project-setup.sh` installs a pre-commit guard that rejects
-  forward-looking, planned-work phrasing in staged content, enforcing
-  the no-plans-on-main rule at commit time. The rule file that
-  defines the phrase list is exempt wherever it is installed, the
-  flagged patterns are assembled from adjacent fragments so the guard
-  and its tests never match themselves, and `tests/hooks-smoke.sh`
-  covers the rejections and the exemptions.
+- `project-setup.sh` installs guards that reject forward-looking,
+  planned-work phrasing across the no-plans-on-main artifacts a local
+  hook can see: staged content at pre-commit, commit and merge
+  messages at commit-msg, and pushed branch names at pre-push. The
+  rule file that defines the phrase list is exempt wherever it is
+  installed, the flagged patterns are assembled from adjacent
+  fragments so the guards and their tests never match themselves,
+  and `tests/hooks-smoke.sh` covers the rejections and the
+  exemptions for each artifact.
 - CI enforces a word budget on the always-tier rule bodies, the text
   loaded into every conversation's context, so growth in the standing
   payload is a deliberate, reviewed decision rather than drift.
