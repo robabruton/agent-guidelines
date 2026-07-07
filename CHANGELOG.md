@@ -4,6 +4,16 @@ All notable changes to this project will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## 2026-07-07
+
+### Added
+
+- `debug` skill drives a live failure to a verified root-cause fix —
+  reproduce, isolate, diagnose, fix, verify — filling the workflow
+  the review-family skills do not cover: chasing a concrete failing
+  behavior rather than inspecting code at rest. Installed globally
+  by `setup.sh` alongside the other general-purpose skills.
+
 ## 2026-07-06
 
 ### Added
