@@ -28,18 +28,15 @@ summary: >-
 
 ## Details and Rationale
 
-- The trailer ban covers commit messages and all committed files: code
-  comments, documentation, README content, changelog entries, and any
-  other tracked content.
-- The hooks installed by `project-setup.sh` enforce this by rejecting
-  authorship trailers (`Co-Authored-By`, `Generated-by`, and similar)
+- These bans cover all tracked content: code comments, documentation,
+  README content, changelog entries, and every other committed file.
+- The hooks installed by `project-setup.sh` reject authorship trailers
   in commit messages and staged content regardless of who is named,
   since a pattern cannot tell tool names from human names. Credit
   human collaborators in commit body prose rather than trailers.
-- References to AI or automation are allowed when they describe project
-  functionality, integrations, APIs, or user-facing behavior, but such
-  functional references must not imply that a tool was used as a
-  development author or contributor.
+- Functional references describe project functionality, integrations,
+  APIs, or user-facing behavior — they must not imply a tool was a
+  development contributor.
 - If a build or packaging step would otherwise sweep in local tooling
   files, exclude them with an allowlist of the project's own files
   rather than by naming the tooling.
