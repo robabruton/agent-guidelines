@@ -367,6 +367,22 @@ chore: initialize repository
 - Ensure updated hook files are executable
 - Do not install hooks globally or into other repositories
 
+## Removal
+
+- `--remove` strips what the script installed and nothing else:
+  managed hook snippet blocks (deleting a hook file only when
+  nothing but a shebang and blank lines remain), the managed
+  `.git/info/exclude` lines, the `commit.template` config value,
+  the managed context blocks in `CLAUDE.md` and `AGENTS.md`
+  (deleting the file only when just the generated preamble
+  remains), the `.agent-guidelines` rules symlink and config, and
+  `.agents/skills` symlinks that point into the canonical skills
+  directory
+- Leave project artifacts in place: `.gittemplate`, `.gitignore`,
+  `README.md`, `CHANGELOG.md`, commits, tracked rule or skill
+  copies, and any user content in hook files or context files
+- Removal honors `--dry-run` and is safe to run repeatedly
+
 ## Rerun and Idempotency
 
 - Before writing any file, compare the intended content or managed block
