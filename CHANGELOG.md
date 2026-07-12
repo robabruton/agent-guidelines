@@ -4,6 +4,16 @@ All notable changes to this project will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## 2026-07-12
+
+### Added
+
+- `performance.md` recall-tier rule: optimize against measurement
+  rather than intuition — profile before changing code, keep the
+  before/after numbers or a repeatable benchmark with the change,
+  and do not trade readability for an unmeasured speedup. Part of
+  the codebase and released profiles.
+
 ## 2026-07-07
 
 ### Added
