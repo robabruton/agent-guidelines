@@ -54,6 +54,7 @@ CODEBASE_EXTRA_RULES=(
   error-handling
   engineering-judgment
   environment-hygiene
+  performance
 )
 
 RELEASED_EXTRA_RULES=(
@@ -77,6 +78,7 @@ CANONICAL_RULE_ORDER=(
   error-handling
   engineering-judgment
   environment-hygiene
+  performance
   dependencies
   changelog-common
   changelog-date

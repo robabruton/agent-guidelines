@@ -196,6 +196,7 @@ git init --initial-branch=main
     - `error-handling.md`
     - `engineering-judgment.md`
     - `environment-hygiene.md`
+    - `performance.md`
   - `released`:
     - all `codebase` rules
     - `backward-compatibility.md`
@@ -233,6 +234,7 @@ git init --initial-branch=main
   - `error-handling.md`
   - `engineering-judgment.md`
   - `environment-hygiene.md`
+  - `performance.md`
   - `dependencies.md`
   - `changelog-common.md`
   - `changelog-date.md`

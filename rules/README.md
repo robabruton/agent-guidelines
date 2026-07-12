@@ -29,7 +29,7 @@ Every rule file declares YAML frontmatter with three fields:
   the sections below.
 
 5 rules are tiered `always`. They form the baseline a
-model follows on every conversation. The remaining 17 are
+model follows on every conversation. The remaining 18 are
 tiered `recall` and cover situational expectations the model reads
 only when needed.
 
@@ -227,6 +227,15 @@ the branch must stand on its own — no `fix`/`fixup` commits
 patching earlier commits in the same branch. Cross-repository
 context belongs in the description rather than in commit history,
 which the git-messages rule keeps self-contained per repo.
+
+### `performance`
+
+Optimize against measurement, not intuition: profile or benchmark
+to find the real cost before changing code, keep the benchmark or
+the before/after numbers with the change, and do not trade
+readability for a speedup you have not measured. Exists because
+guessed-at optimizations usually target the wrong code and leave
+the codebase harder to read for no proven gain.
 
 ### `scripts`
 
