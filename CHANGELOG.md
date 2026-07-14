@@ -12,9 +12,13 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
   template setting it creates beneath the repository's Git directory.
   Removal requires both a valid ownership record and an exact current value,
   leaving identical unrecorded state under user control.
-- Focused regression suites exercise managed-block validation, verified
-  backups, source containment, ownership, and conservative removal. CI lints
-  the shared mutation library and runs every safety suite.
+- Project setup persists its selections and default branch in a strict,
+  versioned, checksum-owned data file. Reruns preserve omitted settings,
+  reconcile explicit changes, and migrate exact owned versionless state
+  without executing it.
+- Focused regression suites exercise setup and removal safety across managed
+  files, repository scope, identity, state, branch policy, and recovery. CI
+  lints the shared mutation library and runs every safety suite.
 
 ### Changed
 
@@ -24,6 +28,10 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
   replacement or removal with rollback.
 - `setup.sh --prune` reports repository-pointing per-rule symlinks as
   ambiguous ownership candidates and leaves them unchanged for inspection.
+- Project setup preserves the repository's resolved default branch, configures
+  both branch-policy hooks from that stored value, and requires
+  `--default-branch` when repository evidence is ambiguous. It never renames
+  or checks out a branch.
 
 ### Fixed
 
@@ -34,6 +42,10 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
   contains their destinations beneath the target repository, accepts only
   exact canonical sources, atomically updates managed hooks and contexts, and
   refuses foreign paths or mismatched owned state without mutation.
+- Project setup rejects nested worktree targets, ambient repository redirects,
+  and hook paths outside the target Git directory. It uses the target's Git
+  identity, preserves existing unborn indexes, and stages new Git metadata for
+  recoverable installation only after setup succeeds.
 
 ## 2026-07-13
 
