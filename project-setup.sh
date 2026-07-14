@@ -19,6 +19,7 @@ CHANGELOG_MODE="auto"
 CONTEXT_RULES_MODE="auto"
 RULE_SOURCE_MODE="symlink"
 SKILL_SOURCE_MODE=""
+DEFAULT_BRANCH=""
 TARGET_DIR="."
 DRY_RUN=false
 PROFILE_SUPPLIED=false
@@ -26,6 +27,7 @@ CHANGELOG_MODE_SUPPLIED=false
 CONTEXT_RULES_MODE_SUPPLIED=false
 RULE_SOURCE_MODE_SUPPLIED=false
 SKILL_SOURCE_MODE_SUPPLIED=false
+DEFAULT_BRANCH_SUPPLIED=false
 INCLUDE_RULES=()
 EXCLUDE_RULES=()
 INCLUDE_SKILLS=()
@@ -42,6 +44,7 @@ LOADED_CHANGELOG_MODE=""
 LOADED_CONTEXT_RULES_MODE=""
 LOADED_RULE_SOURCE_MODE=""
 LOADED_SKILL_SOURCE_MODE=""
+LOADED_DEFAULT_BRANCH=""
 CONFIG_LOADED=false
 GIT_USER_NAME=""
 GIT_USER_EMAIL=""
@@ -128,6 +131,8 @@ Options:
                   present, full otherwise
   --rules-source symlink|copy
   --skills-source symlink|copy   (defaults to --rules-source)
+  --default-branch <name>        preserve this branch as repository default
+                                 when automatic detection is ambiguous
   --remove        remove exact managed blocks, links, and recorded local
                   state whose current values still match, leaving legacy
                   state, project artifacts, and user content in place
@@ -282,6 +287,12 @@ parse_args() {
         SKILL_SOURCE_MODE_SUPPLIED=true
         shift 2
         ;;
+      --default-branch)
+        [ "$#" -ge 2 ] || die "--default-branch requires a value"
+        DEFAULT_BRANCH="$2"
+        DEFAULT_BRANCH_SUPPLIED=true
+        shift 2
+        ;;
       --include-rule)
         [ "$#" -ge 2 ] || die "--include-rule requires a value"
         REQUESTED_INCLUDE_RULES+=("$2")
@@ -383,6 +394,112 @@ EOF
   fi
 }
 
+validate_default_branch_name() {
+  local branch="$1"
+
+  git check-ref-format --branch "$branch" >/dev/null 2>&1 ||
+    die "invalid default branch name: $branch"
+}
+
+target_branch_exists() {
+  local branch="$1"
+  local current
+
+  if git -C "$TARGET_DIR" show-ref --verify --quiet "refs/heads/$branch"; then
+    return 0
+  fi
+  current="$(git -C "$TARGET_DIR" symbolic-ref --quiet --short HEAD \
+    2>/dev/null || true)"
+  [ "$current" = "$branch" ] &&
+    ! git -C "$TARGET_DIR" rev-parse --verify --quiet HEAD >/dev/null 2>&1
+}
+
+resolve_remote_default_candidates() {
+  local symref remainder branch
+  local candidates=()
+
+  while IFS= read -r symref; do
+    [ -n "$symref" ] || continue
+    remainder="${symref#refs/remotes/}"
+    branch="${remainder#*/}"
+    [ "$branch" != "$remainder" ] || continue
+    target_branch_exists "$branch" || continue
+    array_contains "$branch" "${candidates[@]}" ||
+      candidates+=("$branch")
+  done < <(git -C "$TARGET_DIR" for-each-ref \
+    --format='%(symref)' 'refs/remotes/*/HEAD')
+
+  if [ "${#candidates[@]}" -eq 1 ]; then
+    printf '%s\n' "${candidates[0]}"
+    return 0
+  fi
+  if [ "${#candidates[@]}" -gt 1 ]; then
+    printf 'error: remote default branches disagree; use --default-branch\n' \
+      >&2
+    return 2
+  fi
+  return 1
+}
+
+resolve_default_branch() {
+  local current=""
+  local remote_default=""
+  local remote_status
+  local local_branches=()
+  local branch
+
+  if [ -n "$DEFAULT_BRANCH" ]; then
+    validate_default_branch_name "$DEFAULT_BRANCH"
+    if target_has_git_repo && ! target_branch_exists "$DEFAULT_BRANCH"; then
+      die "selected default branch does not exist in target: $DEFAULT_BRANCH"
+    fi
+    printf 'Default branch policy: %s\n' "$DEFAULT_BRANCH"
+    return
+  fi
+
+  if ! target_has_git_repo; then
+    DEFAULT_BRANCH=main
+    printf 'Default branch policy: %s\n' "$DEFAULT_BRANCH"
+    return
+  fi
+
+  current="$(git -C "$TARGET_DIR" symbolic-ref --quiet --short HEAD \
+    2>/dev/null || true)"
+  if ! git -C "$TARGET_DIR" rev-parse --verify --quiet HEAD >/dev/null 2>&1;
+  then
+    [ -n "$current" ] ||
+      die "cannot resolve unborn default branch; use --default-branch"
+    DEFAULT_BRANCH="$current"
+  else
+    if remote_default="$(resolve_remote_default_candidates)"; then
+      DEFAULT_BRANCH="$remote_default"
+    else
+      remote_status=$?
+      [ "$remote_status" -eq 1 ] || exit "$remote_status"
+      while IFS= read -r branch; do
+        [ -n "$branch" ] && local_branches+=("$branch")
+      done < <(git -C "$TARGET_DIR" for-each-ref \
+        --format='%(refname:short)' refs/heads)
+
+      if [ "${#local_branches[@]}" -eq 1 ]; then
+        DEFAULT_BRANCH="${local_branches[0]}"
+      elif [ "$current" = main ] || [ "$current" = master ]; then
+        DEFAULT_BRANCH="$current"
+      else
+        die "default branch is ambiguous; use --default-branch"
+      fi
+    fi
+  fi
+
+  validate_default_branch_name "$DEFAULT_BRANCH"
+  case "$DEFAULT_BRANCH" in
+    feat/*|fix/*|chore/*|docs/*|refactor/*|test/*|build/*|ci/*|perf/*|style/*|revert/*)
+      die "detected typed work branch as default; use --default-branch to confirm: $DEFAULT_BRANCH"
+      ;;
+  esac
+  printf 'Default branch policy: %s\n' "$DEFAULT_BRANCH"
+}
+
 init_git_if_needed() {
   if target_has_git_repo; then
     add_status unchanged "git repository already exists"
@@ -391,7 +508,7 @@ init_git_if_needed() {
   fi
 
   if should_mutate; then
-    git -C "$TARGET_DIR" init --initial-branch=main >/dev/null
+    git -C "$TARGET_DIR" init --initial-branch="$DEFAULT_BRANCH" >/dev/null
   fi
   add_status created "git repository"
   REPO_CREATED=true
@@ -778,6 +895,7 @@ parse_schema_one_config() {
   local context_seen=false
   local rules_source_seen=false
   local skills_source_seen=false
+  local default_branch_seen=false
 
   while IFS= read -r line || [ -n "$line" ]; do
     case "$line" in
@@ -828,6 +946,13 @@ parse_schema_one_config() {
           die "invalid stored skills-source mode: $value"
         LOADED_SKILL_SOURCE_MODE="$value"
         skills_source_seen=true
+        ;;
+      default_branch)
+        [ "$default_branch_seen" = false ] ||
+          die "duplicate setup state key: default_branch"
+        [ -n "$value" ] || die "empty stored default branch"
+        LOADED_DEFAULT_BRANCH="$value"
+        default_branch_seen=true
         ;;
       include_rule|exclude_rule|include_skill|exclude_skill)
         [ -n "$value" ] || die "empty stored selection: $key"
@@ -1093,6 +1218,10 @@ load_local_config() {
     RULE_SOURCE_MODE="$LOADED_RULE_SOURCE_MODE"
   [ "$SKILL_SOURCE_MODE_SUPPLIED" = true ] ||
     SKILL_SOURCE_MODE="$LOADED_SKILL_SOURCE_MODE"
+  if [ "$DEFAULT_BRANCH_SUPPLIED" = false ] &&
+    [ -n "$LOADED_DEFAULT_BRANCH" ]; then
+    DEFAULT_BRANCH="$LOADED_DEFAULT_BRANCH"
+  fi
 
   apply_selection_requests
   [ -n "$SKILL_SOURCE_MODE" ] || SKILL_SOURCE_MODE="$RULE_SOURCE_MODE"
@@ -1864,6 +1993,8 @@ write_local_config_content() {
     printf 'context_rules=%s\n' "$CONTEXT_RULES_MODE"
     printf 'rules_source=%s\n' "$RULE_SOURCE_MODE"
     printf 'skills_source=%s\n' "$SKILL_SOURCE_MODE"
+    [ -z "$DEFAULT_BRANCH" ] ||
+      printf 'default_branch=%s\n' "$DEFAULT_BRANCH"
     for identifier in "${INCLUDE_RULES[@]}"; do
       printf 'include_rule=%s\n' "$identifier"
     done
@@ -2657,6 +2788,7 @@ print_summary() {
   fi
   printf 'Repository: %s\n' "$TARGET_DIR"
   printf 'Branch: %s\n' "$branch"
+  printf 'Default branch: %s\n' "$DEFAULT_BRANCH"
   printf 'Git user: %s <%s>\n' "$GIT_USER_NAME" "$GIT_USER_EMAIL"
   printf 'Profile: %s\n' "$PROFILE"
   printf 'Changelog mode: %s\n' "$CHANGELOG_MODE"
@@ -2709,6 +2841,7 @@ main() {
   load_local_config
   require_git_identity
   preflight_existing_unborn_index
+  resolve_default_branch
   infer_profile
   infer_changelog_mode
   preflight_managed_targets
