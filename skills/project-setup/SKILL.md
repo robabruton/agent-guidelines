@@ -117,6 +117,11 @@ git --git-dir=<recovery-dir>/git --work-tree=<target> \
 
 - Install the completed staged Git directory as `<target>/.git` only after all
   repository setup succeeds
+- If the final move or verification fails, roll back target files and retain a
+  complete staged repository at the reported recovery path
+- If the installed Git directory cannot be restored to its staged path,
+  preserve both the installed directory and its transaction recovery copy
+  instead of deleting uncertain state
 - If the target is already a Git repository, do not reinitialize it
 - Report whether the repository was created or already existed
 

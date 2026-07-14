@@ -144,7 +144,10 @@ another valid name. A new repository's Git metadata is assembled beside
 the target and installed only after setup succeeds. Only a repository
 created by that invocation receives the managed initial commit; existing
 unborn repositories remain uncommitted, and staged unborn content is
-rejected unchanged.
+rejected unchanged. That initial commit contains only artifacts created by
+the setup invocation, leaving pre-existing target files untracked. Failed
+final installation or verification retains and reports complete Git recovery
+state.
 
 Use `--dry-run` to preview every action without changing anything.
 Most accurate against an existing git repository; on a fresh non-git
