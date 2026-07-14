@@ -6,6 +6,9 @@ set -euo pipefail
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd -P)"
 TMP_ROOT="$(mktemp -d /tmp/agent-guidelines-project-removal.XXXXXX)"
 
+# shellcheck source=lib/safe-mutations.sh
+. "${ROOT_DIR}/lib/safe-mutations.sh"
+
 trap 'rm -rf "$TMP_ROOT"' EXIT
 
 export HOME="${TMP_ROOT}/home"
@@ -25,6 +28,32 @@ init_repo() {
 
   mkdir -p "$path"
   git -C "$path" init -q -b main
+}
+
+expect_remove_containment_failure() {
+  local repo="$1"
+  local external="$2"
+  local label="$3"
+  local repo_before="${repo}.before-containment"
+  local external_before="${external}.before-containment"
+  local transaction_tmp="${repo}.transaction-tmp"
+
+  cp -a "$repo" "$repo_before"
+  cp -a "$external" "$external_before"
+  mkdir -p "$transaction_tmp"
+
+  expect_fail env TMPDIR="$transaction_tmp" \
+    "${ROOT_DIR}/project-setup.sh" --remove "$repo"
+  grep -Fq "error: $label is a symlink:" "${TMP_ROOT}/expected.err"
+  agent_guidelines_verify_copy "$repo_before" "$repo"
+  agent_guidelines_verify_copy "$external_before" "$external"
+  test -z "$(find "$transaction_tmp" -mindepth 1 -maxdepth 1 \
+    -print -quit)"
+
+  expect_fail "${ROOT_DIR}/project-setup.sh" --remove --dry-run "$repo"
+  grep -Fq "error: $label is a symlink:" "${TMP_ROOT}/expected.err"
+  agent_guidelines_verify_copy "$repo_before" "$repo"
+  agent_guidelines_verify_copy "$external_before" "$external"
 }
 
 # A repository with no installation history retains lookalike local state.
@@ -90,6 +119,40 @@ test ! -e "${OWNED_REPO}/.git/agent-guidelines"
 ! git -C "$OWNED_REPO" config --local --get commit.template >/dev/null
 ! grep -Fxq 'CLAUDE.md' "${OWNED_REPO}/.git/info/exclude"
 ! grep -Fxq '.agents/skills/' "${OWNED_REPO}/.git/info/exclude"
+
+# Removal rejects managed-parent symlinks before starting a transaction. Both
+# real and dry-run removal preserve the repository and external payload.
+AGENTS_PARENT_REPO="${TMP_ROOT}/agents-parent-repo"
+AGENTS_PARENT_EXTERNAL="${TMP_ROOT}/agents-parent-external"
+init_repo "$AGENTS_PARENT_REPO"
+mkdir -p "${AGENTS_PARENT_EXTERNAL}/skills"
+ln -s "$AGENTS_PARENT_EXTERNAL" "${AGENTS_PARENT_REPO}/.agents"
+ln -s "${ROOT_DIR}/skills/explain" \
+  "${AGENTS_PARENT_EXTERNAL}/skills/explain"
+expect_remove_containment_failure \
+  "$AGENTS_PARENT_REPO" "$AGENTS_PARENT_EXTERNAL" ".agents"
+
+SKILLS_PARENT_REPO="${TMP_ROOT}/skills-parent-repo"
+SKILLS_PARENT_EXTERNAL="${TMP_ROOT}/skills-parent-external"
+init_repo "$SKILLS_PARENT_REPO"
+mkdir -p "${SKILLS_PARENT_REPO}/.agents" \
+  "${SKILLS_PARENT_EXTERNAL}/skills"
+ln -s "${SKILLS_PARENT_EXTERNAL}/skills" \
+  "${SKILLS_PARENT_REPO}/.agents/skills"
+ln -s "${ROOT_DIR}/skills/explain" \
+  "${SKILLS_PARENT_EXTERNAL}/skills/explain"
+expect_remove_containment_failure \
+  "$SKILLS_PARENT_REPO" "$SKILLS_PARENT_EXTERNAL" ".agents/skills"
+
+STATE_PARENT_REPO="${TMP_ROOT}/state-parent-repo"
+STATE_PARENT_EXTERNAL="${TMP_ROOT}/state-parent-external"
+"${ROOT_DIR}/project-setup.sh" \
+  --profile minimal --changelog none --context-rules full \
+  "$STATE_PARENT_REPO" >/dev/null
+mv "${STATE_PARENT_REPO}/.agent-guidelines" "$STATE_PARENT_EXTERNAL"
+ln -s "$STATE_PARENT_EXTERNAL" "${STATE_PARENT_REPO}/.agent-guidelines"
+expect_remove_containment_failure \
+  "$STATE_PARENT_REPO" "$STATE_PARENT_EXTERNAL" ".agent-guidelines"
 
 # Matching legacy values are not adopted: removal preserves their prior state.
 LEGACY_REPO="${TMP_ROOT}/legacy-repo"
