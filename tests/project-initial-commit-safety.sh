@@ -62,6 +62,26 @@ test "$(git -C "$NEW_REPO" show --format= --name-only HEAD | sed '/^$/d')" = \
 git -C "$NEW_REPO" status --short > "${TMP_ROOT}/new.status"
 test ! -s "${TMP_ROOT}/new.status"
 
+# A pre-populated non-Git target commits only artifacts setup creates. Existing
+# project files and sibling skill content remain untracked and unchanged.
+POPULATED_REPO="${TMP_ROOT}/populated-repo"
+mkdir -p "$POPULATED_REPO/.agents/skills/private-skill"
+printf '# Existing project\n' > "$POPULATED_REPO/README.md"
+printf 'user-owned\n' \
+  > "$POPULATED_REPO/.agents/skills/private-skill/note.txt"
+"${ROOT_DIR}/project-setup.sh" \
+  --profile minimal --changelog none --context-rules full \
+  --skills-source copy --include-skill explain \
+  "$POPULATED_REPO" > "${TMP_ROOT}/populated.out"
+test "$(git -C "$POPULATED_REPO" show --format= --name-only HEAD |
+  sed '/^$/d')" = \
+  $'.agents/skills/explain/SKILL.md\n.gitignore\n.gittemplate'
+test "$(git -C "$POPULATED_REPO" status --short)" = \
+  $'?? .agents/skills/private-skill/\n?? README.md'
+grep -Fxq '# Existing project' "$POPULATED_REPO/README.md"
+grep -Fxq 'user-owned' \
+  "$POPULATED_REPO/.agents/skills/private-skill/note.txt"
+
 # A failure at the final Git-directory move rolls back target files while
 # retaining and reporting the complete staged repository for recovery.
 FAILED_REPO="${TMP_ROOT}/failed-new-repo"
