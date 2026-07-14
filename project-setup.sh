@@ -2216,14 +2216,17 @@ write_local_config() {
   local config_path="$TARGET_DIR/.agent-guidelines/config"
   local temp_file
   local checksum
-  local config_record
+  local config_record=""
   temp_file="$(mktemp)"
   write_local_config_content > "$temp_file"
-  config_record="$(ownership_record_path config)"
+  if target_has_git_repo; then
+    config_record="$(ownership_record_path config)"
+  fi
 
   if [ -e "$config_path" ] && cmp -s "$config_path" "$temp_file"; then
     add_status unchanged ".agent-guidelines/config"
-  elif [ -f "$config_path" ] && [ -e "$config_record" ]; then
+  elif [ -f "$config_path" ] && [ -n "$config_record" ] &&
+    [ -e "$config_record" ]; then
     if should_mutate; then
       checksum="$(sha256_file "$temp_file")"
       if ! agent_guidelines_replace_file_safely "$config_path" "$temp_file" ||
