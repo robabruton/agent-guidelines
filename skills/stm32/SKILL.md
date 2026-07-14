@@ -1,6 +1,6 @@
 ---
 name: stm32
-description: Operate and maintain STM32 firmware projects and toolchains. Use when creating, inspecting, configuring, generating, building, sizing, programming, debugging, or troubleshooting projects that use STM32CubeMX .ioc files, STM32CubeIDE, STM32CubeCLT, STM32Cube MCU packages, CMSIS, HAL, LL, GNU Arm Embedded tools, STM32CubeProgrammer, ST-LINK, OpenOCD, SWD, JTAG, or ROM bootloaders.
+description: Operate and maintain STM32 firmware projects and toolchains with STM32Cube HAL as the normal driver layer and LL support when deliberately selected. Use when creating, inspecting, configuring, generating, building, sizing, programming, debugging, researching, or troubleshooting projects that use STM32CubeMX .ioc files, STM32CubeIDE, STM32CubeCLT, STM32Cube MCU packages, CMSIS, HAL, LL, GNU Arm Embedded tools, STM32CubeProgrammer, ST-LINK, OpenOCD, SWD, JTAG, or ROM bootloaders.
 when_to_use: Use for STM32 project setup, code generation, package and toolchain selection, builds, artifacts, programming, debugging, device configuration, and failures.
 argument-hint: "[project|device|board|probe|command|error]"
 ---
@@ -45,6 +45,20 @@ ownership, package inputs, startup, linker, and artifact layout.
 
 Do not silently regenerate a project, update a Cube package, mix family packs,
 or substitute a host tool for the repository's pinned environment.
+
+Use HAL as the default driver model for application and generated code. Use LL
+only where the project already selects it or the user deliberately chooses it
+for a supported peripheral, performance, timing, code-size, or control reason.
+Do not convert HAL code to LL as incidental cleanup.
+
+## Research and Resolve Questions
+
+Use [references/research.md](references/research.md) when answering HAL, LL,
+CMSIS, register, Cube tool, programmer, debugger, diagnostic, or device-behavior
+questions. Match every answer to the exact MCU, Cube package, and installed tool
+versions. Prefer project inputs, installed package headers/source and examples,
+live tool help, exact-device reference material and errata, then primary online
+documentation. Clearly label inferences and cite sources when browsing.
 
 ## Plan the Operation
 

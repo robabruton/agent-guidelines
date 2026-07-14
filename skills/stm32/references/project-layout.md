@@ -42,6 +42,11 @@ Classify:
 - Middleware and RTOS sources.
 - Application-owned source and configuration.
 
+Treat HAL as the normal application driver layer. LL may coexist per peripheral
+when selected in CubeMX or maintained explicitly by the project. Trace HAL and
+LL initialization, interrupt, DMA, clock, and ownership interactions before
+mixing them; do not bypass HAL state behind an active HAL handle accidentally.
+
 Record the STM32Cube MCU package and component versions. Do not combine files
 from different package releases without an explicit compatibility change.
 
