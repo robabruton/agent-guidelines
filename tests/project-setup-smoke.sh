@@ -104,6 +104,7 @@ assert_agent_preamble "${SYMLINK_REPO}/AGENTS.md"
   --changelog versions \
   --context-rules full \
   --rules-source copy \
+  --include-skill esp-idf \
   --include-skill firmware-review \
   "${COPY_REPO}" > "$COPY_OUT"
 
@@ -126,6 +127,14 @@ test ! -L "${COPY_REPO}/.agents/skills/firmware-review"
 test -f "${COPY_REPO}/.agents/skills/firmware-review/SKILL.md"
 git -C "$COPY_REPO" ls-files --error-unmatch \
   .agents/skills/firmware-review/SKILL.md >/dev/null
+test -d "${COPY_REPO}/.agents/skills/esp-idf"
+test ! -L "${COPY_REPO}/.agents/skills/esp-idf"
+test -f "${COPY_REPO}/.agents/skills/esp-idf/SKILL.md"
+test -f "${COPY_REPO}/.agents/skills/esp-idf/references/operations.md"
+git -C "$COPY_REPO" ls-files --error-unmatch \
+  .agents/skills/esp-idf/SKILL.md >/dev/null
+git -C "$COPY_REPO" ls-files --error-unmatch \
+  .agents/skills/esp-idf/references/operations.md >/dev/null
 
 # Trimmed context mode: the managed block is a rule selection router
 # instead of inlined rule bodies.
