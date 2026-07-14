@@ -1,21 +1,40 @@
 # BEGIN agent-guidelines main-branch guard
 current_branch="$(git symbolic-ref --quiet --short HEAD 2>/dev/null || true)"
+worktree_root="$(git rev-parse --show-toplevel 2>/dev/null || true)"
+state_file="${worktree_root}/.agent-guidelines/config"
+
+if [ -z "$worktree_root" ] || [ ! -f "$state_file" ] || [ -L "$state_file" ]; then
+  echo "Cannot resolve the managed default branch from $state_file." >&2
+  echo "Run project setup again with --default-branch when detection is ambiguous." >&2
+  exit 1
+fi
+
+default_branch_count="$(grep -c '^default_branch=' "$state_file" || true)"
+if [ "$default_branch_count" -ne 1 ]; then
+  echo "Managed setup state must contain exactly one default_branch value: $state_file" >&2
+  exit 1
+fi
+default_branch="$(sed -n 's/^default_branch=//p' "$state_file")"
+if ! git check-ref-format --branch "$default_branch" >/dev/null 2>&1; then
+  echo "Managed setup state contains an invalid default branch: $state_file" >&2
+  exit 1
+fi
 
 if ! git rev-parse --verify HEAD >/dev/null 2>&1; then
   exit 0
 fi
 
-# Allow completing a merge on main. A conflicted merge is finished
+# Allow completing a merge on the default branch. A conflicted merge is finished
 # with git commit, which runs pre-commit; merges are how completed
-# branches land on main, so the guard exempts them. Ordinary
-# authored commits on main remain blocked because MERGE_HEAD is
-# only set during a merge.
+# branches land on the default, so the guard exempts them. Ordinary
+# authored commits there remain blocked because MERGE_HEAD is only
+# set during a merge.
 if [ -f "$(git rev-parse --git-path MERGE_HEAD 2>/dev/null)" ]; then
   exit 0
 fi
 
-if [ "$current_branch" = "main" ]; then
-  echo "Direct commits to main are blocked. Create a feature branch first." >&2
+if [ "$current_branch" = "$default_branch" ]; then
+  echo "Direct commits to $default_branch are blocked. Create a feature branch first." >&2
   exit 1
 fi
 # END agent-guidelines main-branch guard

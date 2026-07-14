@@ -116,6 +116,13 @@ independently. Symlink mode adds `.agents/skills/` to the repository's
 local `.git/info/exclude` so the links stay out of git; copy mode tracks
 the copied skill tree as a normal project asset.
 
+Reruns load the selected profile, changelog and context modes, source
+modes, default branch, and rule and skill selections from the
+checksum-owned `.agent-guidelines/config` file. The file uses a versioned,
+non-executable data format. Omitted options preserve the stored selection;
+explicit options update only the named settings. Malformed, changed, or
+unowned setup state stops the operation before mutation.
+
 Project setup accepts only exact canonical symlinks and exact managed
 copies at rule and skill destinations. Foreign paths, malformed managed
 blocks, and user-managed local Git configuration stop the operation
@@ -123,6 +130,24 @@ before mutation. Local state created by setup is recorded under the
 repository's Git directory in `agent-guidelines/ownership-v1`; removal
 uses those records and the current exact value, leaving matching legacy
 state without a record in place.
+
+An existing Git target must be its worktree root, and setup does not create
+a missing target beneath another worktree. Repository redirects and hook
+paths outside the target's own Git metadata are rejected. Git identity is
+resolved in the target repository's configuration context.
+
+Setup preserves the repository's detected default branch and configures
+both branch-policy hooks from the same stored value. It never renames or
+checks out a branch. Use `--default-branch <name>` when automatic detection
+is ambiguous; a new repository uses `main` unless that option selects
+another valid name. A new repository's Git metadata is assembled beside
+the target and installed only after setup succeeds. Only a repository
+created by that invocation receives the managed initial commit; existing
+unborn repositories remain uncommitted, and staged unborn content is
+rejected unchanged. That initial commit contains only artifacts created by
+the setup invocation, leaving pre-existing target files untracked. Failed
+final installation or verification retains and reports complete Git recovery
+state.
 
 Use `--dry-run` to preview every action without changing anything.
 Most accurate against an existing git repository; on a fresh non-git
@@ -142,16 +167,12 @@ or append at the end because no marker pair was found.
   /path/to/project
 ```
 
-Run the smoke tests for the target-repository setup command with:
+Run the target-repository and hook safety suites with:
 
 ```bash
-tests/project-setup-smoke.sh
-```
-
-Run the smoke tests for the installed git hook snippets with:
-
-```bash
-tests/hooks-smoke.sh
+for test in tests/project-*.sh tests/hooks-smoke.sh; do
+  "$test"
+done
 ```
 
 ## License
