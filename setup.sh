@@ -457,6 +457,15 @@ process_links() {
   done
 }
 
+preflight_context_targets() {
+  local item path
+
+  for item in "${CONTEXT_TARGETS[@]}"; do
+    path="${item%%|*}"
+    agent_guidelines_validate_managed_block_file "$path" || return 1
+  done
+}
+
 assemble_context_block() {
   local block_file="$1"
   local always_rules=()
@@ -772,8 +781,8 @@ main() {
   build_links
   validate_sources
   case "$ACTION" in
-    install) process_links; install_context ;;
-    remove)  process_links; remove_context ;;
+    install) preflight_context_targets; process_links; install_context ;;
+    remove)  preflight_context_targets; process_links; remove_context ;;
     status)  process_links; status_context ;;
     prune)   prune_orphans ;;
   esac

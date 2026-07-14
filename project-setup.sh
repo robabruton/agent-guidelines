@@ -937,6 +937,8 @@ install_hook_snippet() {
   hook_path="$(git_path "hooks/$hook_name")"
   snippet_path="$ASSET_DIR/hooks/$snippet_name"
 
+  validate_hook_snippet_target "$hook_name" "$snippet_name" || return 1
+
   if should_mutate; then
     mkdir -p "$(dirname "$hook_path")"
   fi
@@ -979,6 +981,8 @@ replace_hook_block() {
   local temp_file
 
   end_marker="$(sed -n '$p' "$snippet_path")"
+  agent_guidelines_validate_marker_pair \
+    "$hook_path" "$begin_marker" "$end_marker" "$label" || return 1
   temp_file="$(mktemp)"
 
   awk -v begin="$begin_marker" -v end="$end_marker" -v snippet="$snippet_path" '
@@ -1008,6 +1012,7 @@ install_hooks() {
     add_status skipped "git hooks (target has no git repo)"
     return
   fi
+  validate_all_hook_snippet_targets || return 1
   install_hook_snippet pre-commit pre-commit-main-branch
   install_hook_snippet pre-commit pre-commit-attribution
   install_hook_snippet pre-commit pre-commit-banned-phrases
@@ -1045,6 +1050,42 @@ MANAGED_HOOK_SNIPPETS=(
   "pre-push|pre-push-branch-name"
 )
 
+validate_hook_snippet_target() {
+  local hook_name="$1"
+  local snippet_name="$2"
+  local hook_path snippet_path begin_marker end_marker
+
+  hook_path="$(git_path "hooks/$hook_name")"
+  snippet_path="$ASSET_DIR/hooks/$snippet_name"
+  begin_marker="$(sed -n '1p' "$snippet_path")"
+  end_marker="$(sed -n '$p' "$snippet_path")"
+
+  agent_guidelines_validate_marker_pair \
+    "$hook_path" "$begin_marker" "$end_marker" \
+    "$hook_name $snippet_name"
+}
+
+validate_all_hook_snippet_targets() {
+  local pair hook_name snippet_name
+
+  for pair in "${MANAGED_HOOK_SNIPPETS[@]}"; do
+    hook_name="${pair%%|*}"
+    snippet_name="${pair##*|}"
+    validate_hook_snippet_target "$hook_name" "$snippet_name" || return 1
+  done
+}
+
+preflight_managed_targets() {
+  agent_guidelines_validate_managed_block_file \
+    "$TARGET_DIR/CLAUDE.md" || return 1
+  agent_guidelines_validate_managed_block_file \
+    "$TARGET_DIR/AGENTS.md" || return 1
+
+  if target_has_git_repo; then
+    validate_all_hook_snippet_targets || return 1
+  fi
+}
+
 remove_hook_snippet() {
   local hook_name="$1"
   local snippet_name="$2"
@@ -1060,6 +1101,10 @@ remove_hook_snippet() {
 
   begin_marker="$(sed -n '1p' "$snippet_path")"
   end_marker="$(sed -n '$p' "$snippet_path")"
+
+  agent_guidelines_validate_marker_pair \
+    "$hook_path" "$begin_marker" "$end_marker" \
+    "$hook_name $snippet_name" || return 1
 
   if ! grep -Fxq "$begin_marker" "$hook_path"; then
     add_status unchanged "$hook_name $snippet_name (not installed)"
@@ -1265,6 +1310,8 @@ run_remove() {
   [ -d "$TARGET_DIR" ] || die "target directory does not exist: $TARGET_DIR"
   TARGET_DIR="$(cd "$TARGET_DIR" && pwd -P)"
 
+  preflight_managed_targets || return 1
+
   local pair hook_name snippet_name
   if target_has_git_repo; then
     for pair in "${MANAGED_HOOK_SNIPPETS[@]}"; do
@@ -1420,6 +1467,7 @@ main() {
   init_git_if_needed
   infer_profile
   infer_changelog_mode
+  preflight_managed_targets
 
   write_file_if_missing "$TARGET_DIR/.gittemplate" "$ASSET_DIR/gittemplate" ".gittemplate"
   write_file_if_missing "$TARGET_DIR/.gitignore" "$ASSET_DIR/gitignore-minimal" ".gitignore"
