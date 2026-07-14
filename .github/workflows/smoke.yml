@@ -21,9 +21,15 @@ jobs:
             setup.sh \
             project-setup.sh \
             lib/assemble-rules.sh \
+            lib/safe-mutations.sh \
             tests/setup-smoke.sh \
             tests/project-setup-smoke.sh \
             tests/hooks-smoke.sh \
+            tests/managed-block-safety.sh \
+            tests/setup-backup-safety.sh \
+            tests/project-source-safety.sh \
+            tests/project-ownership-safety.sh \
+            tests/project-removal-safety.sh \
             scripts/generate-rules-readme.sh \
             skills/agent-memory/scripts/agent-memory-report.sh
 
@@ -103,6 +109,21 @@ jobs:
 
       - name: Run project-setup-smoke
         run: bash tests/project-setup-smoke.sh
+
+      - name: Run managed-block-safety
+        run: bash tests/managed-block-safety.sh
+
+      - name: Run setup-backup-safety
+        run: bash tests/setup-backup-safety.sh
+
+      - name: Run project-source-safety
+        run: bash tests/project-source-safety.sh
+
+      - name: Run project-ownership-safety
+        run: bash tests/project-ownership-safety.sh
+
+      - name: Run project-removal-safety
+        run: bash tests/project-removal-safety.sh
 
       # Ubuntu's /bin/sh is dash, so this run also proves the hook
       # snippets execute under a strict POSIX shell.
