@@ -432,6 +432,7 @@ install_link() {
   local link_path="$2"
   local source="$3"
   local state
+  local transaction_entry=""
 
   state="$(classify_path "$link_path" "$source")"
   case "$state" in
@@ -443,22 +444,47 @@ install_link() {
       if [ "$DRY_RUN" = true ]; then
         entry "$CYAN" "?" "would create" "$link_path" "-> $source"
       else
-        mkdir -p "$(dirname "$link_path")"
-        ln -s "$source" "$link_path"
+        agent_guidelines_make_directory_safely "$(dirname "$link_path")" ||
+          die "could not create link directory: $link_path"
+        transaction_entry="$(agent_guidelines_transaction_allocate_entry \
+          "$link_path" symlink "$source")" ||
+          die "could not protect link creation: $link_path"
+        if ! ln -s "$source" "$link_path"; then
+          agent_guidelines_transaction_cancel_entry "$transaction_entry" ||
+            die "link creation failed; recovery copy: $transaction_entry"
+          die "link creation failed: $link_path"
+        fi
+        if ! agent_guidelines_transaction_complete_entry "$transaction_entry"; then
+          agent_guidelines_transaction_cancel_entry "$transaction_entry" ||
+            die "link verification failed; recovery copy: $transaction_entry"
+          die "link verification failed: $link_path"
+        fi
         entry "$GREEN" "+" "created" "$link_path" "-> $source"
       fi
       CREATED=$((CREATED + 1))
       ;;
     *)
       if [ "$FORCE" = true ]; then
+        if [ "$DRY_RUN" = false ]; then
+          transaction_entry="$(agent_guidelines_transaction_allocate_entry \
+            "$link_path" symlink "$source")" ||
+            die "could not protect forced replacement: $link_path"
+        fi
         backup_conflict "$link_path"
         if [ "$DRY_RUN" = false ]; then
-          mkdir -p "$(dirname "$link_path")"
-          if ! ln -s "$source" "$link_path"; then
+          if ! agent_guidelines_make_directory_safely "$(dirname "$link_path")" ||
+            ! ln -s "$source" "$link_path"; then
             agent_guidelines_restore_object \
               "$LAST_BACKUP_PATH" "$link_path" ||
               die "link creation failed and restore failed; backup: $LAST_BACKUP_PATH"
+            agent_guidelines_transaction_cancel_entry "$transaction_entry" ||
+              die "link creation failed; recovery copy: $transaction_entry"
             die "link creation failed; restored original $link_path"
+          fi
+          if ! agent_guidelines_transaction_complete_entry "$transaction_entry"; then
+            agent_guidelines_transaction_cancel_entry "$transaction_entry" ||
+              die "link verification failed; recovery copy: $transaction_entry"
+            die "link verification failed: $link_path"
           fi
           entry "$GREEN" "↻" "replaced" "$link_path" "-> $source"
         else
@@ -478,12 +504,24 @@ remove_link() {
   local kind="$1"
   local link_path="$2"
   local source="$3"
+  local transaction_entry=""
 
   if target_matches "$link_path" "$source"; then
     if [ "$DRY_RUN" = true ]; then
       entry "$CYAN" "?" "would remove" "$link_path" "managed link"
     else
-      rm "$link_path"
+      transaction_entry="$(agent_guidelines_transaction_allocate_entry \
+        "$link_path" missing)" || die "could not protect link removal: $link_path"
+      if ! rm "$link_path"; then
+        agent_guidelines_transaction_cancel_entry "$transaction_entry" ||
+          die "link removal failed; recovery copy: $transaction_entry"
+        die "link removal failed: $link_path"
+      fi
+      if ! agent_guidelines_transaction_complete_entry "$transaction_entry"; then
+        agent_guidelines_transaction_cancel_entry "$transaction_entry" ||
+          die "link removal verification failed; recovery copy: $transaction_entry"
+        die "link removal verification failed: $link_path"
+      fi
       entry "$RED" "-" "removed" "$link_path" "managed link removed"
     fi
     REMOVED=$((REMOVED + 1))
@@ -653,7 +691,8 @@ install_context() {
       continue
     fi
 
-    mkdir -p "$(dirname "$path")"
+    agent_guidelines_make_directory_safely "$(dirname "$path")" ||
+      die "could not create context directory for $path"
     local result
     result="$(agent_guidelines_update_managed_block "$path" "$block_file")"
     case "$result" in
@@ -866,8 +905,22 @@ main() {
   build_links
   validate_sources
   case "$ACTION" in
-    install) preflight_context_targets; preflight_links; process_links; install_context ;;
-    remove)  preflight_context_targets; preflight_links; process_links; remove_context ;;
+    install)
+      preflight_context_targets
+      preflight_links
+      [ "$DRY_RUN" = true ] || agent_guidelines_transaction_begin
+      process_links
+      install_context
+      [ "$DRY_RUN" = true ] || agent_guidelines_transaction_commit
+      ;;
+    remove)
+      preflight_context_targets
+      preflight_links
+      [ "$DRY_RUN" = true ] || agent_guidelines_transaction_begin
+      process_links
+      remove_context
+      [ "$DRY_RUN" = true ] || agent_guidelines_transaction_commit
+      ;;
     status)  preflight_links; process_links; status_context ;;
     prune)   prune_orphans ;;
   esac

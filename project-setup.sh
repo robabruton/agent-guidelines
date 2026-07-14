@@ -377,8 +377,10 @@ write_file_if_missing() {
   fi
 
   if should_mutate; then
-    mkdir -p "$(dirname "$path")"
-    cp "$source" "$path"
+    agent_guidelines_make_directory_safely "$(dirname "$path")" ||
+      die "could not create parent directory for $label"
+    agent_guidelines_replace_file_safely "$path" "$source" ||
+      die "could not create $label"
   fi
   add_status created "$label"
 }
@@ -395,9 +397,14 @@ write_readme_if_missing() {
   fi
 
   if should_mutate; then
-    {
-      printf '# %s\n\n' "$(basename "$TARGET_DIR")"
-    } > "$path"
+    local prepared
+    prepared="$(mktemp)"
+    printf '# %s\n\n' "$(basename "$TARGET_DIR")" > "$prepared"
+    if ! agent_guidelines_replace_file_safely "$path" "$prepared"; then
+      rm -f "$prepared"
+      die "could not create README.md"
+    fi
+    rm -f "$prepared"
   fi
   add_status created "README.md"
 }
@@ -417,10 +424,10 @@ configure_commit_template() {
     die "git commit.template is user-managed: $current"
   else
     if should_mutate; then
-      git -C "$TARGET_DIR" config --local commit.template .gittemplate
+      mutate_local_git_config commit.template .gittemplate ||
+        die "could not set git commit.template"
       if ! write_ownership_record \
         commit-template 'created=.gittemplate'; then
-        git -C "$TARGET_DIR" config --local --unset commit.template || true
         die "could not record commit.template ownership"
       fi
     fi
@@ -437,6 +444,137 @@ git_path() {
   esac
 }
 
+git_metadata_root() {
+  git -C "$TARGET_DIR" rev-parse --absolute-git-dir
+}
+
+assert_local_git_path() {
+  local path="$1"
+  local label="$2"
+
+  agent_guidelines_assert_path_beneath \
+    "$path" "$(git_metadata_root)" "$label"
+}
+
+mutate_local_git_config() {
+  local config_path
+  local transaction_entry=""
+
+  config_path="$(git_path config)"
+  assert_local_git_path "$config_path" "git config" || return 1
+  if agent_guidelines_transaction_is_active; then
+    transaction_entry="$(agent_guidelines_transaction_allocate_entry \
+      "$config_path" unknown)" || return 1
+  fi
+  if ! git -C "$TARGET_DIR" config --local "$@"; then
+    [ -z "$transaction_entry" ] ||
+      agent_guidelines_transaction_cancel_entry "$transaction_entry"
+    return 1
+  fi
+  if [ -n "$transaction_entry" ] &&
+    ! agent_guidelines_transaction_complete_entry "$transaction_entry"; then
+    agent_guidelines_transaction_cancel_entry "$transaction_entry" || true
+    return 1
+  fi
+}
+
+make_file_executable_safely() {
+  local path="$1"
+  local transaction_entry=""
+
+  if agent_guidelines_transaction_is_active; then
+    transaction_entry="$(agent_guidelines_transaction_allocate_entry \
+      "$path" unknown)" || return 1
+  fi
+  if ! chmod +x "$path"; then
+    [ -z "$transaction_entry" ] ||
+      agent_guidelines_transaction_cancel_entry "$transaction_entry"
+    return 1
+  fi
+  if [ -n "$transaction_entry" ] &&
+    ! agent_guidelines_transaction_complete_entry "$transaction_entry"; then
+    agent_guidelines_transaction_cancel_entry "$transaction_entry" || true
+    return 1
+  fi
+}
+
+create_managed_symlink_safely() {
+  local target="$1"
+  local source="$2"
+  local transaction_entry=""
+
+  if agent_guidelines_transaction_is_active; then
+    transaction_entry="$(agent_guidelines_transaction_allocate_entry \
+      "$target" symlink "$source")" || return 1
+  fi
+  if ! ln -s "$source" "$target"; then
+    [ -z "$transaction_entry" ] ||
+      agent_guidelines_transaction_cancel_entry "$transaction_entry"
+    return 1
+  fi
+  if [ -n "$transaction_entry" ] &&
+    ! agent_guidelines_transaction_complete_entry "$transaction_entry"; then
+    agent_guidelines_transaction_cancel_entry "$transaction_entry" || true
+    return 1
+  fi
+}
+
+copy_managed_directory_safely() {
+  local target="$1"
+  local source="$2"
+  local parent
+  local stage_dir
+  local staged
+  local transaction_entry=""
+
+  parent="$(dirname "$target")"
+  stage_dir="$(mktemp -d "${parent}/.agent-guidelines-copy.XXXXXX")" || return 1
+  staged="$stage_dir/object"
+  if ! agent_guidelines_backup_object "$source" "$staged"; then
+    rm -rf "$stage_dir"
+    return 1
+  fi
+  if agent_guidelines_transaction_is_active; then
+    transaction_entry="$(agent_guidelines_transaction_allocate_entry \
+      "$target" directory "$staged")" || {
+      rm -rf "$stage_dir"
+      return 1
+    }
+  fi
+  if ! mv "$staged" "$target"; then
+    [ -z "$transaction_entry" ] ||
+      agent_guidelines_transaction_cancel_entry "$transaction_entry"
+    rm -rf "$stage_dir"
+    return 1
+  fi
+  rmdir "$stage_dir"
+  if [ -n "$transaction_entry" ] &&
+    ! agent_guidelines_transaction_complete_entry "$transaction_entry"; then
+    agent_guidelines_transaction_cancel_entry "$transaction_entry" || true
+    return 1
+  fi
+}
+
+remove_managed_symlink_safely() {
+  local target="$1"
+  local transaction_entry=""
+
+  if agent_guidelines_transaction_is_active; then
+    transaction_entry="$(agent_guidelines_transaction_allocate_entry \
+      "$target" missing)" || return 1
+  fi
+  if ! rm -f "$target"; then
+    [ -z "$transaction_entry" ] ||
+      agent_guidelines_transaction_cancel_entry "$transaction_entry"
+    return 1
+  fi
+  if [ -n "$transaction_entry" ] &&
+    ! agent_guidelines_transaction_complete_entry "$transaction_entry"; then
+    agent_guidelines_transaction_cancel_entry "$transaction_entry" || true
+    return 1
+  fi
+}
+
 sha256_file() {
   local path="$1"
 
@@ -448,7 +586,11 @@ sha256_file() {
 }
 
 ownership_dir() {
-  git_path agent-guidelines/ownership-v1
+  local path
+
+  path="$(git_path agent-guidelines/ownership-v1)"
+  assert_local_git_path "$path" "ownership state" || return 1
+  printf '%s\n' "$path"
 }
 
 ownership_record_path() {
@@ -477,8 +619,8 @@ write_ownership_record() {
     return 1
   fi
 
-  mkdir -p "$(dirname "$path")"
-  if ! agent_guidelines_atomic_replace_file "$path" "$prepared"; then
+  agent_guidelines_make_directory_safely "$(dirname "$path")" || return 1
+  if ! agent_guidelines_replace_file_safely "$path" "$prepared"; then
     rm -f "$prepared"
     return 1
   fi
@@ -495,7 +637,7 @@ replace_ownership_record() {
   [ -f "$path" ] && [ ! -L "$path" ] || return 1
   prepared="$(mktemp)"
   printf '%s\n' "$value" > "$prepared"
-  agent_guidelines_atomic_replace_file "$path" "$prepared"
+  agent_guidelines_replace_file_safely "$path" "$prepared"
   local result=$?
   rm -f "$prepared"
   return "$result"
@@ -528,8 +670,8 @@ append_missing_line() {
     prepared="$(mktemp)"
     [ -e "$file" ] && cat "$file" > "$prepared"
     printf '%s\n' "$line" >> "$prepared"
-    if ! agent_guidelines_atomic_replace_file "$file" "$prepared"; then
-      rm -f "$prepared" "$(ownership_record_path "$record_name")"
+    if ! agent_guidelines_replace_file_safely "$file" "$prepared"; then
+      rm -f "$prepared"
       die "could not update $file"
     fi
     rm -f "$prepared"
@@ -545,8 +687,11 @@ configure_local_excludes() {
 
   local exclude_file local_file key
   exclude_file="$(git_path info/exclude)"
+  assert_local_git_path "$exclude_file" "git info/exclude" ||
+    die "git exclude path escapes the repository Git directory"
   if should_mutate; then
-    mkdir -p "$(dirname "$exclude_file")"
+    agent_guidelines_make_directory_safely "$(dirname "$exclude_file")" ||
+      die "could not create git exclude directory"
   fi
 
   append_missing_line "$exclude_file" "CLAUDE.md" "exclude CLAUDE.md" claude
@@ -579,7 +724,8 @@ configure_rule_source() {
   local rules_path="$state_dir/rules"
 
   if should_mutate; then
-    mkdir -p "$state_dir"
+    agent_guidelines_make_directory_safely "$state_dir" ||
+      die "could not create .agent-guidelines directory"
   fi
 
   if [ "$RULE_SOURCE_MODE" = "symlink" ]; then
@@ -595,7 +741,8 @@ configure_rule_source() {
       die ".agent-guidelines/rules exists and is not the managed symlink"
     else
       if should_mutate; then
-        ln -s "$CANONICAL_RULES_DIR" "$rules_path"
+        create_managed_symlink_safely "$rules_path" "$CANONICAL_RULES_DIR" ||
+          die "could not create .agent-guidelines/rules symlink"
       fi
       add_status created ".agent-guidelines/rules symlink"
     fi
@@ -609,7 +756,8 @@ configure_rule_source() {
       die ".agent-guidelines/rules is not an exact managed snapshot"
     else
       if should_mutate; then
-        cp -a "$CANONICAL_RULES_DIR" "$rules_path"
+        copy_managed_directory_safely "$rules_path" "$CANONICAL_RULES_DIR" ||
+          die "could not create .agent-guidelines/rules snapshot"
       fi
       add_status created ".agent-guidelines/rules snapshot"
     fi
@@ -954,7 +1102,8 @@ install_project_skill_symlink() {
     die ".agents/skills/$skill exists and is not the managed symlink"
   else
     if should_mutate; then
-      ln -s "$source" "$target"
+      create_managed_symlink_safely "$target" "$source" ||
+        die "could not create .agents/skills/$skill symlink"
     fi
     add_status created ".agents/skills/$skill"
   fi
@@ -979,7 +1128,8 @@ install_project_skill_copy() {
     die ".agents/skills/$skill exists and is not a managed copy"
   else
     if should_mutate; then
-      cp -aR "$source" "$target"
+      copy_managed_directory_safely "$target" "$source" ||
+        die "could not create .agents/skills/$skill copy"
     fi
     add_status created ".agents/skills/$skill"
   fi
@@ -1083,7 +1233,8 @@ install_per_project_skills() {
 
   local skills_dir="$TARGET_DIR/.agents/skills"
   if should_mutate; then
-    mkdir -p "$skills_dir"
+    agent_guidelines_make_directory_safely "$skills_dir" ||
+      die "could not create .agents/skills directory"
   fi
 
   if [ "$SKILL_SOURCE_MODE" = "symlink" ] && target_has_git_repo; then
@@ -1136,8 +1287,6 @@ write_local_config() {
   local temp_file
   local checksum
   local config_record
-  local rollback_dir
-  local rollback_file
   temp_file="$(mktemp)"
   write_local_config_content > "$temp_file"
   config_record="$(ownership_record_path config)"
@@ -1146,21 +1295,12 @@ write_local_config() {
     add_status unchanged ".agent-guidelines/config"
   elif [ -f "$config_path" ] && [ -e "$config_record" ]; then
     if should_mutate; then
-      rollback_dir="$(mktemp -d)"
-      rollback_file="$rollback_dir/config"
-      agent_guidelines_backup_object "$config_path" "$rollback_file" || {
-        rm -rf "$rollback_dir" "$temp_file"
-        die "could not verify config rollback copy"
-      }
       checksum="$(sha256_file "$temp_file")"
-      if ! agent_guidelines_atomic_replace_file "$config_path" "$temp_file" ||
+      if ! agent_guidelines_replace_file_safely "$config_path" "$temp_file" ||
         ! replace_ownership_record config "sha256=$checksum"; then
-        agent_guidelines_atomic_replace_file "$config_path" "$rollback_file" ||
-          die "config update failed and rollback failed: $rollback_file"
-        rm -rf "$rollback_dir" "$temp_file"
-        die "config update failed; restored previous content"
+        rm -f "$temp_file"
+        die "config update failed"
       fi
-      rm -rf "$rollback_dir"
     fi
     add_status updated ".agent-guidelines/config"
   elif [ -e "$config_path" ] || [ -L "$config_path" ]; then
@@ -1173,8 +1313,8 @@ write_local_config() {
         rm -f "$temp_file"
         die "could not record config ownership"
       }
-      if ! agent_guidelines_atomic_replace_file "$config_path" "$temp_file"; then
-        rm -f "$(ownership_record_path config)" "$temp_file"
+      if ! agent_guidelines_replace_file_safely "$config_path" "$temp_file"; then
+        rm -f "$temp_file"
         die "could not create .agent-guidelines/config"
       fi
     fi
@@ -1237,7 +1377,8 @@ install_hook_snippet() {
   fi
 
   if should_mutate; then
-    chmod +x "$hook_path"
+    make_file_executable_safely "$hook_path" ||
+      die "could not make hook executable: $hook_path"
   fi
 }
 
@@ -1479,8 +1620,11 @@ preflight_project_files() {
   rm -f "$desired_config"
 
   if target_has_git_repo; then
-    local current_template exclude_file exclude_type
+    local current_template config_file exclude_file exclude_type
     exclude_file="$(git_path info/exclude)"
+    config_file="$(git_path config)"
+    assert_local_git_path "$exclude_file" "git info/exclude" || exit 1
+    assert_local_git_path "$config_file" "git config" || exit 1
     exclude_type="$(agent_guidelines_path_type "$exclude_file")"
     case "$exclude_type" in
       missing|regular) ;;
@@ -1621,7 +1765,7 @@ remove_managed_excludes() {
     rm -f "$managed_list" "$temp_file"
     die "owned exclude records did not match removable lines"
   else
-    agent_guidelines_atomic_replace_file "$exclude_file" "$temp_file" || {
+    agent_guidelines_replace_file_safely "$exclude_file" "$temp_file" || {
       rm -f "$managed_list" "$temp_file"
       die "could not remove owned exclude lines"
     }
@@ -1629,7 +1773,10 @@ remove_managed_excludes() {
       key="${pair%%|*}"
       record_name="$(exclude_record_name "$key")"
       record_path="$(ownership_record_path "$record_name")"
-      [ -e "$record_path" ] && rm -f "$record_path"
+      if [ -e "$record_path" ]; then
+        agent_guidelines_remove_file_safely "$record_path" ||
+          die "could not remove exclude ownership record: $record_path"
+      fi
     done
     add_status updated "owned exclude lines removed"
   fi
@@ -1654,8 +1801,10 @@ remove_commit_template_config() {
   fi
 
   if should_mutate; then
-    git -C "$TARGET_DIR" config --local --unset commit.template
-    rm -f "$record_path"
+    mutate_local_git_config --unset commit.template ||
+      die "could not unset git commit.template"
+    agent_guidelines_remove_file_safely "$record_path" ||
+      die "could not remove commit.template ownership record"
   fi
   add_status updated "git commit.template unset"
 }
@@ -1705,7 +1854,8 @@ remove_rule_source_state() {
   if [ -L "$rules_path" ]; then
     if [ "$(readlink "$rules_path")" = "$CANONICAL_RULES_DIR" ]; then
       if should_mutate; then
-        rm -f "$rules_path"
+        remove_managed_symlink_safely "$rules_path" ||
+          die "could not remove .agent-guidelines/rules symlink"
       fi
       add_status updated ".agent-guidelines/rules symlink removed"
     else
@@ -1719,16 +1869,16 @@ remove_rule_source_state() {
   config_record="$(ownership_record_path config)"
   if [ -e "$config_record" ]; then
     if should_mutate; then
-      rm -f "$config_path" "$config_record"
+      agent_guidelines_remove_file_safely "$config_path" ||
+        die "could not remove .agent-guidelines/config"
+      agent_guidelines_remove_file_safely "$config_record" ||
+        die "could not remove config ownership record"
     fi
     add_status updated ".agent-guidelines/config removed"
   elif [ -e "$config_path" ] || [ -L "$config_path" ]; then
     add_status skipped ".agent-guidelines/config has no ownership record"
   fi
 
-  if should_mutate && [ -d "$state_dir" ]; then
-    rmdir "$state_dir" 2>/dev/null || true
-  fi
 }
 
 remove_project_skill_links() {
@@ -1744,7 +1894,8 @@ remove_project_skill_links() {
       expected_target="$CANONICAL_SKILLS_DIR/$(basename "$entry")"
       if [ "$link_target" = "$expected_target" ]; then
         if should_mutate; then
-          rm -f "$entry"
+          remove_managed_symlink_safely "$entry" ||
+            die "could not remove .agents/skills/$(basename "$entry") link"
         fi
         add_status updated ".agents/skills/$(basename "$entry") link removed"
       else
@@ -1755,9 +1906,6 @@ remove_project_skill_links() {
     fi
   done
 
-  if should_mutate; then
-    rmdir "$skills_dir" "$TARGET_DIR/.agents" 2>/dev/null || true
-  fi
 }
 
 cleanup_ownership_state() {
@@ -1765,6 +1913,8 @@ cleanup_ownership_state() {
   if should_mutate; then
     rmdir "$(ownership_dir)" 2>/dev/null || true
     rmdir "$(dirname "$(ownership_dir)")" 2>/dev/null || true
+    rmdir "$TARGET_DIR/.agent-guidelines" 2>/dev/null || true
+    rmdir "$TARGET_DIR/.agents/skills" "$TARGET_DIR/.agents" 2>/dev/null || true
   fi
 }
 
@@ -1790,6 +1940,9 @@ run_remove() {
   TARGET_DIR="$(cd "$TARGET_DIR" && pwd -P)"
 
   preflight_managed_targets || return 1
+  if should_mutate; then
+    agent_guidelines_transaction_begin
+  fi
 
   local pair hook_name snippet_name
   if target_has_git_repo; then
@@ -1811,8 +1964,11 @@ run_remove() {
   remove_context_file_block "$TARGET_DIR/AGENTS.md" "AGENTS.md"
   remove_rule_source_state
   remove_project_skill_links
-  cleanup_ownership_state
 
+  if should_mutate; then
+    agent_guidelines_transaction_commit
+    cleanup_ownership_state
+  fi
   print_remove_summary
 }
 
@@ -1949,6 +2105,9 @@ main() {
   preflight_managed_targets
   preflight_source_targets
   preflight_project_files
+  if should_mutate; then
+    agent_guidelines_transaction_begin
+  fi
   init_git_if_needed
 
   write_file_if_missing "$TARGET_DIR/.gittemplate" "$ASSET_DIR/gittemplate" ".gittemplate"
@@ -1968,6 +2127,9 @@ main() {
   install_per_project_skills
   create_initial_commit_if_needed
   install_hooks
+  if should_mutate; then
+    agent_guidelines_transaction_commit
+  fi
   print_summary
 }
 

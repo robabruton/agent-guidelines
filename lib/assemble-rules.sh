@@ -194,7 +194,6 @@ agent_guidelines_update_managed_block() {
   temp_file="$(mktemp)"
 
   if [ ! -e "$target_file" ]; then
-    mkdir -p "$(dirname "$target_file")"
     if ! agent_guidelines_replace_file_safely "$target_file" "$block_file"; then
       rm -f "$temp_file"
       return 1
