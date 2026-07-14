@@ -30,6 +30,11 @@ jobs:
             tests/project-source-safety.sh \
             tests/project-ownership-safety.sh \
             tests/project-removal-safety.sh \
+            tests/project-state-safety.sh \
+            tests/project-git-scope-safety.sh \
+            tests/project-git-identity-safety.sh \
+            tests/project-initial-commit-safety.sh \
+            tests/project-default-branch-safety.sh \
             scripts/generate-rules-readme.sh \
             skills/agent-memory/scripts/agent-memory-report.sh
 
@@ -124,6 +129,21 @@ jobs:
 
       - name: Run project-removal-safety
         run: bash tests/project-removal-safety.sh
+
+      - name: Run project-state-safety
+        run: bash tests/project-state-safety.sh
+
+      - name: Run project-git-scope-safety
+        run: bash tests/project-git-scope-safety.sh
+
+      - name: Run project-git-identity-safety
+        run: bash tests/project-git-identity-safety.sh
+
+      - name: Run project-initial-commit-safety
+        run: bash tests/project-initial-commit-safety.sh
+
+      - name: Run project-default-branch-safety
+        run: bash tests/project-default-branch-safety.sh
 
       # Ubuntu's /bin/sh is dash, so this run also proves the hook
       # snippets execute under a strict POSIX shell.
