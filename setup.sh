@@ -9,6 +9,8 @@ SKILLS_DIR="${REPO_DIR}/skills"
 
 # shellcheck source=lib/assemble-rules.sh
 . "${REPO_DIR}/lib/assemble-rules.sh"
+# shellcheck source=lib/safe-mutations.sh
+. "${REPO_DIR}/lib/safe-mutations.sh"
 
 # Skills installed into every harness's global skills directory. Skills use
 # the standard SKILL.md frontmatter schema, so the global set stays
@@ -44,7 +46,9 @@ ACTION="install"
 DRY_RUN=false
 FORCE=false
 COLOR_MODE="auto"
-BACKUP_PATH="${HOME}/.agent-guidelines/backups/$(date +%Y%m%d-%H%M%S)"
+BACKUP_PATH="${HOME}/.agent-guidelines/backups"
+BACKUP_RUN_DIR=""
+LAST_BACKUP_PATH=""
 
 # Stable on-disk path that recall-tier rule references in the global
 # AGENTS.md router resolve to. Created as a directory symlink so all
@@ -325,11 +329,83 @@ validate_sources() {
   [ "$ok" = true ] || die "source validation failed"
 }
 
+backup_destination() {
+  local link_path="$1"
+
+  printf '%s%s\n' "$BACKUP_RUN_DIR" "$link_path"
+}
+
+prepare_forced_backups() {
+  local entry rest link_path source state destination
+  local conflict_count=0
+
+  for entry in "${LINKS[@]}"; do
+    rest="${entry#*|}"
+    link_path="${rest%%|*}"
+    source="${rest##*|}"
+    state="$(classify_path "$link_path" "$source")"
+    if [ "$state" != current ] && [ "$state" != missing ]; then
+      conflict_count=$((conflict_count + 1))
+    fi
+  done
+
+  [ "$conflict_count" -gt 0 ] || return 0
+
+  if [ -L "$BACKUP_PATH" ] ||
+    { [ -e "$BACKUP_PATH" ] && [ ! -d "$BACKUP_PATH" ]; }; then
+    die "backup parent is not a regular directory: $BACKUP_PATH"
+  fi
+  [ "$DRY_RUN" = true ] && return 0
+
+  BACKUP_RUN_DIR="$(agent_guidelines_create_backup_run "$BACKUP_PATH")" ||
+    die "could not allocate a unique backup directory under $BACKUP_PATH"
+
+  for entry in "${LINKS[@]}"; do
+    rest="${entry#*|}"
+    link_path="${rest%%|*}"
+    source="${rest##*|}"
+    state="$(classify_path "$link_path" "$source")"
+    if [ "$state" = current ] || [ "$state" = missing ]; then
+      continue
+    fi
+
+    destination="$(backup_destination "$link_path")"
+    agent_guidelines_backup_object "$link_path" "$destination" ||
+      die "backup verification failed for $link_path; live target unchanged"
+  done
+}
+
+preflight_links() {
+  local entry rest link_path source state path_type
+
+  for entry in "${LINKS[@]}"; do
+    rest="${entry#*|}"
+    link_path="${rest%%|*}"
+    source="${rest##*|}"
+    agent_guidelines_assert_path_beneath \
+      "$link_path" "$HOME" "managed link" || exit 1
+
+    state="$(classify_path "$link_path" "$source")"
+    if [ "$FORCE" = true ] && [ "$state" != current ] &&
+      [ "$state" != missing ]; then
+      path_type="$(agent_guidelines_path_type "$link_path")"
+      case "$path_type" in
+        regular|directory|symlink) ;;
+        *) die "unsupported forced-replacement target: $link_path ($path_type)" ;;
+      esac
+    fi
+  done
+
+  if [ "$ACTION" = install ] && [ "$FORCE" = true ]; then
+    prepare_forced_backups
+  fi
+}
+
 backup_conflict() {
   local link_path="$1"
-  local backup_path
+  local backup_path path_type
 
-  backup_path="${BACKUP_PATH}${link_path}"
+  backup_path="$(backup_destination "$link_path")"
 
   if [ "$DRY_RUN" = true ]; then
     entry "$CYAN" "?" "would back up" "$link_path" "to backup directory"
@@ -337,8 +413,17 @@ backup_conflict() {
     return
   fi
 
-  mkdir -p "$(dirname "$backup_path")"
-  mv "$link_path" "$backup_path"
+  [ -n "$BACKUP_RUN_DIR" ] || die "forced backup plan was not prepared"
+  agent_guidelines_verify_copy "$link_path" "$backup_path" ||
+    die "live target changed after backup planning: $link_path"
+
+  path_type="$(agent_guidelines_path_type "$link_path")"
+  case "$path_type" in
+    directory) rm -rf "$link_path" ;;
+    regular|symlink) rm -f "$link_path" ;;
+    *) die "refusing to remove unsupported conflict: $link_path" ;;
+  esac
+  LAST_BACKUP_PATH="$backup_path"
   entry "$CYAN" "↳" "backed up" "$link_path" "-> $backup_path"
   BACKED_UP=$((BACKED_UP + 1))
 }
@@ -370,7 +455,12 @@ install_link() {
         backup_conflict "$link_path"
         if [ "$DRY_RUN" = false ]; then
           mkdir -p "$(dirname "$link_path")"
-          ln -s "$source" "$link_path"
+          if ! ln -s "$source" "$link_path"; then
+            agent_guidelines_restore_object \
+              "$LAST_BACKUP_PATH" "$link_path" ||
+              die "link creation failed and restore failed; backup: $LAST_BACKUP_PATH"
+            die "link creation failed; restored original $link_path"
+          fi
           entry "$GREEN" "↻" "replaced" "$link_path" "-> $source"
         else
           entry "$CYAN" "?" "would replace" "$link_path" "with $source"
@@ -749,7 +839,7 @@ print_summary() {
     install)
       summary_entry "dry run:" "$DRY_RUN"
       summary_entry "forced:" "$FORCE"
-      summary_entry "backup path:" "$BACKUP_PATH"
+      summary_entry "backup path:" "${BACKUP_RUN_DIR:-$BACKUP_PATH}"
       summary_entry "created:" "$CREATED"
       summary_entry "current:" "$CURRENT"
       summary_entry "context created:" "$CONTEXT_CREATED"
@@ -781,9 +871,9 @@ main() {
   build_links
   validate_sources
   case "$ACTION" in
-    install) preflight_context_targets; process_links; install_context ;;
-    remove)  preflight_context_targets; process_links; remove_context ;;
-    status)  process_links; status_context ;;
+    install) preflight_context_targets; preflight_links; process_links; install_context ;;
+    remove)  preflight_context_targets; preflight_links; process_links; remove_context ;;
+    status)  preflight_links; process_links; status_context ;;
     prune)   prune_orphans ;;
   esac
   print_summary
