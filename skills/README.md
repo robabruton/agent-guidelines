@@ -162,6 +162,17 @@ Use this skill when reviewing authentication, authorization, secrets,
 cryptography, dependency risk, deployment exposure, input trust
 boundaries, or firmware security concerns.
 
+### `stm32`
+
+Operates and maintains STM32 projects and toolchains, including HAL-first
+Cube code generation, package and target selection, builds, memory
+artifacts, programming, debugging, option-byte safety, API research, and
+target troubleshooting.
+
+Use this skill for projects that use STM32CubeMX, STM32CubeIDE,
+STM32CubeCLT, STM32Cube MCU packages, CMSIS, HAL, LL, GNU Arm tools,
+STM32CubeProgrammer, ST-LINK, OpenOCD, SWD, JTAG, or ROM bootloaders.
+
 ### `test-audit`
 
 Audits tests for meaningful behavioral coverage, weak assertions,

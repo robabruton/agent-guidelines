@@ -16,6 +16,10 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
   toolchain selection, build and artifact checks, programming and debug
   safety gates, device-state preservation, and family-specific
   troubleshooting references.
+- `stm32` situational skill operates HAL-first STM32 projects with exact
+  device and package selection, Cube generation boundaries, build and memory
+  checks, programming and debug safety gates, option-state preservation, and
+  version-matched research guidance for HAL, LL, and tooling.
 - `esp-idf` situational skill operates ESP-IDF projects and toolchains with
   live environment verification, project and component conventions, build and
   artifact checks, explicit hardware-operation gates, and focused references
