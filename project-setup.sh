@@ -10,6 +10,8 @@ CANONICAL_SKILLS_DIR="${SCRIPT_DIR}/skills"
 
 # shellcheck source=lib/assemble-rules.sh
 . "${SCRIPT_DIR}/lib/assemble-rules.sh"
+# shellcheck source=lib/safe-mutations.sh
+. "${SCRIPT_DIR}/lib/safe-mutations.sh"
 
 MODE="install"
 PROFILE="auto"
@@ -367,6 +369,9 @@ write_file_if_missing() {
   local source="$2"
   local label="$3"
 
+  if [ -L "$path" ] || { [ -e "$path" ] && [ ! -f "$path" ]; }; then
+    die "$label exists and is not a regular file: $path"
+  fi
   if [ -e "$path" ]; then
     add_status unchanged "$label"
     return
@@ -382,6 +387,9 @@ write_file_if_missing() {
 write_readme_if_missing() {
   local path="$TARGET_DIR/README.md"
 
+  if [ -L "$path" ] || { [ -e "$path" ] && [ ! -f "$path" ]; }; then
+    die "README.md exists and is not a regular file: $path"
+  fi
   if [ -e "$path" ]; then
     add_status unchanged "README.md"
     return
@@ -406,9 +414,16 @@ configure_commit_template() {
 
   if [ "$current" = ".gittemplate" ]; then
     add_status unchanged "git commit.template"
+  elif [ -n "$current" ]; then
+    die "git commit.template is user-managed: $current"
   else
     if should_mutate; then
       git -C "$TARGET_DIR" config --local commit.template .gittemplate
+      if ! write_ownership_record \
+        commit-template 'created=.gittemplate'; then
+        git -C "$TARGET_DIR" config --local --unset commit.template || true
+        die "could not record commit.template ownership"
+      fi
     fi
     add_status updated "git commit.template"
   fi
@@ -423,10 +438,83 @@ git_path() {
   esac
 }
 
+sha256_file() {
+  local path="$1"
+
+  if command -v sha256sum >/dev/null 2>&1; then
+    sha256sum "$path" | awk '{ print $1 }'
+  else
+    shasum -a 256 "$path" | awk '{ print $1 }'
+  fi
+}
+
+ownership_dir() {
+  git_path agent-guidelines/ownership-v1
+}
+
+ownership_record_path() {
+  local name="$1"
+
+  printf '%s/%s\n' "$(ownership_dir)" "$name"
+}
+
+write_ownership_record() {
+  local name="$1"
+  local value="$2"
+  local path
+  local prepared
+
+  path="$(ownership_record_path "$name")"
+  prepared="$(mktemp)"
+  printf '%s\n' "$value" > "$prepared"
+
+  if [ -e "$path" ] && cmp -s "$path" "$prepared"; then
+    rm -f "$prepared"
+    return 0
+  fi
+  if [ -e "$path" ] || [ -L "$path" ]; then
+    rm -f "$prepared"
+    printf 'error: ownership record conflicts: %s\n' "$path" >&2
+    return 1
+  fi
+
+  mkdir -p "$(dirname "$path")"
+  if ! agent_guidelines_atomic_replace_file "$path" "$prepared"; then
+    rm -f "$prepared"
+    return 1
+  fi
+  rm -f "$prepared"
+}
+
+replace_ownership_record() {
+  local name="$1"
+  local value="$2"
+  local path
+  local prepared
+
+  path="$(ownership_record_path "$name")"
+  [ -f "$path" ] && [ ! -L "$path" ] || return 1
+  prepared="$(mktemp)"
+  printf '%s\n' "$value" > "$prepared"
+  agent_guidelines_atomic_replace_file "$path" "$prepared"
+  local result=$?
+  rm -f "$prepared"
+  return "$result"
+}
+
+exclude_record_name() {
+  local key="$1"
+
+  printf 'exclude-%s\n' "$key"
+}
+
 append_missing_line() {
   local file="$1"
   local line="$2"
   local label="$3"
+  local key="$4"
+  local record_name
+  local prepared
 
   if [ -e "$file" ] && grep -Fxq "$line" "$file"; then
     add_status unchanged "$label"
@@ -434,8 +522,18 @@ append_missing_line() {
   fi
 
   if should_mutate; then
-    touch "$file"
-    printf '%s\n' "$line" >> "$file"
+    record_name="$(exclude_record_name "$key")"
+    write_ownership_record "$record_name" "line=$line" ||
+      die "could not record ownership for $label"
+
+    prepared="$(mktemp)"
+    [ -e "$file" ] && cat "$file" > "$prepared"
+    printf '%s\n' "$line" >> "$prepared"
+    if ! agent_guidelines_atomic_replace_file "$file" "$prepared"; then
+      rm -f "$prepared" "$(ownership_record_path "$record_name")"
+      die "could not update $file"
+    fi
+    rm -f "$prepared"
   fi
   add_status updated "$label"
 }
@@ -446,27 +544,33 @@ configure_local_excludes() {
     return
   fi
 
-  local exclude_file
+  local exclude_file local_file key
   exclude_file="$(git_path info/exclude)"
   if should_mutate; then
     mkdir -p "$(dirname "$exclude_file")"
   fi
 
-  append_missing_line "$exclude_file" "CLAUDE.md" "exclude CLAUDE.md"
-  append_missing_line "$exclude_file" "CLAUDE.local.md" "exclude CLAUDE.local.md"
-  append_missing_line "$exclude_file" "AGENTS.md" "exclude AGENTS.md"
-  append_missing_line "$exclude_file" ".claude/" "exclude .claude/"
-  append_missing_line "$exclude_file" ".codex/" "exclude .codex/"
-  append_missing_line "$exclude_file" ".agent-guidelines/config" "exclude .agent-guidelines/config"
+  append_missing_line "$exclude_file" "CLAUDE.md" "exclude CLAUDE.md" claude
+  append_missing_line "$exclude_file" "CLAUDE.local.md" "exclude CLAUDE.local.md" claude-local
+  append_missing_line "$exclude_file" "AGENTS.md" "exclude AGENTS.md" agents
+  append_missing_line "$exclude_file" ".claude/" "exclude .claude/" claude-dir
+  append_missing_line "$exclude_file" ".codex/" "exclude .codex/" codex-dir
+  append_missing_line "$exclude_file" ".agent-guidelines/config" "exclude .agent-guidelines/config" config
   if [ "$RULE_SOURCE_MODE" = "symlink" ]; then
-    append_missing_line "$exclude_file" ".agent-guidelines/rules" "exclude .agent-guidelines/rules symlink"
+    append_missing_line "$exclude_file" ".agent-guidelines/rules" \
+      "exclude .agent-guidelines/rules symlink" rules
   fi
 
   for local_file in opencode.json .mcp.json; do
     if git -C "$TARGET_DIR" ls-files --error-unmatch "$local_file" >/dev/null 2>&1; then
       add_status skipped "$local_file is tracked"
     else
-      append_missing_line "$exclude_file" "$local_file" "exclude $local_file"
+      case "$local_file" in
+        opencode.json) key=opencode ;;
+        .mcp.json) key=mcp ;;
+      esac
+      append_missing_line "$exclude_file" "$local_file" \
+        "exclude $local_file" "$key"
     fi
   done
 }
@@ -898,6 +1002,10 @@ preflight_rule_source_target() {
   local rules_path="$state_dir/rules"
   local current
 
+  agent_guidelines_assert_path_beneath \
+    "$state_dir" "$TARGET_DIR" ".agent-guidelines" || exit 1
+  agent_guidelines_assert_path_beneath \
+    "$rules_path" "$TARGET_DIR" ".agent-guidelines/rules" || exit 1
   validate_managed_directory "$state_dir" ".agent-guidelines"
 
   if [ "$RULE_SOURCE_MODE" = "symlink" ]; then
@@ -927,6 +1035,10 @@ preflight_skill_source_targets() {
   local skills_dir="$agents_dir/skills"
   local skill source target current
 
+  agent_guidelines_assert_path_beneath \
+    "$agents_dir" "$TARGET_DIR" ".agents" || exit 1
+  agent_guidelines_assert_path_beneath \
+    "$skills_dir" "$TARGET_DIR" ".agents/skills" || exit 1
   validate_managed_directory "$agents_dir" ".agents"
   validate_managed_directory "$skills_dir" ".agents/skills"
 
@@ -935,6 +1047,8 @@ preflight_skill_source_targets() {
     source="$CANONICAL_SKILLS_DIR/$skill"
     [ -d "$source" ] || continue
     target="$skills_dir/$skill"
+    agent_guidelines_assert_path_beneath \
+      "$target" "$TARGET_DIR" ".agents/skills/$skill" || exit 1
 
     if [ "$SKILL_SOURCE_MODE" = "symlink" ]; then
       if [ -L "$target" ]; then
@@ -975,7 +1089,8 @@ install_per_project_skills() {
   if [ "$SKILL_SOURCE_MODE" = "symlink" ] && target_has_git_repo; then
     local exclude_file
     exclude_file="$(git_path info/exclude)"
-    append_missing_line "$exclude_file" ".agents/skills/" "exclude .agents/skills/"
+    append_missing_line "$exclude_file" ".agents/skills/" \
+      "exclude .agents/skills/" skills
   fi
 
   local skill source target
@@ -1001,12 +1116,7 @@ install_per_project_skills() {
   done
 }
 
-write_local_config() {
-  local config_path="$TARGET_DIR/.agent-guidelines/config"
-  local temp_file
-  local existed=false
-  temp_file="$(mktemp)"
-
+write_local_config_content() {
   {
     printf 'profile=%s\n' "$PROFILE"
     printf 'changelog=%s\n' "$CHANGELOG_MODE"
@@ -1018,21 +1128,57 @@ write_local_config() {
     printf 'exclude_rules=%s\n' "${EXCLUDE_RULES[*]:-}"
     printf 'include_skills=%s\n' "${INCLUDE_SKILLS[*]:-}"
     printf 'exclude_skills=%s\n' "${EXCLUDE_SKILLS[*]:-}"
-  } > "$temp_file"
+  }
+}
+
+write_local_config() {
+  local config_path="$TARGET_DIR/.agent-guidelines/config"
+  local temp_file
+  local checksum
+  local config_record
+  local rollback_dir
+  local rollback_file
+  temp_file="$(mktemp)"
+  write_local_config_content > "$temp_file"
+  config_record="$(ownership_record_path config)"
 
   if [ -e "$config_path" ] && cmp -s "$config_path" "$temp_file"; then
     add_status unchanged ".agent-guidelines/config"
-  else
-    [ -e "$config_path" ] && existed=true
+  elif [ -f "$config_path" ] && [ -e "$config_record" ]; then
     if should_mutate; then
-      mkdir -p "$(dirname "$config_path")"
-      cp "$temp_file" "$config_path"
+      rollback_dir="$(mktemp -d)"
+      rollback_file="$rollback_dir/config"
+      agent_guidelines_backup_object "$config_path" "$rollback_file" || {
+        rm -rf "$rollback_dir" "$temp_file"
+        die "could not verify config rollback copy"
+      }
+      checksum="$(sha256_file "$temp_file")"
+      if ! agent_guidelines_atomic_replace_file "$config_path" "$temp_file" ||
+        ! replace_ownership_record config "sha256=$checksum"; then
+        agent_guidelines_atomic_replace_file "$config_path" "$rollback_file" ||
+          die "config update failed and rollback failed: $rollback_file"
+        rm -rf "$rollback_dir" "$temp_file"
+        die "config update failed; restored previous content"
+      fi
+      rm -rf "$rollback_dir"
     fi
-    if [ "$existed" = true ]; then
-      add_status updated ".agent-guidelines/config"
-    else
-      add_status created ".agent-guidelines/config"
+    add_status updated ".agent-guidelines/config"
+  elif [ -e "$config_path" ] || [ -L "$config_path" ]; then
+    rm -f "$temp_file"
+    die ".agent-guidelines/config differs from requested state"
+  else
+    if should_mutate; then
+      checksum="$(sha256_file "$temp_file")"
+      write_ownership_record config "sha256=$checksum" || {
+        rm -f "$temp_file"
+        die "could not record config ownership"
+      }
+      if ! agent_guidelines_atomic_replace_file "$config_path" "$temp_file"; then
+        rm -f "$(ownership_record_path config)" "$temp_file"
+        die "could not create .agent-guidelines/config"
+      fi
     fi
+    add_status created ".agent-guidelines/config"
   fi
   rm -f "$temp_file"
 }
@@ -1131,9 +1277,20 @@ install_hooks() {
   install_hook_snippet pre-push pre-push-branch-name
 }
 
-# Managed exclude lines the removal flow may strip from
-# .git/info/exclude; mirrors what configure_local_excludes and
-# install_per_project_skills append.
+# Exclude ownership records written only for lines created by this script.
+MANAGED_EXCLUDE_RECORDS=(
+  "claude|CLAUDE.md"
+  "claude-local|CLAUDE.local.md"
+  "agents|AGENTS.md"
+  "claude-dir|.claude/"
+  "codex-dir|.codex/"
+  "config|.agent-guidelines/config"
+  "rules|.agent-guidelines/rules"
+  "opencode|opencode.json"
+  "mcp|.mcp.json"
+  "skills|.agents/skills/"
+)
+
 MANAGED_EXCLUDE_LINES=(
   "CLAUDE.md"
   "CLAUDE.local.md"
@@ -1184,13 +1341,166 @@ validate_all_hook_snippet_targets() {
   done
 }
 
+validate_ownership_record() {
+  local name="$1"
+  local expected="$2"
+  local path
+
+  path="$(ownership_record_path "$name")"
+  if [ -L "$path" ] || [ ! -f "$path" ] ||
+    [ "$(wc -l < "$path")" -ne 1 ] ||
+    ! grep -Fxq "$expected" "$path"; then
+    die "invalid ownership record: $path"
+  fi
+}
+
+ownership_record_known() {
+  local name="$1"
+  local pair key
+
+  case "$name" in
+    commit-template|config) return 0 ;;
+  esac
+  for pair in "${MANAGED_EXCLUDE_RECORDS[@]}"; do
+    key="${pair%%|*}"
+    [ "$name" = "$(exclude_record_name "$key")" ] && return 0
+  done
+  return 1
+}
+
+validate_ownership_state() {
+  target_has_git_repo || return 0
+
+  local state_dir
+  local record_path
+  local record_name
+  local current
+  local expected_hash
+  local pair key line count
+  local exclude_file
+
+  state_dir="$(ownership_dir)"
+  validate_managed_directory "$state_dir" "ownership state"
+  [ -d "$state_dir" ] || return 0
+
+  while IFS= read -r -d '' record_path; do
+    record_name="$(basename "$record_path")"
+    ownership_record_known "$record_name" ||
+      die "unknown ownership record: $record_path"
+  done < <(find "$state_dir" -mindepth 1 -maxdepth 1 -print0)
+
+  record_path="$(ownership_record_path commit-template)"
+  if [ -e "$record_path" ] || [ -L "$record_path" ]; then
+    validate_ownership_record commit-template 'created=.gittemplate'
+    current="$(git -C "$TARGET_DIR" config --local --get commit.template || true)"
+    [ "$current" = ".gittemplate" ] ||
+      die "owned commit.template no longer matches .gittemplate"
+  fi
+
+  record_path="$(ownership_record_path config)"
+  if [ -e "$record_path" ] || [ -L "$record_path" ]; then
+    if [ -L "$record_path" ] || [ ! -f "$record_path" ] ||
+      [ "$(wc -l < "$record_path")" -ne 1 ] ||
+      ! grep -Eq '^sha256=[0-9a-f]{64}$' "$record_path"; then
+      die "invalid config ownership record: $record_path"
+    fi
+    expected_hash="$(sed 's/^sha256=//' "$record_path")"
+    if [ -L "$TARGET_DIR/.agent-guidelines/config" ] ||
+      [ ! -f "$TARGET_DIR/.agent-guidelines/config" ] ||
+      [ "$(sha256_file "$TARGET_DIR/.agent-guidelines/config")" != "$expected_hash" ]; then
+      die "owned config no longer matches its recorded content"
+    fi
+  fi
+
+  exclude_file="$(git_path info/exclude)"
+  for pair in "${MANAGED_EXCLUDE_RECORDS[@]}"; do
+    key="${pair%%|*}"
+    line="${pair##*|}"
+    record_name="$(exclude_record_name "$key")"
+    record_path="$(ownership_record_path "$record_name")"
+    if [ -e "$record_path" ] || [ -L "$record_path" ]; then
+      validate_ownership_record "$record_name" "line=$line"
+      if [ -L "$exclude_file" ] || [ ! -f "$exclude_file" ]; then
+        die "owned exclude line has no regular exclude file: $line"
+      fi
+      count="$(grep -Fxc "$line" "$exclude_file" || true)"
+      [ "$count" -eq 1 ] ||
+        die "owned exclude line no longer has one exact match: $line"
+    fi
+  done
+}
+
+validate_regular_or_missing() {
+  local path="$1"
+  local label="$2"
+  local path_type
+
+  agent_guidelines_assert_path_beneath "$path" "$TARGET_DIR" "$label" ||
+    exit 1
+  path_type="$(agent_guidelines_path_type "$path")"
+  case "$path_type" in
+    missing|regular) ;;
+    *) die "$label must be a regular file or missing: $path ($path_type)" ;;
+  esac
+}
+
+preflight_project_files() {
+  validate_regular_or_missing "$TARGET_DIR/.gittemplate" ".gittemplate"
+  validate_regular_or_missing "$TARGET_DIR/.gitignore" ".gitignore"
+  validate_regular_or_missing "$TARGET_DIR/README.md" "README.md"
+  if [ "$CHANGELOG_MODE" != none ]; then
+    validate_regular_or_missing "$TARGET_DIR/CHANGELOG.md" "CHANGELOG.md"
+  fi
+  validate_regular_or_missing \
+    "$TARGET_DIR/.agent-guidelines/config" ".agent-guidelines/config"
+
+  local desired_config
+  local config_owned=false
+  desired_config="$(mktemp)"
+  write_local_config_content > "$desired_config"
+  if target_has_git_repo && [ -e "$(ownership_record_path config)" ]; then
+    config_owned=true
+  fi
+  if [ -e "$TARGET_DIR/.agent-guidelines/config" ] &&
+    ! cmp -s "$TARGET_DIR/.agent-guidelines/config" "$desired_config" &&
+    [ "$config_owned" = false ]; then
+      rm -f "$desired_config"
+      die ".agent-guidelines/config differs from requested state"
+  fi
+  rm -f "$desired_config"
+
+  if target_has_git_repo; then
+    local current_template exclude_file exclude_type
+    exclude_file="$(git_path info/exclude)"
+    exclude_type="$(agent_guidelines_path_type "$exclude_file")"
+    case "$exclude_type" in
+      missing|regular) ;;
+      *) die "git info/exclude is not a regular file: $exclude_file" ;;
+    esac
+
+    current_template="$(git -C "$TARGET_DIR" config --local \
+      --get commit.template || true)"
+    case "$current_template" in
+      ""|.gittemplate) ;;
+      *) die "git commit.template is user-managed: $current_template" ;;
+    esac
+  fi
+}
+
 preflight_managed_targets() {
+  agent_guidelines_assert_path_beneath \
+    "$TARGET_DIR/CLAUDE.md" "$TARGET_DIR" "CLAUDE.md" || return 1
+  agent_guidelines_assert_path_beneath \
+    "$TARGET_DIR/AGENTS.md" "$TARGET_DIR" "AGENTS.md" || return 1
   agent_guidelines_validate_managed_block_file \
     "$TARGET_DIR/CLAUDE.md" || return 1
   agent_guidelines_validate_managed_block_file \
     "$TARGET_DIR/AGENTS.md" || return 1
 
   if target_has_git_repo; then
+    if [ "$MODE" != remove ]; then
+      validate_ownership_state
+    fi
     validate_all_hook_snippet_targets || return 1
   fi
 }
@@ -1577,6 +1887,7 @@ main() {
   infer_changelog_mode
   preflight_managed_targets
   preflight_source_targets
+  preflight_project_files
   init_git_if_needed
 
   write_file_if_missing "$TARGET_DIR/.gittemplate" "$ASSET_DIR/gittemplate" ".gittemplate"
