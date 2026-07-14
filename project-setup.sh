@@ -371,6 +371,25 @@ parse_args() {
 }
 
 resolve_target() {
+  if [ ! -d "$TARGET_DIR" ]; then
+    local candidate existing_parent worktree_root
+    candidate="$(agent_guidelines_physical_candidate "$TARGET_DIR")" ||
+      die "could not resolve target path: $TARGET_DIR"
+    existing_parent="$(dirname "$candidate")"
+    while [ ! -d "$existing_parent" ]; do
+      existing_parent="$(dirname "$existing_parent")"
+    done
+    if git -C "$existing_parent" rev-parse --is-inside-work-tree \
+      >/dev/null 2>&1; then
+      worktree_root="$(git -C "$existing_parent" rev-parse --show-toplevel)"
+      worktree_root="$(cd "$worktree_root" && pwd -P)"
+      case "$candidate" in
+        "$worktree_root"/*)
+          die "target must not be created below repository worktree root $worktree_root: $candidate"
+          ;;
+      esac
+    fi
+  fi
   if should_mutate; then
     mkdir -p "$TARGET_DIR"
   elif [ ! -d "$TARGET_DIR" ]; then
