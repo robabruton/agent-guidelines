@@ -265,4 +265,15 @@ grep -Fq 'duplicate --include-skill value: explain' \
   "${TMP_ROOT}/cli-duplicate.err"
 diff -qr "$CLI_DUPLICATE_REPO" "${CLI_DUPLICATE_REPO}.before" >/dev/null
 
+# A fresh dry run previews local state without requiring Git metadata.
+FRESH_DRY_REPO="${TMP_ROOT}/fresh-dry-repo"
+mkdir -p "$FRESH_DRY_REPO"
+"${ROOT_DIR}/project-setup.sh" --dry-run --profile minimal \
+  "$FRESH_DRY_REPO" >"${TMP_ROOT}/fresh-dry.out" \
+  2>"${TMP_ROOT}/fresh-dry.err"
+test ! -s "${TMP_ROOT}/fresh-dry.err"
+test -z "$(find "$FRESH_DRY_REPO" -mindepth 1 -print -quit)"
+grep -Fq 'Default branch policy: main' "${TMP_ROOT}/fresh-dry.out"
+grep -Fq 'Would create:' "${TMP_ROOT}/fresh-dry.out"
+
 printf 'project state safety tests passed\n'
