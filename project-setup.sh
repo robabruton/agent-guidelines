@@ -351,6 +351,18 @@ resolve_target() {
   TARGET_DIR="$(cd "$TARGET_DIR" && pwd -P)"
 }
 
+validate_target_worktree_root() {
+  target_has_git_repo || return 0
+
+  local worktree_root
+  worktree_root="$(git -C "$TARGET_DIR" rev-parse --show-toplevel)" ||
+    die "could not resolve target worktree root: $TARGET_DIR"
+  worktree_root="$(cd "$worktree_root" && pwd -P)"
+  if [ "$worktree_root" != "$TARGET_DIR" ]; then
+    die "target must be the repository worktree root $worktree_root: $TARGET_DIR"
+  fi
+}
+
 require_git_identity() {
   command -v git >/dev/null 2>&1 || die "git is required"
 
@@ -2048,6 +2060,8 @@ validate_hook_snippet_target() {
 
   hook_path="$(git_path "hooks/$hook_name")"
   snippet_path="$ASSET_DIR/hooks/$snippet_name"
+  assert_local_git_path "$hook_path" "$hook_name hook" ||
+    die "managed hook path escapes the repository Git directory: $hook_path"
   begin_marker="$(sed -n '1p' "$snippet_path")"
   end_marker="$(sed -n '$p' "$snippet_path")"
 
@@ -2514,6 +2528,7 @@ run_remove() {
   [ -d "$TARGET_DIR" ] || die "target directory does not exist: $TARGET_DIR"
   TARGET_DIR="$(cd "$TARGET_DIR" && pwd -P)"
 
+  validate_target_worktree_root
   preflight_managed_targets || return 1
   if should_mutate; then
     agent_guidelines_transaction_begin
@@ -2674,6 +2689,7 @@ main() {
   fi
 
   resolve_target
+  validate_target_worktree_root
   load_local_config
   require_git_identity
   infer_profile
