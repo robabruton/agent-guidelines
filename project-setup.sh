@@ -397,6 +397,16 @@ init_git_if_needed() {
   REPO_CREATED=true
 }
 
+preflight_existing_unborn_index() {
+  target_has_git_repo || return 0
+  git -C "$TARGET_DIR" rev-parse --verify --quiet HEAD >/dev/null 2>&1 &&
+    return 0
+
+  if ! git -C "$TARGET_DIR" diff --cached --quiet; then
+    die "unborn target repository has staged content; clear or commit its index before setup"
+  fi
+}
+
 infer_profile() {
   if [ "$PROFILE" != "auto" ]; then
     return
@@ -2579,6 +2589,12 @@ create_initial_commit_if_needed() {
     return
   fi
 
+  if [ "$REPO_CREATED" != true ]; then
+    add_status skipped \
+      "initial commit because setup did not initialize the repository"
+    return
+  fi
+
   if ! should_mutate; then
     add_status created "initial commit (would be created by install)"
     return
@@ -2692,6 +2708,7 @@ main() {
   validate_target_worktree_root
   load_local_config
   require_git_identity
+  preflight_existing_unborn_index
   infer_profile
   infer_changelog_mode
   preflight_managed_targets
