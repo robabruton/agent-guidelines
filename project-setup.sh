@@ -108,10 +108,9 @@ Options:
                   present, full otherwise
   --rules-source symlink|copy
   --skills-source symlink|copy   (defaults to --rules-source)
-  --remove        remove the managed hook snippets, exclude lines,
-                  context blocks, and .agent-guidelines state this
-                  script installed, leaving project artifacts and
-                  user content in place
+  --remove        remove exact managed blocks, links, and recorded local
+                  state whose current values still match, leaving legacy
+                  state, project artifacts, and user content in place
   --include-rule <id>            (repeatable)
   --exclude-rule <id>            (repeatable)
   --include-skill <id>           (repeatable)
