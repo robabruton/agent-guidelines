@@ -196,6 +196,10 @@ agent_guidelines_transaction_is_active() {
   [ "${AGENT_GUIDELINES_TRANSACTION_ACTIVE:-false}" = true ]
 }
 
+agent_guidelines_transaction_set_recovery_note() {
+  AGENT_GUIDELINES_TRANSACTION_RECOVERY_NOTE="$1"
+}
+
 agent_guidelines_transaction_allocate_entry() {
   local path="$1"
   local intended_type="$2"

@@ -527,7 +527,8 @@ init_git_if_needed() {
       "$(dirname "$TARGET_DIR")/.agent-guidelines-git.XXXXXX")" ||
       die "could not create staged Git directory beside $TARGET_DIR"
     STAGED_GIT_DIR="$STAGED_GIT_PARENT/git"
-    AGENT_GUIDELINES_TRANSACTION_RECOVERY_NOTE="staged Git directory: $STAGED_GIT_DIR"
+    agent_guidelines_transaction_set_recovery_note \
+      "staged Git directory: $STAGED_GIT_DIR"
     if ! git --git-dir="$STAGED_GIT_DIR" --work-tree="$TARGET_DIR" \
       init --initial-branch="$DEFAULT_BRANCH" >/dev/null; then
       die "could not initialize staged Git directory: $STAGED_GIT_DIR"
@@ -569,7 +570,7 @@ finalize_staged_git_repository() {
     die "could not remove empty staged Git parent: $STAGED_GIT_PARENT"
   STAGED_GIT_PARENT=""
   STAGED_GIT_DIR=""
-  AGENT_GUIDELINES_TRANSACTION_RECOVERY_NOTE=""
+  agent_guidelines_transaction_set_recovery_note ""
 }
 
 preflight_existing_unborn_index() {
