@@ -9,6 +9,8 @@ SKILLS_DIR="${REPO_DIR}/skills"
 
 # shellcheck source=lib/assemble-rules.sh
 . "${REPO_DIR}/lib/assemble-rules.sh"
+# shellcheck source=lib/safe-mutations.sh
+. "${REPO_DIR}/lib/safe-mutations.sh"
 
 # Skills installed into every harness's global skills directory. Skills use
 # the standard SKILL.md frontmatter schema, so the global set stays
@@ -44,7 +46,9 @@ ACTION="install"
 DRY_RUN=false
 FORCE=false
 COLOR_MODE="auto"
-BACKUP_PATH="${HOME}/.agent-guidelines/backups/$(date +%Y%m%d-%H%M%S)"
+BACKUP_PATH="${HOME}/.agent-guidelines/backups"
+BACKUP_RUN_DIR=""
+LAST_BACKUP_PATH=""
 
 # Stable on-disk path that recall-tier rule references in the global
 # AGENTS.md router resolve to. Created as a directory symlink so all
@@ -110,9 +114,8 @@ Options:
   --install       Create or repair managed tool links (default)
   --remove        Remove managed links that point into this repository
   --status        Report link state without changing files
-  --prune         Remove symlinks in managed directories that point into
-                  this repository but are no longer in the managed set;
-                  symlinks pointing elsewhere are left untouched
+  --prune         Report unowned symlinks in managed directories that point
+                  into this repository but are outside the managed set
   --dry-run       Preview install, remove, or prune actions without
                   changing files
   --force         Back up conflicting files before replacing them
@@ -325,11 +328,83 @@ validate_sources() {
   [ "$ok" = true ] || die "source validation failed"
 }
 
+backup_destination() {
+  local link_path="$1"
+
+  printf '%s%s\n' "$BACKUP_RUN_DIR" "$link_path"
+}
+
+prepare_forced_backups() {
+  local entry rest link_path source state destination
+  local conflict_count=0
+
+  for entry in "${LINKS[@]}"; do
+    rest="${entry#*|}"
+    link_path="${rest%%|*}"
+    source="${rest##*|}"
+    state="$(classify_path "$link_path" "$source")"
+    if [ "$state" != current ] && [ "$state" != missing ]; then
+      conflict_count=$((conflict_count + 1))
+    fi
+  done
+
+  [ "$conflict_count" -gt 0 ] || return 0
+
+  if [ -L "$BACKUP_PATH" ] ||
+    { [ -e "$BACKUP_PATH" ] && [ ! -d "$BACKUP_PATH" ]; }; then
+    die "backup parent is not a regular directory: $BACKUP_PATH"
+  fi
+  [ "$DRY_RUN" = true ] && return 0
+
+  BACKUP_RUN_DIR="$(agent_guidelines_create_backup_run "$BACKUP_PATH")" ||
+    die "could not allocate a unique backup directory under $BACKUP_PATH"
+
+  for entry in "${LINKS[@]}"; do
+    rest="${entry#*|}"
+    link_path="${rest%%|*}"
+    source="${rest##*|}"
+    state="$(classify_path "$link_path" "$source")"
+    if [ "$state" = current ] || [ "$state" = missing ]; then
+      continue
+    fi
+
+    destination="$(backup_destination "$link_path")"
+    agent_guidelines_backup_object "$link_path" "$destination" ||
+      die "backup verification failed for $link_path; live target unchanged"
+  done
+}
+
+preflight_links() {
+  local entry rest link_path source state path_type
+
+  for entry in "${LINKS[@]}"; do
+    rest="${entry#*|}"
+    link_path="${rest%%|*}"
+    source="${rest##*|}"
+    agent_guidelines_assert_path_beneath \
+      "$link_path" "$HOME" "managed link" || exit 1
+
+    state="$(classify_path "$link_path" "$source")"
+    if [ "$FORCE" = true ] && [ "$state" != current ] &&
+      [ "$state" != missing ]; then
+      path_type="$(agent_guidelines_path_type "$link_path")"
+      case "$path_type" in
+        regular|directory|symlink) ;;
+        *) die "unsupported forced-replacement target: $link_path ($path_type)" ;;
+      esac
+    fi
+  done
+
+  if [ "$ACTION" = install ] && [ "$FORCE" = true ]; then
+    prepare_forced_backups
+  fi
+}
+
 backup_conflict() {
   local link_path="$1"
-  local backup_path
+  local backup_path path_type
 
-  backup_path="${BACKUP_PATH}${link_path}"
+  backup_path="$(backup_destination "$link_path")"
 
   if [ "$DRY_RUN" = true ]; then
     entry "$CYAN" "?" "would back up" "$link_path" "to backup directory"
@@ -337,8 +412,17 @@ backup_conflict() {
     return
   fi
 
-  mkdir -p "$(dirname "$backup_path")"
-  mv "$link_path" "$backup_path"
+  [ -n "$BACKUP_RUN_DIR" ] || die "forced backup plan was not prepared"
+  agent_guidelines_verify_copy "$link_path" "$backup_path" ||
+    die "live target changed after backup planning: $link_path"
+
+  path_type="$(agent_guidelines_path_type "$link_path")"
+  case "$path_type" in
+    directory) rm -rf "$link_path" ;;
+    regular|symlink) rm -f "$link_path" ;;
+    *) die "refusing to remove unsupported conflict: $link_path" ;;
+  esac
+  LAST_BACKUP_PATH="$backup_path"
   entry "$CYAN" "↳" "backed up" "$link_path" "-> $backup_path"
   BACKED_UP=$((BACKED_UP + 1))
 }
@@ -348,6 +432,7 @@ install_link() {
   local link_path="$2"
   local source="$3"
   local state
+  local transaction_entry=""
 
   state="$(classify_path "$link_path" "$source")"
   case "$state" in
@@ -359,18 +444,48 @@ install_link() {
       if [ "$DRY_RUN" = true ]; then
         entry "$CYAN" "?" "would create" "$link_path" "-> $source"
       else
-        mkdir -p "$(dirname "$link_path")"
-        ln -s "$source" "$link_path"
+        agent_guidelines_make_directory_safely "$(dirname "$link_path")" ||
+          die "could not create link directory: $link_path"
+        transaction_entry="$(agent_guidelines_transaction_allocate_entry \
+          "$link_path" symlink "$source")" ||
+          die "could not protect link creation: $link_path"
+        if ! ln -s "$source" "$link_path"; then
+          agent_guidelines_transaction_cancel_entry "$transaction_entry" ||
+            die "link creation failed; recovery copy: $transaction_entry"
+          die "link creation failed: $link_path"
+        fi
+        if ! agent_guidelines_transaction_complete_entry "$transaction_entry"; then
+          agent_guidelines_transaction_cancel_entry "$transaction_entry" ||
+            die "link verification failed; recovery copy: $transaction_entry"
+          die "link verification failed: $link_path"
+        fi
         entry "$GREEN" "+" "created" "$link_path" "-> $source"
       fi
       CREATED=$((CREATED + 1))
       ;;
     *)
       if [ "$FORCE" = true ]; then
+        if [ "$DRY_RUN" = false ]; then
+          transaction_entry="$(agent_guidelines_transaction_allocate_entry \
+            "$link_path" symlink "$source")" ||
+            die "could not protect forced replacement: $link_path"
+        fi
         backup_conflict "$link_path"
         if [ "$DRY_RUN" = false ]; then
-          mkdir -p "$(dirname "$link_path")"
-          ln -s "$source" "$link_path"
+          if ! agent_guidelines_make_directory_safely "$(dirname "$link_path")" ||
+            ! ln -s "$source" "$link_path"; then
+            agent_guidelines_restore_object \
+              "$LAST_BACKUP_PATH" "$link_path" ||
+              die "link creation failed and restore failed; backup: $LAST_BACKUP_PATH"
+            agent_guidelines_transaction_cancel_entry "$transaction_entry" ||
+              die "link creation failed; recovery copy: $transaction_entry"
+            die "link creation failed; restored original $link_path"
+          fi
+          if ! agent_guidelines_transaction_complete_entry "$transaction_entry"; then
+            agent_guidelines_transaction_cancel_entry "$transaction_entry" ||
+              die "link verification failed; recovery copy: $transaction_entry"
+            die "link verification failed: $link_path"
+          fi
           entry "$GREEN" "↻" "replaced" "$link_path" "-> $source"
         else
           entry "$CYAN" "?" "would replace" "$link_path" "with $source"
@@ -389,12 +504,24 @@ remove_link() {
   local kind="$1"
   local link_path="$2"
   local source="$3"
+  local transaction_entry=""
 
   if target_matches "$link_path" "$source"; then
     if [ "$DRY_RUN" = true ]; then
       entry "$CYAN" "?" "would remove" "$link_path" "managed link"
     else
-      rm "$link_path"
+      transaction_entry="$(agent_guidelines_transaction_allocate_entry \
+        "$link_path" missing)" || die "could not protect link removal: $link_path"
+      if ! rm "$link_path"; then
+        agent_guidelines_transaction_cancel_entry "$transaction_entry" ||
+          die "link removal failed; recovery copy: $transaction_entry"
+        die "link removal failed: $link_path"
+      fi
+      if ! agent_guidelines_transaction_complete_entry "$transaction_entry"; then
+        agent_guidelines_transaction_cancel_entry "$transaction_entry" ||
+          die "link removal verification failed; recovery copy: $transaction_entry"
+        die "link removal verification failed: $link_path"
+      fi
       entry "$RED" "-" "removed" "$link_path" "managed link removed"
     fi
     REMOVED=$((REMOVED + 1))
@@ -454,6 +581,15 @@ process_links() {
       remove) remove_link "$kind" "$link_path" "$source" ;;
       status) status_link "$kind" "$link_path" "$source" ;;
     esac
+  done
+}
+
+preflight_context_targets() {
+  local item path
+
+  for item in "${CONTEXT_TARGETS[@]}"; do
+    path="${item%%|*}"
+    agent_guidelines_validate_managed_block_file "$path" || return 1
   done
 }
 
@@ -555,7 +691,8 @@ install_context() {
       continue
     fi
 
-    mkdir -p "$(dirname "$path")"
+    agent_guidelines_make_directory_safely "$(dirname "$path")" ||
+      die "could not create context directory for $path"
     local result
     result="$(agent_guidelines_update_managed_block "$path" "$block_file")"
     case "$result" in
@@ -653,18 +790,14 @@ status_context() {
   rm -f "$block_file"
 }
 
-# Walks the rule and skill harness directories looking for symlinks
-# whose resolved targets point into this repository's rules/ or skills/
-# tree. Classifies each such symlink three ways:
-#   managed - link path appears in today's LINKS array; left alone
-#   orphan  - target inside repo but link path not in LINKS; removed
-#   foreign - target resolves outside this repo; left strictly alone
-# The foreign bucket is the safety rail that prevents a user's own
-# symlink in a managed directory from ever being touched.
+# Reports symlinks in managed directories whose resolved targets point into
+# this repository but whose paths are outside the current managed set. These
+# links lack ownership records, so prune leaves them unchanged.
 prune_orphans() {
   section "Orphan Links"
 
   local managed_paths=()
+  local ambiguous_count=0
   local link_entry rest link_path
   for link_entry in "${LINKS[@]}"; do
     rest="${link_entry#*|}"
@@ -705,18 +838,16 @@ prune_orphans() {
       done
       [ "$matched" = true ] && continue
 
-      if [ "$DRY_RUN" = true ]; then
-        entry "$CYAN" "?" "would prune" "$link_path" "-> $target"
-      else
-        rm "$link_path"
-        entry "$RED" "-" "pruned" "$link_path" "-> $target"
-      fi
-      PRUNED=$((PRUNED + 1))
+      entry "$YELLOW" "!" "ambiguous" "$link_path" \
+        "unowned link left unchanged -> $target"
+      SKIPPED=$((SKIPPED + 1))
+      WARNINGS=$((WARNINGS + 1))
+      ambiguous_count=$((ambiguous_count + 1))
     done < <(find "$scan_dir" -maxdepth 1 -type l -print0 2>/dev/null)
   done
 
-  if [ "$PRUNED" -eq 0 ]; then
-    entry "$DIM" "·" "none" "managed dirs" "no orphan links found"
+  if [ "$ambiguous_count" -eq 0 ]; then
+    entry "$DIM" "·" "none" "managed dirs" "no unowned links found"
   fi
 }
 
@@ -740,7 +871,7 @@ print_summary() {
     install)
       summary_entry "dry run:" "$DRY_RUN"
       summary_entry "forced:" "$FORCE"
-      summary_entry "backup path:" "$BACKUP_PATH"
+      summary_entry "backup path:" "${BACKUP_RUN_DIR:-$BACKUP_PATH}"
       summary_entry "created:" "$CREATED"
       summary_entry "current:" "$CURRENT"
       summary_entry "context created:" "$CONTEXT_CREATED"
@@ -760,6 +891,8 @@ print_summary() {
     prune)
       summary_entry "dry run:" "$DRY_RUN"
       summary_entry "pruned:" "$PRUNED"
+      summary_entry "skipped:" "$SKIPPED"
+      summary_entry "warnings:" "$WARNINGS"
       ;;
   esac
 
@@ -772,9 +905,23 @@ main() {
   build_links
   validate_sources
   case "$ACTION" in
-    install) process_links; install_context ;;
-    remove)  process_links; remove_context ;;
-    status)  process_links; status_context ;;
+    install)
+      preflight_context_targets
+      preflight_links
+      [ "$DRY_RUN" = true ] || agent_guidelines_transaction_begin
+      process_links
+      install_context
+      [ "$DRY_RUN" = true ] || agent_guidelines_transaction_commit
+      ;;
+    remove)
+      preflight_context_targets
+      preflight_links
+      [ "$DRY_RUN" = true ] || agent_guidelines_transaction_begin
+      process_links
+      remove_context
+      [ "$DRY_RUN" = true ] || agent_guidelines_transaction_commit
+      ;;
+    status)  preflight_links; process_links; status_context ;;
     prune)   prune_orphans ;;
   esac
   print_summary

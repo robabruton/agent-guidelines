@@ -23,10 +23,13 @@ rules and reports it as current, stale, or missing; `--dry-run`
 previews only the files an install would actually change. Run
 `--install` to refresh anything reported stale.
 
-Use `--backup-path <path>` with `--force` to choose where conflicting
-files, directories, or foreign symlinks are moved before replacement.
-Without an override, backups are written under
-`$HOME/.agent-guidelines/backups/YYYYMMDD-HHMMSS/`.
+Use `--backup-path <path>` with `--force` to choose the parent directory
+for conflict backups. Before replacing anything, setup copies every full
+conflicting file, directory, or foreign symlink into one unique
+`run.XXXXXX` recovery directory and verifies its type, content, and
+metadata. Without an override, recovery directories are created under
+`$HOME/.agent-guidelines/backups/`. The exact path is printed in the
+result summary.
 
 ### Managed Paths
 
@@ -49,8 +52,9 @@ you keep in those files stays intact.
 
 The context files are the only global delivery channel for rules, so a
 harness that also reads a per-rule directory never loads the same rule
-twice. `setup.sh --prune` removes per-rule symlinks left in
-`~/.claude/rules/` by earlier installs.
+twice. `setup.sh --prune` reports repository-pointing per-rule symlinks
+in `~/.claude/rules/` as ambiguous ownership candidates and leaves them
+unchanged for inspection.
 
 The `GLOBAL_SKILLS` array is the authoritative global set and currently
 contains every entry in `skills/`. These managed-path patterns apply to
@@ -111,6 +115,14 @@ By default, project-local skills use the same source mode as rules
 independently. Symlink mode adds `.agents/skills/` to the repository's
 local `.git/info/exclude` so the links stay out of git; copy mode tracks
 the copied skill tree as a normal project asset.
+
+Project setup accepts only exact canonical symlinks and exact managed
+copies at rule and skill destinations. Foreign paths, malformed managed
+blocks, and user-managed local Git configuration stop the operation
+before mutation. Local state created by setup is recorded under the
+repository's Git directory in `agent-guidelines/ownership-v1`; removal
+uses those records and the current exact value, leaving matching legacy
+state without a record in place.
 
 Use `--dry-run` to preview every action without changing anything.
 Most accurate against an existing git repository; on a fresh non-git

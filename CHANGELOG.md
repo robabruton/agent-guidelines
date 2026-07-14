@@ -4,6 +4,37 @@ All notable changes to this project will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## 2026-07-14
+
+### Added
+
+- Project setup records the local exclude lines, configuration, and commit
+  template setting it creates beneath the repository's Git directory.
+  Removal requires both a valid ownership record and an exact current value,
+  leaving identical unrecorded state under user control.
+- Focused regression suites exercise managed-block validation, verified
+  backups, source containment, ownership, and conservative removal. CI lints
+  the shared mutation library and runs every safety suite.
+
+### Changed
+
+- Destructive-write rules distinguish unowned data that requires a verified
+  full backup from exact owned generated state eligible for atomic
+  replacement. Setup mutations use verified recovery copies plus atomic
+  replacement or removal with rollback.
+- `setup.sh --prune` reports repository-pointing per-rule symlinks as
+  ambiguous ownership candidates and leaves them unchanged for inspection.
+
+### Fixed
+
+- Global setup preflights context and link targets, uses collision-free
+  recovery directories for forced replacements, preserves file modes, and
+  rejects malformed markers or nonregular managed targets without mutation.
+- Project setup constrains rule and skill identifiers to catalog-safe names,
+  contains their destinations beneath the target repository, accepts only
+  exact canonical sources, atomically updates managed hooks and contexts, and
+  refuses foreign paths or mismatched owned state without mutation.
+
 ## 2026-07-13
 
 ### Added

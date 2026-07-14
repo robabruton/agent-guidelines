@@ -23,6 +23,12 @@
 #       Write a marker-bracketed block containing the named rule files
 #       (with frontmatter stripped) to block_file. Each missing rule is
 #       reported to stderr as "missing-rule: <name>".
+#   agent_guidelines_validate_marker_pair <target_file> <begin> <end> <label>
+#       Reject symlinks, non-regular files, and malformed marker pairs.
+#       A regular file may contain either no markers or exactly one ordered
+#       pair. Missing files are valid because callers may create them.
+#   agent_guidelines_validate_managed_block_file <target_file>
+#       Validate the standard project-rules marker pair in target_file.
 #   agent_guidelines_update_managed_block <target_file> <block_file>
 #       Replace an existing marker block in target_file with block_file's
 #       contents, append the block if target_file lacks markers, or
@@ -48,8 +54,69 @@
 #       the value is stripped so the cell completes the column header
 #       without doubling.
 
+ASSEMBLE_RULES_LIB_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd -P)"
+# shellcheck source=lib/safe-mutations.sh
+. "${ASSEMBLE_RULES_LIB_DIR}/safe-mutations.sh"
+unset ASSEMBLE_RULES_LIB_DIR
+
 AGENT_GUIDELINES_MARKER_BEGIN="<!-- BEGIN agent-guidelines project rules -->"
 AGENT_GUIDELINES_MARKER_END="<!-- END agent-guidelines project rules -->"
+
+agent_guidelines_validate_marker_pair() {
+  local target_file="$1"
+  local begin_marker="$2"
+  local end_marker="$3"
+  local label="$4"
+  local begin_count
+  local end_count
+  local begin_line
+  local end_line
+
+  if [ -L "$target_file" ]; then
+    printf 'error: refusing to manage symlinked %s: %s\n' \
+      "$label" "$target_file" >&2
+    return 1
+  fi
+
+  [ -e "$target_file" ] || return 0
+
+  if [ ! -f "$target_file" ]; then
+    printf 'error: refusing to manage non-regular %s: %s\n' \
+      "$label" "$target_file" >&2
+    return 1
+  fi
+
+  begin_count="$(grep -Fxc "$begin_marker" "$target_file" || true)"
+  end_count="$(grep -Fxc "$end_marker" "$target_file" || true)"
+
+  if [ "$begin_count" -eq 0 ] && [ "$end_count" -eq 0 ]; then
+    return 0
+  fi
+
+  if [ "$begin_count" -ne 1 ] || [ "$end_count" -ne 1 ]; then
+    printf 'error: malformed %s markers in %s (begin=%s, end=%s)\n' \
+      "$label" "$target_file" "$begin_count" "$end_count" >&2
+    return 1
+  fi
+
+  begin_line="$(grep -Fn "$begin_marker" "$target_file" | cut -d: -f1)"
+  end_line="$(grep -Fn "$end_marker" "$target_file" | cut -d: -f1)"
+  if [ "$begin_line" -ge "$end_line" ]; then
+    printf 'error: reversed %s markers in %s\n' \
+      "$label" "$target_file" >&2
+    return 1
+  fi
+}
+
+agent_guidelines_validate_managed_block_file() {
+  local target_file="$1"
+
+  agent_guidelines_validate_marker_pair \
+    "$target_file" \
+    "$AGENT_GUIDELINES_MARKER_BEGIN" \
+    "$AGENT_GUIDELINES_MARKER_END" \
+    "project-rules block"
+}
 
 agent_guidelines_strip_frontmatter() {
   local file="$1"
@@ -122,11 +189,15 @@ agent_guidelines_update_managed_block() {
   local target_file="$1"
   local block_file="$2"
   local temp_file
+
+  agent_guidelines_validate_managed_block_file "$target_file" || return 1
   temp_file="$(mktemp)"
 
   if [ ! -e "$target_file" ]; then
-    mkdir -p "$(dirname "$target_file")"
-    cp "$block_file" "$target_file"
+    if ! agent_guidelines_replace_file_safely "$target_file" "$block_file"; then
+      rm -f "$temp_file"
+      return 1
+    fi
     rm -f "$temp_file"
     printf 'created'
     return
@@ -159,7 +230,14 @@ agent_guidelines_update_managed_block() {
   if cmp -s "$target_file" "$temp_file"; then
     result="unchanged"
   else
-    cp "$temp_file" "$target_file"
+    agent_guidelines_validate_managed_block_file "$target_file" || {
+      rm -f "$temp_file"
+      return 1
+    }
+    if ! agent_guidelines_replace_file_safely "$target_file" "$temp_file"; then
+      rm -f "$temp_file"
+      return 1
+    fi
     result="updated"
   fi
   rm -f "$temp_file"
@@ -169,6 +247,8 @@ agent_guidelines_update_managed_block() {
 agent_guidelines_remove_managed_block() {
   local target_file="$1"
   local temp_file
+
+  agent_guidelines_validate_managed_block_file "$target_file" || return 1
 
   if [ ! -e "$target_file" ]; then
     printf 'missing'
@@ -191,17 +271,28 @@ agent_guidelines_remove_managed_block() {
   ' "$target_file" > "$temp_file"
 
   if grep -Eq '[^[:space:]]' "$temp_file"; then
-    cp "$temp_file" "$target_file"
+    agent_guidelines_validate_managed_block_file "$target_file" || {
+      rm -f "$temp_file"
+      return 1
+    }
+    if ! agent_guidelines_replace_file_safely "$target_file" "$temp_file"; then
+      rm -f "$temp_file"
+      return 1
+    fi
     rm -f "$temp_file"
     printf 'cleared'
   else
-    rm -f "$temp_file" "$target_file"
+    rm -f "$temp_file"
+    agent_guidelines_validate_managed_block_file "$target_file" || return 1
+    agent_guidelines_remove_file_safely "$target_file" || return 1
     printf 'removed'
   fi
 }
 
 agent_guidelines_extract_managed_block() {
   local target_file="$1"
+
+  agent_guidelines_validate_managed_block_file "$target_file" || return 1
 
   [ -e "$target_file" ] || return 0
 

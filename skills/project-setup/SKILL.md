@@ -102,6 +102,9 @@ git init --initial-branch=main
 - Add local-only agent and tool files to `.git/info/exclude`
 - Create `.git/info/exclude` if it does not already exist
 - Append only missing exclude patterns and preserve existing user entries
+- Record only exclude lines created by this run in the Git directory's
+  `agent-guidelines/ownership-v1` state; an identical existing line
+  remains user-managed
 - Do not add these patterns to `.gitignore`, because these files are
   local agent configuration rather than project artifacts
 - Always exclude:
@@ -161,8 +164,11 @@ git init --initial-branch=main
   project-local rule source path
 - If `.agent-guidelines/rules` does not exist and symlink mode is
   selected, create it as a symlink to the canonical `rules/` directory
-- If symlink creation is unavailable or the user selects copy mode, copy
-  rule files into `.agent-guidelines/rules` as a snapshot
+- When copy mode is selected, copy rule files into
+  `.agent-guidelines/rules` as a snapshot
+- Accept an existing rule source only when it is the exact canonical
+  symlink selected by symlink mode or an exact snapshot selected by copy
+  mode; stop without mutation on every other existing path
 - Treat `.agent-guidelines/config` as local setup state that records the
   selected profile, changelog mode, versioning mode, rule and skill
   source modes, and the included and excluded rules and skills
@@ -265,9 +271,9 @@ git init --initial-branch=main
   and add `.agents/skills/` to `.git/info/exclude` so the links stay
   out of git
 - In copy mode, copy the skill directory as a tracked project asset
-- Leave a path in place and report it as skipped when it exists and is
-  not what the selected mode would create (a symlink pointing
-  elsewhere, a regular file, or a directory in symlink mode)
+- Accept an existing skill path only when it is the exact canonical
+  symlink selected by symlink mode or an exact copy selected by copy
+  mode; stop without mutation on every other existing path
 - Warn when a selected skill does not exist in the skills source
 
 ## Commit Template
@@ -280,9 +286,12 @@ git init --initial-branch=main
 git config --local commit.template .gittemplate
 ```
 
-- If `.gittemplate` already exists, leave the file unchanged and still
-  ensure the local git config points to it
-- Do not overwrite an existing user-managed commit template without asking
+- If `.gittemplate` already exists, leave the file unchanged
+- Set `commit.template` only when it is unset or already equals
+  `.gittemplate`; stop without mutation when it names a user-managed
+  template
+- Record ownership only when setup creates the local config value;
+  matching legacy configuration remains user-managed
 
 ## Gitignore
 
@@ -375,15 +384,17 @@ chore: initialize repository
 
 ## Removal
 
-- `--remove` strips what the script installed and nothing else:
-  managed hook snippet blocks (deleting a hook file only when
-  nothing but a shebang and blank lines remain), the managed
-  `.git/info/exclude` lines, the `commit.template` config value,
-  the managed context blocks in `CLAUDE.md` and `AGENTS.md`
-  (deleting the file only when just the generated preamble
-  remains), the `.agent-guidelines` rules symlink and config, and
-  `.agents/skills` symlinks that point into the canonical skills
-  directory
+- `--remove` strips exact managed hook and context blocks, exact canonical
+  rule and skill symlinks, and local state carrying a valid ownership
+  record
+- Remove owned `.git/info/exclude` lines, `commit.template`, and
+  `.agent-guidelines/config` only when their current values still match
+  the recorded state; stop without mutation on a mismatch
+- Leave identical legacy exclude lines, config values, and configuration
+  files without ownership records in place
+- Delete a hook file only when nothing but a shebang and blank lines
+  remains, and delete a context file only when nothing but its generated
+  preamble remains
 - Leave project artifacts in place: `.gittemplate`, `.gitignore`,
   `README.md`, `CHANGELOG.md`, commits, tracked rule or skill
   copies, and any user content in hook files or context files
@@ -398,8 +409,8 @@ chore: initialize repository
   or project rule blocks
 - Do not replace user-managed content outside explicit marker blocks
 - Treat an already-correct git config value as unchanged
-- Treat an existing user-managed file as skipped when the skill cannot
-  safely determine how to update it
+- Stop before mutation when a managed destination has ambiguous ownership
+  or conflicts with the selected source mode
 - When replacing a managed marker block, preserve the surrounding file
   content and newline style when practical
 - Track each operation as one of:
