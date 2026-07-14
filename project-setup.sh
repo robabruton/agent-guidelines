@@ -57,6 +57,7 @@ UPDATED=()
 UNCHANGED=()
 SKIPPED=()
 WARNINGS=()
+INITIAL_COMMIT_PATHS=()
 
 # Profile rule lists and the canonical order are also documented in
 # skills/project-setup/SKILL.md for environments without this script;
@@ -670,6 +671,7 @@ write_file_if_missing() {
     agent_guidelines_replace_file_safely "$path" "$source" ||
       die "could not create $label"
   fi
+  INITIAL_COMMIT_PATHS+=("${path#"$TARGET_DIR"/}")
   add_status created "$label"
 }
 
@@ -694,6 +696,7 @@ write_readme_if_missing() {
     fi
     rm -f "$prepared"
   fi
+  INITIAL_COMMIT_PATHS+=("README.md")
   add_status created "README.md"
 }
 
@@ -1540,6 +1543,7 @@ configure_rule_source() {
         copy_managed_directory_safely "$rules_path" "$CANONICAL_RULES_DIR" ||
           die "could not create .agent-guidelines/rules snapshot"
       fi
+      INITIAL_COMMIT_PATHS+=(".agent-guidelines/rules")
       add_status created ".agent-guidelines/rules snapshot"
     fi
   fi
@@ -1912,6 +1916,7 @@ install_project_skill_copy() {
       copy_managed_directory_safely "$target" "$source" ||
         die "could not create .agents/skills/$skill copy"
     fi
+    INITIAL_COMMIT_PATHS+=(".agents/skills/$skill")
     add_status created ".agents/skills/$skill"
   fi
 }
@@ -2936,21 +2941,8 @@ create_initial_commit_if_needed() {
     return
   fi
 
-  local paths=(".gittemplate" ".gitignore" "README.md")
-  if [ "$CHANGELOG_MODE" != "none" ]; then
-    paths+=("CHANGELOG.md")
-  fi
-  if [ "$RULE_SOURCE_MODE" = "copy" ]; then
-    paths+=(".agent-guidelines/rules")
-  fi
-  if [ "$SKILL_SOURCE_MODE" = "copy" ] &&
-    [ "${#INCLUDE_SKILLS[@]}" -gt 0 ] &&
-    [ -d "$TARGET_DIR/.agents/skills" ]; then
-    paths+=(".agents/skills")
-  fi
-
   local path
-  for path in "${paths[@]}"; do
+  for path in "${INITIAL_COMMIT_PATHS[@]}"; do
     [ -e "$TARGET_DIR/$path" ] && git -C "$TARGET_DIR" add "$path"
   done
 
