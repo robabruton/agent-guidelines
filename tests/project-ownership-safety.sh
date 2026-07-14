@@ -75,6 +75,20 @@ test ! -e \
 test ! -e \
   "${LEGACY_REPO}/.git/agent-guidelines/ownership-v1/commit-template"
 
+# A symlinked ownership-state parent cannot redirect local setup records.
+STATE_ESCAPE_REPO="${TMP_ROOT}/state-escape-repo"
+EXTERNAL_STATE="${TMP_ROOT}/external-state"
+init_repo "$STATE_ESCAPE_REPO"
+mkdir -p "$EXTERNAL_STATE"
+printf 'external state sentinel\n' > "${EXTERNAL_STATE}/sentinel"
+cp -a "$EXTERNAL_STATE" "${EXTERNAL_STATE}.before"
+ln -s "$EXTERNAL_STATE" "${STATE_ESCAPE_REPO}/.git/agent-guidelines"
+expect_fail "${ROOT_DIR}/project-setup.sh" \
+  --profile minimal --changelog none --context-rules full \
+  "$STATE_ESCAPE_REPO"
+diff -qr "$EXTERNAL_STATE" "${EXTERNAL_STATE}.before" >/dev/null
+test ! -e "${EXTERNAL_STATE}/ownership-v1"
+
 # Changed recorded state is a preflight conflict, not an overwrite target.
 printf 'user edit\n' >> "${OWNED_REPO}/.agent-guidelines/config"
 cp -a "$OWNED_REPO" "${OWNED_REPO}.before"
@@ -105,5 +119,32 @@ ln -s "$EXTERNAL_TEMPLATE" "${TEMPLATE_LINK_REPO}/.gittemplate"
 expect_fail "${ROOT_DIR}/project-setup.sh" "$TEMPLATE_LINK_REPO"
 cmp -s "$EXTERNAL_TEMPLATE" "${EXTERNAL_TEMPLATE}.before"
 test ! -e "${TEMPLATE_LINK_REPO}/.git"
+
+# A late runtime write failure restores project files, local Git state, source
+# links, ownership records, and directories created earlier in the invocation.
+ROLLBACK_REPO="${TMP_ROOT}/rollback-repo"
+init_repo "$ROLLBACK_REPO"
+printf '# rollback fixture\n' > "${ROLLBACK_REPO}/README.md"
+printf '*.tmp\n' > "${ROLLBACK_REPO}/.gitignore"
+cp -a "$ROLLBACK_REPO" "${ROLLBACK_REPO}.before"
+MV_SHIM_DIR="${TMP_ROOT}/project-mv-shim"
+REAL_MV="$(command -v mv)"
+mkdir -p "$MV_SHIM_DIR"
+{
+  printf '#!/bin/sh\n'
+  printf 'last=""\n'
+  printf 'for arg do last=$arg; done\n'
+  printf '[ "$last" != "$FAIL_MV_TARGET" ] || exit 74\n'
+  printf 'exec "$REAL_MV" "$@"\n'
+} > "${MV_SHIM_DIR}/mv"
+chmod +x "${MV_SHIM_DIR}/mv"
+expect_fail env \
+  FAIL_MV_TARGET="${ROLLBACK_REPO}/AGENTS.md" \
+  REAL_MV="$REAL_MV" \
+  PATH="${MV_SHIM_DIR}:$PATH" \
+  "${ROOT_DIR}/project-setup.sh" \
+  --profile minimal --changelog none --context-rules full \
+  "$ROLLBACK_REPO"
+diff -qr "$ROLLBACK_REPO" "${ROLLBACK_REPO}.before" >/dev/null
 
 printf 'project ownership safety tests passed\n'

@@ -85,6 +85,34 @@ test -p "$LATE_CONFLICT"
 test ! -e "${HOME}/.agent-guidelines/rules"
 test ! -e "${HOME}/.claude/skills/agent-memory"
 
+# An unexpected failure in a later context write restores every link,
+# directory, and context created earlier in the same invocation.
+export HOME="${TMP_ROOT}/runtime-failure-home"
+mkdir -p "$HOME"
+cp -a "$HOME" "${HOME}.before"
+MV_SHIM_DIR="${TMP_ROOT}/mv-shim"
+MV_COUNT_FILE="${TMP_ROOT}/mv-count"
+REAL_MV="$(command -v mv)"
+mkdir -p "$MV_SHIM_DIR"
+{
+  printf '#!/bin/sh\n'
+  printf 'count=0\n'
+  printf '[ ! -f "$MV_COUNT_FILE" ] || count=$(sed -n "1p" "$MV_COUNT_FILE")\n'
+  printf 'count=$((count + 1))\n'
+  printf 'printf "%%s\\n" "$count" > "$MV_COUNT_FILE"\n'
+  printf '[ "$count" -ne 2 ] || exit 73\n'
+  printf 'exec "$REAL_MV" "$@"\n'
+} > "${MV_SHIM_DIR}/mv"
+chmod +x "${MV_SHIM_DIR}/mv"
+expect_fail env \
+  HOME="$HOME" \
+  MV_COUNT_FILE="$MV_COUNT_FILE" \
+  REAL_MV="$REAL_MV" \
+  PATH="${MV_SHIM_DIR}:$PATH" \
+  "${ROOT_DIR}/setup.sh" --install --no-color
+test "$(<"$MV_COUNT_FILE")" -eq 2
+diff -qr "$HOME" "${HOME}.before" >/dev/null
+
 # Dry-run reports a forced replacement without creating a backup or changing
 # the conflict.
 export HOME="${TMP_ROOT}/dry-run-home"

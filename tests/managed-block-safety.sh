@@ -145,4 +145,62 @@ expect_fail "${ROOT_DIR}/project-setup.sh" --profile minimal "$HOOK_REPO"
 cmp -s "$HOOK_FILE" "${HOOK_FILE}.before"
 grep -Fq 'USER_HOOK_SENTINEL' "$HOOK_FILE"
 
+# A runtime failure after multiple valid writes restores every earlier target.
+TRANSACTION_ONE="${TMP_ROOT}/transaction-one.md"
+TRANSACTION_TWO="${TMP_ROOT}/transaction-two.md"
+TRANSACTION_DIR_LOG="${TMP_ROOT}/transaction-dir"
+for target in "$TRANSACTION_ONE" "$TRANSACTION_TWO"; do
+  {
+    printf '%s\n' "$AGENT_GUIDELINES_MARKER_BEGIN"
+    printf 'original managed content\n'
+    printf '%s\n' "$AGENT_GUIDELINES_MARKER_END"
+  } > "$target"
+  cp -a "$target" "${target}.before"
+done
+
+transaction_status=0
+(
+  agent_guidelines_transaction_begin
+  printf '%s\n' "$AGENT_GUIDELINES_TRANSACTION_DIR" > "$TRANSACTION_DIR_LOG"
+  agent_guidelines_update_managed_block \
+    "$TRANSACTION_ONE" "$BLOCK_FILE" >/dev/null
+  agent_guidelines_update_managed_block \
+    "$TRANSACTION_TWO" "$BLOCK_FILE" >/dev/null
+  exit 27
+) || transaction_status=$?
+test "$transaction_status" -eq 27
+cmp -s "$TRANSACTION_ONE" "${TRANSACTION_ONE}.before"
+cmp -s "$TRANSACTION_TWO" "${TRANSACTION_TWO}.before"
+test ! -e "$(<"$TRANSACTION_DIR_LOG")"
+
+# A target changed outside the transaction is preserved and its verified
+# original remains available for explicit recovery.
+MISMATCH_TARGET="${TMP_ROOT}/transaction-mismatch.md"
+MISMATCH_DIR_LOG="${TMP_ROOT}/mismatch-transaction-dir"
+{
+  printf '%s\n' "$AGENT_GUIDELINES_MARKER_BEGIN"
+  printf 'original managed content\n'
+  printf '%s\n' "$AGENT_GUIDELINES_MARKER_END"
+} > "$MISMATCH_TARGET"
+cp -a "$MISMATCH_TARGET" "${MISMATCH_TARGET}.before"
+mismatch_status=0
+(
+  agent_guidelines_transaction_begin
+  printf '%s\n' "$AGENT_GUIDELINES_TRANSACTION_DIR" > "$MISMATCH_DIR_LOG"
+  agent_guidelines_update_managed_block \
+    "$MISMATCH_TARGET" "$BLOCK_FILE" >/dev/null
+  printf 'external concurrent content\n' > "$MISMATCH_TARGET"
+  exit 28
+) 2>"${TMP_ROOT}/mismatch.err" || mismatch_status=$?
+test "$mismatch_status" -eq 1
+grep -Fxq 'external concurrent content' "$MISMATCH_TARGET"
+MISMATCH_RECOVERY="$(<"$MISMATCH_DIR_LOG")"
+test -d "$MISMATCH_RECOVERY"
+mapfile -t mismatch_entries < <(find "$MISMATCH_RECOVERY/entries" \
+  -mindepth 1 -maxdepth 1 -type d -print)
+test "${#mismatch_entries[@]}" -eq 1
+cmp -s "${MISMATCH_TARGET}.before" "${mismatch_entries[0]}/original"
+grep -Fq 'transaction rollback incomplete' "${TMP_ROOT}/mismatch.err"
+rm -rf "$MISMATCH_RECOVERY"
+
 printf 'managed-block safety tests passed\n'
