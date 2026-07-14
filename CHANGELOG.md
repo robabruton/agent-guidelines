@@ -23,7 +23,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 - `esp-idf` situational skill operates ESP-IDF projects and toolchains with
   live environment verification, project and component conventions, build and
   artifact checks, explicit hardware-operation gates, and focused references
-  for layout, commands, and troubleshooting.
+  for layout, commands, version-matched research, and troubleshooting.
 
 ## 2026-07-12
 
