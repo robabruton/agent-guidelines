@@ -1,6 +1,6 @@
 ---
 name: esp-idf
-description: Operate and maintain ESP-IDF projects and local toolchains. Use when creating, inspecting, configuring, building, testing, flashing, monitoring, or troubleshooting projects that use idf.py, project.cmake, idf_component_register, sdkconfig, Kconfig, ESP-IDF component manifests, partition tables, esptool, OpenOCD, or EIM-managed installations.
+description: Operate and maintain ESP-IDF projects and local toolchains. Use when creating, inspecting, configuring, building, testing, flashing, monitoring, researching, or troubleshooting projects that use idf.py, project.cmake, idf_component_register, sdkconfig, Kconfig, ESP-IDF component manifests, partition tables, esptool, OpenOCD, or EIM-managed installations.
 when_to_use: Use for ESP-IDF project setup, component work, configuration, builds, tests, artifacts, hardware operations, and toolchain failures.
 argument-hint: "[project|component|target|command|error]"
 ---
@@ -47,6 +47,16 @@ Honor configured tool paths. Do not assume tools live under `~/.espressif`,
 silently select the newest installation, install or update a framework, or
 switch a project's version without authorization. Treat remembered versions,
 flags, release status, and paths as point-in-time knowledge.
+
+## Research and Resolve Questions
+
+Use [references/research.md](references/research.md) when answering ESP-IDF
+API, component, Kconfig, build-system, toolchain, diagnostic, protocol, or
+chip-behavior questions. Match every answer to the active ESP-IDF release or
+commit and exact chip target. Prefer project evidence, installed framework
+headers/source/examples and live tool help, exact-chip technical material and
+errata, then version-matched primary online documentation. Clearly label
+inferences and cite sources when browsing.
 
 ## Plan the Operation
 
