@@ -28,6 +28,7 @@ GLOBAL_SKILLS=(
   project-setup
   script-audit
   security-audit
+  stm32
   test-audit
 )
 
