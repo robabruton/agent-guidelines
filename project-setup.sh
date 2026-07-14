@@ -583,8 +583,19 @@ finalize_staged_git_repository() {
     die "could not install the staged Git directory: $target_git_dir"
   fi
   if ! agent_guidelines_transaction_complete_entry "$transaction_entry"; then
-    agent_guidelines_transaction_cancel_entry "$transaction_entry" || true
-    die "could not verify the installed Git directory: $target_git_dir"
+    if mv "$target_git_dir" "$STAGED_GIT_DIR"; then
+      agent_guidelines_transaction_cancel_entry "$transaction_entry" ||
+        die "could not release the restored staged Git transaction"
+      die "could not verify the installed Git directory; staged Git retained: \
+$STAGED_GIT_DIR"
+    fi
+    agent_guidelines_transaction_retain_entry "$transaction_entry" ||
+      die "could not retain the uncertain Git transaction entry"
+    agent_guidelines_transaction_set_recovery_note \
+      "installed Git directory: $target_git_dir; \
+transaction recovery entry: $transaction_entry"
+    die "could not verify or restore the installed Git directory: \
+$target_git_dir"
   fi
   rmdir "$STAGED_GIT_PARENT" ||
     die "could not remove empty staged Git parent: $STAGED_GIT_PARENT"
