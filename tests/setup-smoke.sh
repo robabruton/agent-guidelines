@@ -197,12 +197,9 @@ test -L "${HOME}/.claude/skills/code-review"
 backup_file="$(find "$CUSTOM_BACKUP_PATH" -path "*/.claude/skills/code-review" -type f -print -quit)"
 test -n "$backup_file"
 
-# --prune scenario: plant orphan symlinks pointing into this repository
-# (two rule links of the kind earlier installs created, one obsolete skill
-# link) and a foreign symlink whose target sits outside the
-# repository. Verify that --prune --dry-run previews removal of the
-# orphans only, --prune actually removes them, and the foreign symlink
-# and managed links remain intact.
+# --prune scenario: plant unowned symlinks pointing into this repository and a
+# foreign symlink whose target sits outside it. Prune reports the ambiguous
+# repository links and leaves every unowned link unchanged.
 export HOME="${TMP_ROOT}/prune-home"
 mkdir -p "$HOME"
 PRUNE_DRY_OUT="${TMP_ROOT}/prune-dry.out"
@@ -221,7 +218,7 @@ ln -s "$FOREIGN_TARGET" "${HOME}/.claude/rules/foreign.md"
 
 "${ROOT_DIR}/setup.sh" --prune --dry-run --no-color > "$PRUNE_DRY_OUT"
 grep -Eq "action:[[:space:]]+prune" "$PRUNE_DRY_OUT"
-grep -Eq "pruned:[[:space:]]+3" "$PRUNE_DRY_OUT"
+grep -Eq "pruned:[[:space:]]+0" "$PRUNE_DRY_OUT"
 grep -Fq "agent-conduct.md" "$PRUNE_DRY_OUT"
 grep -Fq "code-quality.md" "$PRUNE_DRY_OUT"
 grep -Fq "obsolete-skill" "$PRUNE_DRY_OUT"
@@ -235,15 +232,16 @@ test -L "${HOME}/.claude/skills/obsolete-skill"
 test -L "${HOME}/.claude/rules/foreign.md"
 
 "${ROOT_DIR}/setup.sh" --prune --no-color > "$PRUNE_OUT"
-grep -Eq "pruned:[[:space:]]+3" "$PRUNE_OUT"
-test ! -e "${HOME}/.claude/rules/agent-conduct.md"
-test ! -e "${HOME}/.claude/rules/code-quality.md"
-test ! -e "${HOME}/.claude/skills/obsolete-skill"
+grep -Eq "pruned:[[:space:]]+0" "$PRUNE_OUT"
+grep -Eq "warnings:[[:space:]]+3" "$PRUNE_OUT"
+test -L "${HOME}/.claude/rules/agent-conduct.md"
+test -L "${HOME}/.claude/rules/code-quality.md"
+test -L "${HOME}/.claude/skills/obsolete-skill"
 test -L "${HOME}/.claude/rules/foreign.md"
 test -L "${HOME}/.claude/skills/agent-memory"
 
 "${ROOT_DIR}/setup.sh" --prune --no-color > "$PRUNE_OUT"
 grep -Eq "pruned:[[:space:]]+0" "$PRUNE_OUT"
-grep -Fq "no orphan links found" "$PRUNE_OUT"
+grep -Eq "warnings:[[:space:]]+3" "$PRUNE_OUT"
 
 printf 'setup smoke tests passed\n'

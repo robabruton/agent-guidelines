@@ -114,9 +114,8 @@ Options:
   --install       Create or repair managed tool links (default)
   --remove        Remove managed links that point into this repository
   --status        Report link state without changing files
-  --prune         Remove symlinks in managed directories that point into
-                  this repository but are no longer in the managed set;
-                  symlinks pointing elsewhere are left untouched
+  --prune         Report unowned symlinks in managed directories that point
+                  into this repository but are outside the managed set
   --dry-run       Preview install, remove, or prune actions without
                   changing files
   --force         Back up conflicting files before replacing them
@@ -752,18 +751,14 @@ status_context() {
   rm -f "$block_file"
 }
 
-# Walks the rule and skill harness directories looking for symlinks
-# whose resolved targets point into this repository's rules/ or skills/
-# tree. Classifies each such symlink three ways:
-#   managed - link path appears in today's LINKS array; left alone
-#   orphan  - target inside repo but link path not in LINKS; removed
-#   foreign - target resolves outside this repo; left strictly alone
-# The foreign bucket is the safety rail that prevents a user's own
-# symlink in a managed directory from ever being touched.
+# Reports symlinks in managed directories whose resolved targets point into
+# this repository but whose paths are outside the current managed set. These
+# links lack ownership records, so prune leaves them unchanged.
 prune_orphans() {
   section "Orphan Links"
 
   local managed_paths=()
+  local ambiguous_count=0
   local link_entry rest link_path
   for link_entry in "${LINKS[@]}"; do
     rest="${link_entry#*|}"
@@ -804,18 +799,16 @@ prune_orphans() {
       done
       [ "$matched" = true ] && continue
 
-      if [ "$DRY_RUN" = true ]; then
-        entry "$CYAN" "?" "would prune" "$link_path" "-> $target"
-      else
-        rm "$link_path"
-        entry "$RED" "-" "pruned" "$link_path" "-> $target"
-      fi
-      PRUNED=$((PRUNED + 1))
+      entry "$YELLOW" "!" "ambiguous" "$link_path" \
+        "unowned link left unchanged -> $target"
+      SKIPPED=$((SKIPPED + 1))
+      WARNINGS=$((WARNINGS + 1))
+      ambiguous_count=$((ambiguous_count + 1))
     done < <(find "$scan_dir" -maxdepth 1 -type l -print0 2>/dev/null)
   done
 
-  if [ "$PRUNED" -eq 0 ]; then
-    entry "$DIM" "·" "none" "managed dirs" "no orphan links found"
+  if [ "$ambiguous_count" -eq 0 ]; then
+    entry "$DIM" "·" "none" "managed dirs" "no unowned links found"
   fi
 }
 
@@ -859,6 +852,8 @@ print_summary() {
     prune)
       summary_entry "dry run:" "$DRY_RUN"
       summary_entry "pruned:" "$PRUNED"
+      summary_entry "skipped:" "$SKIPPED"
+      summary_entry "warnings:" "$WARNINGS"
       ;;
   esac
 
