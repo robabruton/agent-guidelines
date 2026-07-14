@@ -106,4 +106,37 @@ grep -Fq 'target must be the repository worktree root' \
   "${TMP_ROOT}/subdir.err"
 diff -qr "$PARENT_REPO" "${PARENT_REPO}.before" >/dev/null
 
+# A missing nested target is rejected before setup creates the directory.
+MISSING_SUBDIR="$PARENT_REPO/missing/nested-project"
+cp -a "$PARENT_REPO" "${PARENT_REPO}.before-missing"
+if "${ROOT_DIR}/project-setup.sh" \
+  --profile minimal --changelog none --context-rules full \
+  "$MISSING_SUBDIR" >"${TMP_ROOT}/missing-subdir.out" \
+  2>"${TMP_ROOT}/missing-subdir.err"; then
+  echo "missing subdirectory target unexpectedly succeeded" >&2
+  exit 1
+fi
+grep -Fq 'target must not be created below repository worktree root' \
+  "${TMP_ROOT}/missing-subdir.err"
+test ! -e "$MISSING_SUBDIR"
+diff -qr "$PARENT_REPO" "${PARENT_REPO}.before-missing" >/dev/null
+
+# Ambient Git path overrides cannot redirect commands away from the target.
+ENV_REPO="${TMP_ROOT}/environment-repo"
+ENV_GIT_DIR="${TMP_ROOT}/environment.git"
+init_repo "$ENV_REPO"
+git init -q --bare "$ENV_GIT_DIR"
+cp -a "$ENV_REPO" "${ENV_REPO}.before"
+cp -a "$ENV_GIT_DIR" "${ENV_GIT_DIR}.before"
+if env GIT_DIR="$ENV_GIT_DIR" "${ROOT_DIR}/project-setup.sh" \
+  --profile minimal --changelog none --context-rules full \
+  "$ENV_REPO" >"${TMP_ROOT}/environment.out" \
+  2>"${TMP_ROOT}/environment.err"; then
+  echo "ambient GIT_DIR unexpectedly succeeded" >&2
+  exit 1
+fi
+grep -Fq 'GIT_DIR must be unset' "${TMP_ROOT}/environment.err"
+diff -qr "$ENV_REPO" "${ENV_REPO}.before" >/dev/null
+diff -qr "$ENV_GIT_DIR" "${ENV_GIT_DIR}.before" >/dev/null
+
 printf 'project Git scope safety tests passed\n'
