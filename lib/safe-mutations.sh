@@ -8,6 +8,7 @@
 
 AGENT_GUIDELINES_TRANSACTION_ACTIVE=false
 AGENT_GUIDELINES_TRANSACTION_DIR=""
+AGENT_GUIDELINES_TRANSACTION_RECOVERY_NOTE=""
 
 agent_guidelines_path_type() {
   local path="$1"
@@ -269,6 +270,20 @@ agent_guidelines_transaction_read_path() {
   printf '%s' "$path"
 }
 
+agent_guidelines_transaction_discard_entries_beneath() {
+  local root="$1"
+  local entry path
+
+  agent_guidelines_transaction_is_active || return 0
+  for entry in "${AGENT_GUIDELINES_TRANSACTION_DIR}"/entries/*; do
+    [ -d "$entry" ] || continue
+    path="$(agent_guidelines_transaction_read_path "$entry")"
+    case "$path" in
+      "$root"|"$root"/*) rm -rf "$entry" ;;
+    esac
+  done
+}
+
 agent_guidelines_transaction_matches() {
   local path="$1"
   local type="$2"
@@ -451,6 +466,10 @@ agent_guidelines_transaction_on_exit() {
     rollback_status=$?
     [ "$rollback_status" -eq 0 ] || status=1
   fi
+  if [ -n "${AGENT_GUIDELINES_TRANSACTION_RECOVERY_NOTE:-}" ]; then
+    printf 'error: recovery state retained: %s\n' \
+      "$AGENT_GUIDELINES_TRANSACTION_RECOVERY_NOTE" >&2
+  fi
   exit "$status"
 }
 
@@ -461,6 +480,7 @@ agent_guidelines_transaction_begin() {
   fi
 
   AGENT_GUIDELINES_TRANSACTION_DIR="$(mktemp -d)" || return 1
+  AGENT_GUIDELINES_TRANSACTION_RECOVERY_NOTE=""
   mkdir "${AGENT_GUIDELINES_TRANSACTION_DIR}/entries" || return 1
   printf '1\n' > "${AGENT_GUIDELINES_TRANSACTION_DIR}/next"
   AGENT_GUIDELINES_TRANSACTION_ACTIVE=true
@@ -472,6 +492,7 @@ agent_guidelines_transaction_commit() {
   rm -rf "$AGENT_GUIDELINES_TRANSACTION_DIR" || return 1
   AGENT_GUIDELINES_TRANSACTION_DIR=""
   AGENT_GUIDELINES_TRANSACTION_ACTIVE=false
+  AGENT_GUIDELINES_TRANSACTION_RECOVERY_NOTE=""
   trap - EXIT
 }
 

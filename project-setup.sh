@@ -49,6 +49,8 @@ LOADED_DEFAULT_BRANCH=""
 CONFIG_LOADED=false
 GIT_USER_NAME=""
 GIT_USER_EMAIL=""
+STAGED_GIT_PARENT=""
+STAGED_GIT_DIR=""
 
 CREATED=()
 UPDATED=()
@@ -175,6 +177,18 @@ add_status() {
 
 should_mutate() {
   [ "$DRY_RUN" != true ]
+}
+
+validate_git_environment() {
+  local variable
+
+  for variable in \
+    GIT_DIR GIT_WORK_TREE GIT_INDEX_FILE GIT_OBJECT_DIRECTORY \
+    GIT_ALTERNATE_OBJECT_DIRECTORIES; do
+    if [ -n "${!variable:-}" ]; then
+      die "$variable must be unset so setup can isolate the target repository"
+    fi
+  done
 }
 
 target_has_git_repo() {
@@ -509,10 +523,53 @@ init_git_if_needed() {
   fi
 
   if should_mutate; then
-    git -C "$TARGET_DIR" init --initial-branch="$DEFAULT_BRANCH" >/dev/null
+    STAGED_GIT_PARENT="$(mktemp -d \
+      "$(dirname "$TARGET_DIR")/.agent-guidelines-git.XXXXXX")" ||
+      die "could not create staged Git directory beside $TARGET_DIR"
+    STAGED_GIT_DIR="$STAGED_GIT_PARENT/git"
+    AGENT_GUIDELINES_TRANSACTION_RECOVERY_NOTE="staged Git directory: $STAGED_GIT_DIR"
+    if ! git --git-dir="$STAGED_GIT_DIR" --work-tree="$TARGET_DIR" \
+      init --initial-branch="$DEFAULT_BRANCH" >/dev/null; then
+      die "could not initialize staged Git directory: $STAGED_GIT_DIR"
+    fi
+    export GIT_DIR="$STAGED_GIT_DIR"
+    export GIT_WORK_TREE="$TARGET_DIR"
   fi
   add_status created "git repository"
   REPO_CREATED=true
+}
+
+finalize_staged_git_repository() {
+  [ "${REPO_CREATED:-false}" = true ] || return 0
+  should_mutate || return 0
+
+  local target_git_dir="$TARGET_DIR/.git"
+  local transaction_entry
+
+  [ -n "$STAGED_GIT_DIR" ] && [ -d "$STAGED_GIT_DIR" ] ||
+    die "staged Git directory is unavailable: $STAGED_GIT_DIR"
+  [ ! -e "$target_git_dir" ] && [ ! -L "$target_git_dir" ] ||
+    die "target Git path appeared during setup: $target_git_dir"
+
+  unset GIT_DIR GIT_WORK_TREE
+  agent_guidelines_transaction_discard_entries_beneath "$STAGED_GIT_DIR" ||
+    die "could not consolidate staged Git recovery entries"
+  transaction_entry="$(agent_guidelines_transaction_allocate_entry \
+    "$target_git_dir" directory "$STAGED_GIT_DIR")" ||
+    die "could not protect final Git directory installation"
+  if ! mv "$STAGED_GIT_DIR" "$target_git_dir"; then
+    agent_guidelines_transaction_cancel_entry "$transaction_entry" || true
+    die "could not install the staged Git directory: $target_git_dir"
+  fi
+  if ! agent_guidelines_transaction_complete_entry "$transaction_entry"; then
+    agent_guidelines_transaction_cancel_entry "$transaction_entry" || true
+    die "could not verify the installed Git directory: $target_git_dir"
+  fi
+  rmdir "$STAGED_GIT_PARENT" ||
+    die "could not remove empty staged Git parent: $STAGED_GIT_PARENT"
+  STAGED_GIT_PARENT=""
+  STAGED_GIT_DIR=""
+  AGENT_GUIDELINES_TRANSACTION_RECOVERY_NOTE=""
 }
 
 preflight_existing_unborn_index() {
@@ -2955,6 +3012,7 @@ print_summary() {
 
 main() {
   parse_args "$@"
+  validate_git_environment
 
   if [ "$MODE" = "remove" ]; then
     run_remove
@@ -2989,13 +3047,14 @@ main() {
   configure_commit_template
   configure_local_excludes
   configure_rule_source
-  write_local_config
   assemble_agent_files
   remove_deselected_project_skills
   reconcile_selected_skill_source_modes
   install_per_project_skills
   create_initial_commit_if_needed
   install_hooks
+  write_local_config
+  finalize_staged_git_repository
   if should_mutate; then
     agent_guidelines_transaction_commit
   fi
