@@ -22,6 +22,7 @@ CUSTOM_BACKUP_PATH="${TMP_ROOT}/custom-backups"
 
 GLOBAL_SKILLS=(
   agent-memory
+  avr
   code-review
   debug
   dependency-audit
