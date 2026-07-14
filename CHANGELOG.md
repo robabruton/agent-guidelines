@@ -4,6 +4,15 @@ All notable changes to this project will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## 2026-07-13
+
+### Added
+
+- `esp-idf` situational skill operates ESP-IDF projects and toolchains with
+  live environment verification, project and component conventions, build and
+  artifact checks, explicit hardware-operation gates, and focused references
+  for layout, commands, and troubleshooting.
+
 ## 2026-07-12
 
 ### Added

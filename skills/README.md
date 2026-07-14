@@ -102,6 +102,16 @@ Use this skill when the user asks to understand a file, function,
 command, workflow, architecture, data flow, branch, error path, or
 project concept.
 
+### `esp-idf`
+
+Operates and maintains ESP-IDF projects and local toolchains, including
+environment selection, project configuration, components, builds, tests,
+artifacts, flashing, monitoring, and troubleshooting.
+
+Use this skill when creating, inspecting, configuring, building, testing,
+flashing, monitoring, or troubleshooting projects that use ESP-IDF tooling,
+components, configuration, partition tables, or EIM-managed installations.
+
 ### `firmware-review`
 
 Reviews embedded firmware, drivers, RTOS code, ISRs,
