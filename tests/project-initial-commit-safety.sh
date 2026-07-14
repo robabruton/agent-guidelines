@@ -62,4 +62,44 @@ test "$(git -C "$NEW_REPO" show --format= --name-only HEAD | sed '/^$/d')" = \
 git -C "$NEW_REPO" status --short > "${TMP_ROOT}/new.status"
 test ! -s "${TMP_ROOT}/new.status"
 
+# A failure at the final Git-directory move rolls back target files while
+# retaining and reporting the complete staged repository for recovery.
+FAILED_REPO="${TMP_ROOT}/failed-new-repo"
+MV_SHIM_DIR="${TMP_ROOT}/mv-shim"
+REAL_MV="$(command -v mv)"
+mkdir -p "$MV_SHIM_DIR"
+{
+  printf '#!/bin/sh\n'
+  printf 'last=""\n'
+  printf 'for arg do last=$arg; done\n'
+  printf '[ "$last" != "$FAIL_MV_TARGET" ] || exit 74\n'
+  printf 'exec "$REAL_MV" "$@"\n'
+} > "$MV_SHIM_DIR/mv"
+chmod +x "$MV_SHIM_DIR/mv"
+if env \
+  FAIL_MV_TARGET="$FAILED_REPO/.git" \
+  REAL_MV="$REAL_MV" \
+  PATH="$MV_SHIM_DIR:$PATH" \
+  "${ROOT_DIR}/project-setup.sh" \
+  --profile minimal --changelog none --context-rules full \
+  "$FAILED_REPO" >"${TMP_ROOT}/failed.out" \
+  2>"${TMP_ROOT}/failed.err"; then
+  echo "injected final Git-directory failure unexpectedly succeeded" >&2
+  exit 1
+fi
+grep -Fq 'could not install the staged Git directory:' \
+  "${TMP_ROOT}/failed.err"
+recovery_git_dir="$(sed -n \
+  's/^error: recovery state retained: staged Git directory: //p' \
+  "${TMP_ROOT}/failed.err" | tail -1)"
+test -n "$recovery_git_dir"
+test -d "$recovery_git_dir"
+test ! -e "$FAILED_REPO/.git"
+test -d "$FAILED_REPO"
+test -z "$(find "$FAILED_REPO" -mindepth 1 -print -quit)"
+git --git-dir="$recovery_git_dir" fsck --full
+test "$(git --git-dir="$recovery_git_dir" rev-list --count HEAD)" -eq 1
+test -x "$recovery_git_dir/hooks/pre-commit"
+test -f "$recovery_git_dir/agent-guidelines/ownership-v1/config"
+
 printf 'project initial commit safety tests passed\n'
