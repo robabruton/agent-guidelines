@@ -250,9 +250,13 @@ git init --initial-branch=main
 
 ## Per-Project Skills
 
-- Install skills only when the user opts in with `include skill <id>`
-  (`--include-skill` for the script); `exclude skill <id>` removes a
-  skill from the selection
+- Treat globally installed skills as sufficient for normal local use
+- Install a project-local skill only when the user opts in for a portable
+  copy or pinned snapshot with `include skill <id>` (`--include-skill` for
+  the script)
+- Use `exclude skill <id>` (`--exclude-skill`) to cancel a matching
+  project-local selection in the same invocation; it does not hide a globally
+  installed skill
 - Install selected skills into `.agents/skills/<skill>/` in the target
   repository, where the supported harnesses discover project skills
 - Use the same source mode as rules unless the user overrides it

@@ -23,8 +23,18 @@ CUSTOM_BACKUP_PATH="${TMP_ROOT}/custom-backups"
 GLOBAL_SKILLS=(
   agent-memory
   code-review
+  debug
+  dependency-audit
+  docs-audit
+  docs-review
+  docstrings
+  esp-idf
   explain
+  firmware-review
   project-setup
+  script-audit
+  security-audit
+  test-audit
 )
 
 SKILL_HARNESSES=(
@@ -54,6 +64,14 @@ assert_managed_links() {
   # no per-rule symlinks may be installed.
   test ! -e "${HOME}/.claude/rules/agent-conduct.md"
   test ! -e "${HOME}/.claude/rules/git-workflow.md"
+
+  for skill_dir in "${ROOT_DIR}"/skills/*/; do
+    skill="$(basename "$skill_dir")"
+    if [[ ! " ${GLOBAL_SKILLS[*]} " =~ [[:space:]]${skill}[[:space:]] ]]; then
+      echo "canonical skill is not classified as global: $skill" >&2
+      return 1
+    fi
+  done
 }
 
 assert_context_files() {
@@ -81,11 +99,8 @@ assert_context_files() {
       echo "recall-tier rule inlined in $path" >&2
       return 1
     fi
-    grep -Fq "## Situational Skills" "$path"
-    grep -Fq "| security-audit |" "$path"
-    grep -Fq "| docstrings |" "$path"
-    if grep -Fq "| agent-memory |" "$path"; then
-      echo "global skill leaked into router in $path" >&2
+    if grep -Fq "## Situational Skills" "$path"; then
+      echo "globally installed skill leaked into router in $path" >&2
       return 1
     fi
     if grep -Fq "load: always" "$path"; then
@@ -125,11 +140,6 @@ grep -Eq "created:[[:space:]]+${expected_links}" "$INSTALL_OUT"
 grep -Eq "context created:[[:space:]]+4" "$INSTALL_OUT"
 assert_managed_links
 assert_context_files
-
-# A skill that is no longer global (e.g. test-audit) must NOT be linked
-# globally by setup.sh after the global-set curation.
-test ! -e "${HOME}/.claude/skills/test-audit"
-test ! -e "${HOME}/.agents/skills/firmware-review"
 
 # No rule of any tier is linked globally; context files carry them.
 test ! -e "${HOME}/.claude/rules/testing.md"
@@ -186,8 +196,8 @@ backup_file="$(find "$CUSTOM_BACKUP_PATH" -path "*/.claude/skills/code-review" -
 test -n "$backup_file"
 
 # --prune scenario: plant orphan symlinks pointing into this repository
-# (two rule links of the kind earlier installs created, one skill not
-# in GLOBAL_SKILLS) and a foreign symlink whose target sits outside the
+# (two rule links of the kind earlier installs created, one obsolete skill
+# link) and a foreign symlink whose target sits outside the
 # repository. Verify that --prune --dry-run previews removal of the
 # orphans only, --prune actually removes them, and the foreign symlink
 # and managed links remain intact.
@@ -204,7 +214,7 @@ mkdir -p "$FOREIGN_DIR" "${HOME}/.claude/rules"
 printf 'user-private\n' > "$FOREIGN_TARGET"
 ln -s "${ROOT_DIR}/rules/agent-conduct.md" "${HOME}/.claude/rules/agent-conduct.md"
 ln -s "${ROOT_DIR}/rules/code-quality.md" "${HOME}/.claude/rules/code-quality.md"
-ln -s "${ROOT_DIR}/skills/security-audit" "${HOME}/.claude/skills/security-audit"
+ln -s "${ROOT_DIR}/skills/security-audit" "${HOME}/.claude/skills/obsolete-skill"
 ln -s "$FOREIGN_TARGET" "${HOME}/.claude/rules/foreign.md"
 
 "${ROOT_DIR}/setup.sh" --prune --dry-run --no-color > "$PRUNE_DRY_OUT"
@@ -212,21 +222,21 @@ grep -Eq "action:[[:space:]]+prune" "$PRUNE_DRY_OUT"
 grep -Eq "pruned:[[:space:]]+3" "$PRUNE_DRY_OUT"
 grep -Fq "agent-conduct.md" "$PRUNE_DRY_OUT"
 grep -Fq "code-quality.md" "$PRUNE_DRY_OUT"
-grep -Fq "security-audit" "$PRUNE_DRY_OUT"
+grep -Fq "obsolete-skill" "$PRUNE_DRY_OUT"
 if grep -Fq "foreign.md" "$PRUNE_DRY_OUT"; then
   echo "foreign symlink reported by --prune --dry-run" >&2
   exit 1
 fi
 test -L "${HOME}/.claude/rules/agent-conduct.md"
 test -L "${HOME}/.claude/rules/code-quality.md"
-test -L "${HOME}/.claude/skills/security-audit"
+test -L "${HOME}/.claude/skills/obsolete-skill"
 test -L "${HOME}/.claude/rules/foreign.md"
 
 "${ROOT_DIR}/setup.sh" --prune --no-color > "$PRUNE_OUT"
 grep -Eq "pruned:[[:space:]]+3" "$PRUNE_OUT"
 test ! -e "${HOME}/.claude/rules/agent-conduct.md"
 test ! -e "${HOME}/.claude/rules/code-quality.md"
-test ! -e "${HOME}/.claude/skills/security-audit"
+test ! -e "${HOME}/.claude/skills/obsolete-skill"
 test -L "${HOME}/.claude/rules/foreign.md"
 test -L "${HOME}/.claude/skills/agent-memory"
 

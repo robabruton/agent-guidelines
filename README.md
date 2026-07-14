@@ -30,11 +30,11 @@ Without an override, backups are written under
 
 ### Managed Paths
 
-`setup.sh` installs a curated **global** set: the skills listed in the
-`GLOBAL_SKILLS` array near the top of `setup.sh`, a stable rules store
-symlink, and one assembled context file per harness. Everything else
-stays out of the global path and is opted in per project through
-`project-setup.sh`.
+`setup.sh` installs every catalogued skill globally: the skills listed in
+the `GLOBAL_SKILLS` array near the top of `setup.sh`, a stable rules store
+symlink, and one assembled context file per harness. Skill instructions
+load when their trigger matches a task rather than loading for every
+conversation.
 
 Each assembled context file contains the rules marked `load: always`
 in their YAML frontmatter inlined, plus a router section that lists
@@ -52,23 +52,16 @@ harness that also reads a per-rule directory never loads the same rule
 twice. `setup.sh --prune` removes per-rule symlinks left in
 `~/.claude/rules/` by earlier installs.
 
-The global set today:
+The `GLOBAL_SKILLS` array is the authoritative global set and currently
+contains every entry in `skills/`. These managed-path patterns apply to
+each skill:
 
 | Kind | Managed path | Source |
 | --- | --- | --- |
 | Store | `$HOME/.agent-guidelines/rules` | `rules/` |
-| Skill | `$HOME/.claude/skills/agent-memory` | `skills/agent-memory` |
-| Skill | `$HOME/.claude/skills/code-review` | `skills/code-review` |
-| Skill | `$HOME/.claude/skills/explain` | `skills/explain` |
-| Skill | `$HOME/.claude/skills/project-setup` | `skills/project-setup` |
-| Skill | `$HOME/.agents/skills/agent-memory` | `skills/agent-memory` |
-| Skill | `$HOME/.agents/skills/code-review` | `skills/code-review` |
-| Skill | `$HOME/.agents/skills/explain` | `skills/explain` |
-| Skill | `$HOME/.agents/skills/project-setup` | `skills/project-setup` |
-| Skill | `$HOME/.codex/skills/agent-memory` | `skills/agent-memory` |
-| Skill | `$HOME/.codex/skills/code-review` | `skills/code-review` |
-| Skill | `$HOME/.codex/skills/explain` | `skills/explain` |
-| Skill | `$HOME/.codex/skills/project-setup` | `skills/project-setup` |
+| Skill | `$HOME/.claude/skills/<skill>` | `skills/<skill>` |
+| Skill | `$HOME/.agents/skills/<skill>` | `skills/<skill>` |
+| Skill | `$HOME/.codex/skills/<skill>` | `skills/<skill>` |
 | Context | `$HOME/.claude/CLAUDE.md` | assembled from `rules/` |
 | Context | `$HOME/.config/opencode/AGENTS.md` | assembled from `rules/` |
 | Context | `$HOME/.pi/agent/AGENTS.md` | assembled from `rules/` |
@@ -105,13 +98,19 @@ target repository:
 ./project-setup.sh --profile codebase --changelog date /path/to/project
 ```
 
-Per-project skills are opt-in via `--include-skill` (repeatable) and
-land in `<project>/.agents/skills/<skill>/`, where OpenCode, Pi, and
-Claude Code discover them. By default they use the same source mode as
-rules (`--rules-source`); `--skills-source symlink|copy` lets you
-override that independently. Symlink mode adds `.agents/skills/` to
-the repository's local `.git/info/exclude` so the links stay out of
-git; copy mode tracks the copied skill tree as a normal project asset.
+Global installation is sufficient for normal local use. Per-project
+skills remain opt-in via `--include-skill` (repeatable) when a repository
+needs a portable copy or pinned snapshot. They land in
+`<project>/.agents/skills/<skill>/`, where the supported harnesses
+discover them. `--exclude-skill` cancels a matching project-local
+selection in the same invocation; it does not hide a globally installed
+skill.
+
+By default, project-local skills use the same source mode as rules
+(`--rules-source`); `--skills-source symlink|copy` overrides that
+independently. Symlink mode adds `.agents/skills/` to the repository's
+local `.git/info/exclude` so the links stay out of git; copy mode tracks
+the copied skill tree as a normal project asset.
 
 Use `--dry-run` to preview every action without changing anything.
 Most accurate against an existing git repository; on a fresh non-git
