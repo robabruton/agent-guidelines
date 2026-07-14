@@ -11,7 +11,7 @@ Check for:
 - Compile and link commands naming different MCUs.
 - Wrong architecture, ABI, startup object, linker script, or device pack.
 - `F_CPU` differing from the physical clock or fuse configuration.
-- Missing AVR-LibC or XC8 device support.
+- Missing AVR-LibC or compiler device support.
 - LTO or section-garbage-collection removing required interrupt or startup code.
 - Flash, SRAM, EEPROM, vector, or bootloader overflow.
 - Program-memory access using the wrong address space or accessor.

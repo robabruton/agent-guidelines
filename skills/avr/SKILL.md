@@ -1,6 +1,6 @@
 ---
 name: avr
-description: Operate and maintain 8-bit Microchip AVR firmware projects and toolchains. Use when creating, inspecting, configuring, building, sizing, programming, debugging, or troubleshooting ATmega, ATtiny, AVR Dx/Ex, megaAVR, tinyAVR, or XMEGA projects that use AVR GCC, AVR-LibC, MPLAB XC8, MPLAB X, Device Family Packs, avrdude, UPDI, ISP, PDI, JTAG, or debugWIRE.
+description: Operate and maintain direct-C firmware projects for 8-bit Microchip AVR devices. Use when creating, inspecting, configuring, building, sizing, programming, debugging, researching, or troubleshooting ATmega, ATtiny, AVR Dx/Ex, megaAVR, tinyAVR, or XMEGA projects that use AVR GCC, AVR-LibC, Make or CMake, avrdude, UPDI, ISP, PDI, JTAG, or debugWIRE.
 when_to_use: Use for 8-bit AVR project setup, device and toolchain selection, builds, artifacts, programming, debugging, device configuration, and failures.
 argument-hint: "[project|device|programmer|command|error]"
 ---
@@ -27,8 +27,8 @@ Determine the requested project or operation:
 - Hardware operation: identify the target, programmer/debugger, interface,
   port or serial number, power arrangement, and requested action.
 
-Recognize AVR projects from evidence such as `-mmcu` build flags, AVR headers,
-MPLAB X project metadata, AVR-specific PlatformIO or Arduino configuration, or
+Recognize direct AVR C projects from evidence such as `-mmcu` build flags, AVR
+headers and libraries, Make or CMake configuration, linker inputs, or
 programming commands naming an AVR part. Do not infer the device from a generic
 C file or board nickname.
 
@@ -38,18 +38,24 @@ forms, maintained inputs, generated files, and artifact ownership.
 ## Establish the Environment
 
 1. Read the repository's documented build and programming workflow.
-2. Determine whether it uses AVR GCC, MPLAB XC8, an IDE-generated build,
-   Arduino, PlatformIO, or another explicit environment.
-3. Verify compiler, Binutils, C library, Device Family Pack, build tool,
-   programmer utility, and debugger versions from live commands and project
-   metadata.
-4. Confirm that the selected toolchain and pack support the exact device.
-5. Record the device, toolchain, pack, programmer, and interface used.
+2. Identify the AVR GCC, AVR-LibC, Binutils, Make or CMake, programmer, and
+   debugger executables used by the actual build.
+3. Verify their versions from live commands and project metadata.
+4. Confirm that the selected compiler and device-support files recognize the
+   exact MCU.
+5. Record the device, toolchain, programmer, and interface used.
 
-Do not silently substitute XC8 for AVR GCC, a system `avrdude` for a
-framework-bundled build, or a newer Device Family Pack for a pinned project.
-Recognize existing Microchip Studio projects without selecting that environment
-for new work unless the user requests it.
+Do not silently substitute another compiler, a different `avrdude`, or
+unverified device-support files for the project's selected tools.
+
+## Research and Resolve Questions
+
+Use [references/research.md](references/research.md) when answering AVR API,
+register, fuse, toolchain, programmer, diagnostic, or device-behavior questions.
+Match every answer to the exact MCU and installed tool versions. Prefer the
+project, installed headers and libraries, live tool help, exact-device datasheet
+and errata, and primary tool documentation in that order. Clearly label any
+inference and cite web sources when browsing is required.
 
 ## Plan the Operation
 
@@ -111,7 +117,7 @@ programmer output. Change one relevant variable at a time.
   protocol, or concurrency correctness.
 - Use `security-audit` for lock bits, bootloaders, protected memory, debug
   access, update trust, or secret provisioning.
-- Use `dependency-audit` for frameworks, device packs, libraries, cores, or
+- Use `dependency-audit` for AVR-LibC, device-support packages, libraries, or
   vendored drivers.
 - Use `script-audit` for Make targets, programming helpers, installers, or
   production command automation.
@@ -119,7 +125,7 @@ programmer output. Change one relevant variable at a time.
 
 ## Report Results
 
-State the project path, exact AVR device, clock assumptions, toolchain and pack,
+State the project path, exact AVR device, clock assumptions, toolchain,
 programmer and interface, commands run, artifacts and sizes, memory regions
 written, verification result, observed boot behavior, unperformed hardware
 checks, and remaining recovery or compatibility risk.

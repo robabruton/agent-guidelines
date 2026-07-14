@@ -5,16 +5,17 @@ common tools and operations without defining a universal project workflow.
 
 ## Inspect the Toolchain
 
-- Use compiler version output such as `avr-gcc --version` or
-  `xc8-cc --version` as applicable.
+- Use `avr-gcc --version` and the actual build's verbose output to identify the
+  compiler and search paths.
 - Inspect assembler, linker, object-copy, size, and C-library versions used by
   the actual build.
-- Inspect the selected Device Family Pack and framework/core package versions.
-- Use `avrdude --help`, MPLAB tool help, or the repository's programmer wrapper
-  to discover supported flags and identifiers.
+- Inspect the device specifications, AVR-LibC, and programmer part database
+  used by the selected tools.
+- Use `avrdude --help` or the repository's programmer wrapper to discover
+  supported flags and identifiers.
 
-Do not mix host-installed and framework-bundled tools unless the project makes
-that composition explicit.
+Do not mix tools from different installations unless the project makes that
+composition explicit.
 
 ## Build and Inspect
 
