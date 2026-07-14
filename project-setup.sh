@@ -38,6 +38,7 @@ REQUESTED_INCLUDE_SKILLS=()
 REQUESTED_EXCLUDE_SKILLS=()
 STORED_INCLUDE_SKILLS=()
 STORED_EXCLUDE_SKILLS=()
+STORED_RULE_SOURCE_MODE=""
 STORED_SKILL_SOURCE_MODE=""
 LOADED_PROFILE=""
 LOADED_CHANGELOG_MODE=""
@@ -1207,6 +1208,7 @@ load_local_config() {
   CONFIG_LOADED=true
   STORED_INCLUDE_SKILLS=("${INCLUDE_SKILLS[@]}")
   STORED_EXCLUDE_SKILLS=("${EXCLUDE_SKILLS[@]}")
+  STORED_RULE_SOURCE_MODE="$LOADED_RULE_SOURCE_MODE"
   STORED_SKILL_SOURCE_MODE="$LOADED_SKILL_SOURCE_MODE"
 
   [ "$PROFILE_SUPPLIED" = true ] || PROFILE="$LOADED_PROFILE"
@@ -1321,6 +1323,39 @@ append_missing_line() {
   add_status updated "$label"
 }
 
+remove_owned_exclude_line() {
+  local file="$1"
+  local line="$2"
+  local label="$3"
+  local key="$4"
+  local record_name record_path prepared
+
+  record_name="$(exclude_record_name "$key")"
+  record_path="$(ownership_record_path "$record_name")"
+  if [ ! -e "$record_path" ] && [ ! -L "$record_path" ]; then
+    add_status unchanged "$label (not owned)"
+    return
+  fi
+  validate_ownership_record "$record_name" "line=$line"
+  [ -f "$file" ] && [ ! -L "$file" ] ||
+    die "owned exclude line has no regular exclude file: $line"
+  [ "$(grep -Fxc "$line" "$file" || true)" -eq 1 ] ||
+    die "owned exclude line no longer has one exact match: $line"
+
+  if should_mutate; then
+    prepared="$(mktemp)"
+    grep -Fvx "$line" "$file" > "$prepared" || true
+    if ! agent_guidelines_replace_file_safely "$file" "$prepared"; then
+      rm -f "$prepared"
+      die "could not remove $label"
+    fi
+    rm -f "$prepared"
+    agent_guidelines_remove_file_safely "$record_path" ||
+      die "could not remove ownership for $label"
+  fi
+  add_status updated "$label removed"
+}
+
 configure_local_excludes() {
   if ! target_has_git_repo; then
     add_status skipped "git info/exclude (target has no git repo)"
@@ -1345,6 +1380,17 @@ configure_local_excludes() {
   if [ "$RULE_SOURCE_MODE" = "symlink" ]; then
     append_missing_line "$exclude_file" ".agent-guidelines/rules" \
       "exclude .agent-guidelines/rules symlink" rules
+  else
+    remove_owned_exclude_line "$exclude_file" ".agent-guidelines/rules" \
+      "exclude .agent-guidelines/rules symlink" rules
+  fi
+
+  if [ "$SKILL_SOURCE_MODE" = symlink ] && has_selected_skills; then
+    append_missing_line "$exclude_file" ".agents/skills/" \
+      "exclude .agents/skills/" skills
+  else
+    remove_owned_exclude_line "$exclude_file" ".agents/skills/" \
+      "exclude .agents/skills/" skills
   fi
 
   for local_file in opencode.json .mcp.json; do
@@ -1368,6 +1414,22 @@ configure_rule_source() {
   if should_mutate; then
     agent_guidelines_make_directory_safely "$state_dir" ||
       die "could not create .agent-guidelines directory"
+  fi
+
+  if [ "$CONFIG_LOADED" = true ] &&
+    [ "$STORED_RULE_SOURCE_MODE" != "$RULE_SOURCE_MODE" ]; then
+    if ! should_mutate; then
+      add_status updated ".agent-guidelines/rules source mode"
+      RULE_SOURCE_DIR="$rules_path"
+      return
+    fi
+    if [ "$STORED_RULE_SOURCE_MODE" = symlink ]; then
+      remove_managed_symlink_safely "$rules_path" ||
+        die "could not replace the managed rule-source symlink"
+    else
+      remove_managed_directory_safely "$rules_path" ||
+        die "could not replace the managed rule-source snapshot"
+    fi
   fi
 
   if [ "$RULE_SOURCE_MODE" = "symlink" ]; then
@@ -1800,6 +1862,23 @@ preflight_rule_source_target() {
     "$rules_path" "$TARGET_DIR" ".agent-guidelines/rules" || exit 1
   validate_managed_directory "$state_dir" ".agent-guidelines"
 
+  if [ "$CONFIG_LOADED" = true ] &&
+    [ "$STORED_RULE_SOURCE_MODE" != "$RULE_SOURCE_MODE" ]; then
+    if [ "$STORED_RULE_SOURCE_MODE" = symlink ]; then
+      [ -L "$rules_path" ] ||
+        die ".agent-guidelines/rules is not the recorded managed symlink"
+      current="$(readlink "$rules_path")"
+      [ "$current" = "$CANONICAL_RULES_DIR" ] ||
+        die ".agent-guidelines/rules points to an unmanaged target: $current"
+    else
+      [ -d "$rules_path" ] && [ ! -L "$rules_path" ] ||
+        die ".agent-guidelines/rules is not the recorded managed snapshot"
+      diff -qr "$CANONICAL_RULES_DIR" "$rules_path" >/dev/null ||
+        die ".agent-guidelines/rules changed from its managed snapshot"
+    fi
+    return
+  fi
+
   if [ "$RULE_SOURCE_MODE" = "symlink" ]; then
     if [ -L "$rules_path" ]; then
       current="$(readlink "$rules_path")"
@@ -1834,6 +1913,15 @@ desired_skill_selected() {
 
   array_contains "$skill" "${INCLUDE_SKILLS[@]}" || return 1
   ! array_contains "$skill" "${EXCLUDE_SKILLS[@]}"
+}
+
+has_selected_skills() {
+  local skill
+
+  for skill in "${INCLUDE_SKILLS[@]}"; do
+    desired_skill_selected "$skill" && return 0
+  done
+  return 1
 }
 
 preflight_deselected_skill_targets() {
@@ -1886,10 +1974,32 @@ preflight_skill_source_targets() {
   for skill in "${INCLUDE_SKILLS[@]}"; do
     skill_excluded "$skill" && continue
     source="$CANONICAL_SKILLS_DIR/$skill"
-    [ -d "$source" ] || continue
+    if [ ! -d "$source" ]; then
+      if [ "$CONFIG_LOADED" = true ] && stored_skill_selected "$skill"; then
+        die "recorded skill source is missing: $source"
+      fi
+      continue
+    fi
     target="$skills_dir/$skill"
     agent_guidelines_assert_path_beneath \
       "$target" "$TARGET_DIR" ".agents/skills/$skill" || exit 1
+
+    if [ "$CONFIG_LOADED" = true ] && stored_skill_selected "$skill" &&
+      [ "$STORED_SKILL_SOURCE_MODE" != "$SKILL_SOURCE_MODE" ]; then
+      if [ "$STORED_SKILL_SOURCE_MODE" = symlink ]; then
+        [ -L "$target" ] ||
+          die ".agents/skills/$skill is not the recorded managed symlink"
+        current="$(readlink "$target")"
+        [ "$current" = "$source" ] ||
+          die ".agents/skills/$skill points to an unmanaged target: $current"
+      else
+        [ -d "$target" ] && [ ! -L "$target" ] ||
+          die ".agents/skills/$skill is not the recorded managed copy"
+        diff -qr "$source" "$target" >/dev/null ||
+          die ".agents/skills/$skill changed from its recorded managed copy"
+      fi
+      continue
+    fi
 
     if [ "$SKILL_SOURCE_MODE" = "symlink" ]; then
       if [ -L "$target" ]; then
@@ -1937,6 +2047,28 @@ remove_deselected_project_skills() {
   done
 }
 
+reconcile_selected_skill_source_modes() {
+  [ "$CONFIG_LOADED" = true ] || return 0
+  [ "$STORED_SKILL_SOURCE_MODE" != "$SKILL_SOURCE_MODE" ] || return 0
+
+  local skill target
+  for skill in "${STORED_INCLUDE_SKILLS[@]}"; do
+    stored_skill_selected "$skill" || continue
+    desired_skill_selected "$skill" || continue
+    target="$TARGET_DIR/.agents/skills/$skill"
+    if should_mutate; then
+      if [ "$STORED_SKILL_SOURCE_MODE" = symlink ]; then
+        remove_managed_symlink_safely "$target" ||
+          die "could not replace .agents/skills/$skill symlink"
+      else
+        remove_managed_directory_safely "$target" ||
+          die "could not replace .agents/skills/$skill copy"
+      fi
+    fi
+    add_status updated ".agents/skills/$skill source mode"
+  done
+}
+
 preflight_source_targets() {
   preflight_rule_source_target
   preflight_skill_source_targets
@@ -1951,13 +2083,6 @@ install_per_project_skills() {
   if should_mutate; then
     agent_guidelines_make_directory_safely "$skills_dir" ||
       die "could not create .agents/skills directory"
-  fi
-
-  if [ "$SKILL_SOURCE_MODE" = "symlink" ] && target_has_git_repo; then
-    local exclude_file
-    exclude_file="$(git_path info/exclude)"
-    append_missing_line "$exclude_file" ".agents/skills/" \
-      "exclude .agents/skills/" skills
   fi
 
   local skill source target
@@ -2867,6 +2992,7 @@ main() {
   write_local_config
   assemble_agent_files
   remove_deselected_project_skills
+  reconcile_selected_skill_source_modes
   install_per_project_skills
   create_initial_commit_if_needed
   install_hooks
