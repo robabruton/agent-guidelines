@@ -34,6 +34,7 @@ jobs:
             tests/project-git-scope-safety.sh \
             tests/project-git-identity-safety.sh \
             tests/project-initial-commit-safety.sh \
+            tests/project-git-recovery-safety.sh \
             tests/project-default-branch-safety.sh \
             scripts/generate-rules-readme.sh \
             skills/agent-memory/scripts/agent-memory-report.sh
@@ -141,6 +142,9 @@ jobs:
 
       - name: Run project-initial-commit-safety
         run: bash tests/project-initial-commit-safety.sh
+
+      - name: Run project-git-recovery-safety
+        run: bash tests/project-git-recovery-safety.sh
 
       - name: Run project-default-branch-safety
         run: bash tests/project-default-branch-safety.sh
