@@ -39,9 +39,10 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
   recovery directories for forced replacements, preserves file modes, and
   rejects malformed markers or nonregular managed targets without mutation.
 - Project setup constrains rule and skill identifiers to catalog-safe names,
-  contains their destinations beneath the target repository, accepts only
-  exact canonical sources, atomically updates managed hooks and contexts, and
-  refuses foreign paths or mismatched owned state without mutation.
+  confines their operations to physical directories beneath the target
+  repository, accepts only exact canonical sources, atomically updates managed
+  hooks and contexts, and refuses symlinked managed parents, foreign paths, or
+  mismatched owned state before mutation.
 - Project setup rejects nested worktree targets, ambient repository redirects,
   and hook paths outside the target Git directory. It uses the target's Git
   identity, preserves existing unborn indexes, and commits only artifacts it
