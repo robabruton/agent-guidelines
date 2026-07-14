@@ -9,6 +9,7 @@
 AGENT_GUIDELINES_TRANSACTION_ACTIVE=false
 AGENT_GUIDELINES_TRANSACTION_DIR=""
 AGENT_GUIDELINES_TRANSACTION_RECOVERY_NOTE=""
+AGENT_GUIDELINES_TRANSACTION_RETAIN_ENTRY=""
 
 agent_guidelines_path_type() {
   local path="$1"
@@ -288,6 +289,14 @@ agent_guidelines_transaction_discard_entries_beneath() {
   done
 }
 
+agent_guidelines_transaction_retain_entry() {
+  local entry="$1"
+
+  agent_guidelines_transaction_is_active || return 1
+  [ -d "$entry" ] || return 1
+  AGENT_GUIDELINES_TRANSACTION_RETAIN_ENTRY="$entry"
+}
+
 agent_guidelines_transaction_matches() {
   local path="$1"
   local type="$2"
@@ -403,6 +412,13 @@ agent_guidelines_transaction_rollback_entry() {
   local original_type
   local expected_type
 
+  if [ "$entry" = \
+    "${AGENT_GUIDELINES_TRANSACTION_RETAIN_ENTRY:-}" ]; then
+    printf 'error: uncertain transaction entry retained: %s\n' \
+      "$entry" >&2
+    return 1
+  fi
+
   if [ ! -e "$entry/complete" ]; then
     agent_guidelines_transaction_cancel_entry "$entry"
     return
@@ -485,6 +501,7 @@ agent_guidelines_transaction_begin() {
 
   AGENT_GUIDELINES_TRANSACTION_DIR="$(mktemp -d)" || return 1
   AGENT_GUIDELINES_TRANSACTION_RECOVERY_NOTE=""
+  AGENT_GUIDELINES_TRANSACTION_RETAIN_ENTRY=""
   mkdir "${AGENT_GUIDELINES_TRANSACTION_DIR}/entries" || return 1
   printf '1\n' > "${AGENT_GUIDELINES_TRANSACTION_DIR}/next"
   AGENT_GUIDELINES_TRANSACTION_ACTIVE=true
@@ -497,6 +514,7 @@ agent_guidelines_transaction_commit() {
   AGENT_GUIDELINES_TRANSACTION_DIR=""
   AGENT_GUIDELINES_TRANSACTION_ACTIVE=false
   AGENT_GUIDELINES_TRANSACTION_RECOVERY_NOTE=""
+  AGENT_GUIDELINES_TRANSACTION_RETAIN_ENTRY=""
   trap - EXIT
 }
 
