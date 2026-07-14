@@ -33,6 +33,24 @@ expect_precommit_failure() {
   fi
 }
 
+expect_merge_precommit_success() {
+  local repo="$1"
+  local merge_head
+
+  merge_head="$(git -C "$repo" rev-parse --git-path MERGE_HEAD)"
+  case "$merge_head" in
+    /*) ;;
+    *) merge_head="$repo/$merge_head" ;;
+  esac
+  git -C "$repo" rev-parse HEAD > "$merge_head"
+  if ! (cd "$repo" && .git/hooks/pre-commit) >/dev/null 2>&1; then
+    rm -f "$merge_head"
+    echo "default-branch merge pre-commit unexpectedly failed: $repo" >&2
+    return 1
+  fi
+  rm -f "$merge_head"
+}
+
 expect_prepush() {
   local expected_exit="$1"
   local repo="$2"
@@ -67,6 +85,7 @@ grep -Fxq 'default_branch=master' \
 grep -Fq 'Default branch policy: master' "${TMP_ROOT}/master.out"
 grep -Fq 'Default branch: master' "${TMP_ROOT}/master.out"
 expect_precommit_failure "$MASTER_REPO"
+expect_merge_precommit_success "$MASTER_REPO"
 expect_prepush 0 "$MASTER_REPO" master
 expect_prepush 0 "$MASTER_REPO" feat/valid-work
 expect_prepush 1 "$MASTER_REPO" invalid-work
@@ -79,6 +98,7 @@ init_repo "$STABLE_REPO" stable
 grep -Fxq 'default_branch=stable' \
   "$STABLE_REPO/.agent-guidelines/config"
 expect_precommit_failure "$STABLE_REPO"
+expect_merge_precommit_success "$STABLE_REPO"
 expect_prepush 0 "$STABLE_REPO" stable
 
 # New repositories accept an explicit default without renaming it later.
@@ -89,6 +109,7 @@ TRUNK_REPO="${TMP_ROOT}/trunk-repo"
 test "$(git -C "$TRUNK_REPO" branch --show-current)" = trunk
 grep -Fxq 'default_branch=trunk' "$TRUNK_REPO/.agent-guidelines/config"
 expect_precommit_failure "$TRUNK_REPO"
+expect_merge_precommit_success "$TRUNK_REPO"
 expect_prepush 0 "$TRUNK_REPO" trunk
 expect_prepush 1 "$TRUNK_REPO" main
 
