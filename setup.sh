@@ -15,6 +15,7 @@ SKILLS_DIR="${REPO_DIR}/skills"
 # hardcoded here rather than deriving from a non-standard field.
 GLOBAL_SKILLS=(
   agent-memory
+  avr
   code-review
   debug
   dependency-audit
