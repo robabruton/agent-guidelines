@@ -17,8 +17,17 @@ GLOBAL_SKILLS=(
   agent-memory
   code-review
   debug
+  dependency-audit
+  docs-audit
+  docs-review
+  docstrings
+  esp-idf
   explain
+  firmware-review
   project-setup
+  script-audit
+  security-audit
+  test-audit
 )
 
 # Harness directories that receive symlinks for every entry in
