@@ -159,6 +159,28 @@ die() {
   exit 1
 }
 
+validate_catalog_id() {
+  local kind="$1"
+  local identifier="$2"
+
+  case "$identifier" in
+    ""|-*|*-|*--*|*[!a-z0-9-]*)
+      die "invalid $kind identifier: $identifier"
+      ;;
+  esac
+}
+
+validate_catalog_ids() {
+  local identifier
+
+  for identifier in "${INCLUDE_RULES[@]}" "${EXCLUDE_RULES[@]}"; do
+    validate_catalog_id rule "$identifier"
+  done
+  for identifier in "${INCLUDE_SKILLS[@]}" "${EXCLUDE_SKILLS[@]}"; do
+    validate_catalog_id skill "$identifier"
+  done
+}
+
 parse_args() {
   while [ "$#" -gt 0 ]; do
     case "$1" in
@@ -245,6 +267,7 @@ parse_args() {
     SKILL_SOURCE_MODE="$RULE_SOURCE_MODE"
   fi
   case "$SKILL_SOURCE_MODE" in symlink|copy) ;; *) die "invalid skills source mode: $SKILL_SOURCE_MODE" ;; esac
+  validate_catalog_ids
 }
 
 resolve_target() {
@@ -463,11 +486,10 @@ configure_rule_source() {
       if [ "$current" = "$CANONICAL_RULES_DIR" ]; then
         add_status unchanged ".agent-guidelines/rules symlink"
       else
-        add_status skipped ".agent-guidelines/rules points to $current"
+        die ".agent-guidelines/rules points to an unmanaged target: $current"
       fi
     elif [ -e "$rules_path" ]; then
-      add_status skipped ".agent-guidelines/rules exists and is not a symlink"
-      RULE_SOURCE_MODE="copy"
+      die ".agent-guidelines/rules exists and is not the managed symlink"
     else
       if should_mutate; then
         ln -s "$CANONICAL_RULES_DIR" "$rules_path"
@@ -477,11 +499,17 @@ configure_rule_source() {
   fi
 
   if [ "$RULE_SOURCE_MODE" = "copy" ]; then
-    if should_mutate; then
-      mkdir -p "$rules_path"
-      cp "$CANONICAL_RULES_DIR"/*.md "$rules_path"/
+    if [ -d "$rules_path" ] &&
+      diff -qr "$CANONICAL_RULES_DIR" "$rules_path" >/dev/null; then
+      add_status unchanged ".agent-guidelines/rules snapshot"
+    elif [ -e "$rules_path" ] || [ -L "$rules_path" ]; then
+      die ".agent-guidelines/rules is not an exact managed snapshot"
+    else
+      if should_mutate; then
+        cp -a "$CANONICAL_RULES_DIR" "$rules_path"
+      fi
+      add_status created ".agent-guidelines/rules snapshot"
     fi
-    add_status updated ".agent-guidelines/rules snapshot"
   fi
 
   RULE_SOURCE_DIR="$rules_path"
@@ -816,10 +844,10 @@ install_project_skill_symlink() {
     if [ "$current" = "$source" ]; then
       add_status unchanged ".agents/skills/$skill"
     else
-      add_status skipped ".agents/skills/$skill points to $current"
+      die ".agents/skills/$skill points to an unmanaged target: $current"
     fi
   elif [ -e "$target" ]; then
-    add_status skipped ".agents/skills/$skill exists and is not a symlink"
+    die ".agents/skills/$skill exists and is not the managed symlink"
   else
     if should_mutate; then
       ln -s "$source" "$target"
@@ -834,23 +862,104 @@ install_project_skill_copy() {
   local source="$3"
 
   if [ -L "$target" ]; then
-    add_status skipped ".agents/skills/$skill exists as a symlink"
-    return
+    die ".agents/skills/$skill exists as an unmanaged symlink"
   fi
 
   if [ -d "$target" ]; then
-    if should_mutate; then
-      cp -aR "$source"/. "$target"/
+    if diff -qr "$source" "$target" >/dev/null; then
+      add_status unchanged ".agents/skills/$skill"
+    else
+      die ".agents/skills/$skill is not an exact managed copy"
     fi
-    add_status updated ".agents/skills/$skill"
   elif [ -e "$target" ]; then
-    add_status skipped ".agents/skills/$skill exists and is not a directory"
+    die ".agents/skills/$skill exists and is not a managed copy"
   else
     if should_mutate; then
       cp -aR "$source" "$target"
     fi
     add_status created ".agents/skills/$skill"
   fi
+}
+
+validate_managed_directory() {
+  local path="$1"
+  local label="$2"
+
+  if [ -L "$path" ]; then
+    die "$label is a symlink: $path"
+  fi
+  if [ -e "$path" ] && [ ! -d "$path" ]; then
+    die "$label is not a directory: $path"
+  fi
+}
+
+preflight_rule_source_target() {
+  local state_dir="$TARGET_DIR/.agent-guidelines"
+  local rules_path="$state_dir/rules"
+  local current
+
+  validate_managed_directory "$state_dir" ".agent-guidelines"
+
+  if [ "$RULE_SOURCE_MODE" = "symlink" ]; then
+    if [ -L "$rules_path" ]; then
+      current="$(readlink "$rules_path")"
+      [ "$current" = "$CANONICAL_RULES_DIR" ] ||
+        die ".agent-guidelines/rules points to an unmanaged target: $current"
+    elif [ -e "$rules_path" ]; then
+      die ".agent-guidelines/rules exists and is not the managed symlink"
+    fi
+    return
+  fi
+
+  if [ -L "$rules_path" ]; then
+    die ".agent-guidelines/rules is an unmanaged symlink"
+  fi
+  if [ -e "$rules_path" ]; then
+    [ -d "$rules_path" ] ||
+      die ".agent-guidelines/rules is not a directory"
+    diff -qr "$CANONICAL_RULES_DIR" "$rules_path" >/dev/null ||
+      die ".agent-guidelines/rules is not an exact managed snapshot"
+  fi
+}
+
+preflight_skill_source_targets() {
+  local agents_dir="$TARGET_DIR/.agents"
+  local skills_dir="$agents_dir/skills"
+  local skill source target current
+
+  validate_managed_directory "$agents_dir" ".agents"
+  validate_managed_directory "$skills_dir" ".agents/skills"
+
+  for skill in "${INCLUDE_SKILLS[@]}"; do
+    skill_excluded "$skill" && continue
+    source="$CANONICAL_SKILLS_DIR/$skill"
+    [ -d "$source" ] || continue
+    target="$skills_dir/$skill"
+
+    if [ "$SKILL_SOURCE_MODE" = "symlink" ]; then
+      if [ -L "$target" ]; then
+        current="$(readlink "$target")"
+        [ "$current" = "$source" ] ||
+          die ".agents/skills/$skill points to an unmanaged target: $current"
+      elif [ -e "$target" ]; then
+        die ".agents/skills/$skill exists and is not the managed symlink"
+      fi
+    else
+      if [ -L "$target" ]; then
+        die ".agents/skills/$skill is an unmanaged symlink"
+      elif [ -e "$target" ]; then
+        [ -d "$target" ] ||
+          die ".agents/skills/$skill is not a directory"
+        diff -qr "$source" "$target" >/dev/null ||
+          die ".agents/skills/$skill is not an exact managed copy"
+      fi
+    fi
+  done
+}
+
+preflight_source_targets() {
+  preflight_rule_source_target
+  preflight_skill_source_targets
 }
 
 install_per_project_skills() {
@@ -1464,10 +1573,11 @@ main() {
 
   resolve_target
   require_git_identity
-  init_git_if_needed
   infer_profile
   infer_changelog_mode
   preflight_managed_targets
+  preflight_source_targets
+  init_git_if_needed
 
   write_file_if_missing "$TARGET_DIR/.gittemplate" "$ASSET_DIR/gittemplate" ".gittemplate"
   write_file_if_missing "$TARGET_DIR/.gitignore" "$ASSET_DIR/gitignore-minimal" ".gitignore"
