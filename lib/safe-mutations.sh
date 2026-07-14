@@ -231,3 +231,103 @@ agent_guidelines_atomic_replace_file() {
     return 1
   fi
 }
+
+agent_guidelines_replace_file_safely() {
+  local target="$1"
+  local prepared="$2"
+  local target_type
+  local rollback_dir=""
+  local rollback_file=""
+
+  target_type="$(agent_guidelines_path_type "$target")"
+  case "$target_type" in
+    regular)
+      rollback_dir="$(mktemp -d)" || return 1
+      rollback_file="$rollback_dir/target"
+      agent_guidelines_backup_object "$target" "$rollback_file" || {
+        printf 'error: verified rollback copy failed for %s\n' "$target" >&2
+        return 1
+      }
+      ;;
+    missing) ;;
+    *)
+      printf 'error: refusing safe replacement over %s: %s\n' \
+        "$target_type" "$target" >&2
+      return 1
+      ;;
+  esac
+
+  if agent_guidelines_atomic_replace_file "$target" "$prepared" &&
+    cmp -s "$target" "$prepared"; then
+    [ -n "$rollback_dir" ] && rm -rf "$rollback_dir"
+    return 0
+  fi
+
+  if [ "$target_type" = regular ]; then
+    if [ -f "$target" ] && [ ! -L "$target" ]; then
+      agent_guidelines_atomic_replace_file "$target" "$rollback_file" || {
+        printf 'error: replacement rollback failed; recovery copy: %s\n' \
+          "$rollback_file" >&2
+        return 1
+      }
+    elif [ ! -e "$target" ] && [ ! -L "$target" ]; then
+      agent_guidelines_restore_object "$rollback_file" "$target" || {
+        printf 'error: replacement restore failed; recovery copy: %s\n' \
+          "$rollback_file" >&2
+        return 1
+      }
+    else
+      printf 'error: replacement changed target type; recovery copy: %s\n' \
+        "$rollback_file" >&2
+      return 1
+    fi
+    rm -rf "$rollback_dir"
+  elif [ -f "$target" ] && [ ! -L "$target" ]; then
+    rm -f "$target"
+  fi
+
+  printf 'error: safe replacement failed for %s; original restored\n' \
+    "$target" >&2
+  return 1
+}
+
+agent_guidelines_remove_file_safely() {
+  local target="$1"
+  local target_type
+  local rollback_dir
+  local rollback_file
+
+  target_type="$(agent_guidelines_path_type "$target")"
+  if [ "$target_type" = missing ]; then
+    return 0
+  fi
+  if [ "$target_type" != regular ]; then
+    printf 'error: refusing safe file removal of %s: %s\n' \
+      "$target_type" "$target" >&2
+    return 1
+  fi
+
+  rollback_dir="$(mktemp -d)" || return 1
+  rollback_file="$rollback_dir/target"
+  agent_guidelines_backup_object "$target" "$rollback_file" || {
+    printf 'error: verified removal backup failed for %s\n' "$target" >&2
+    return 1
+  }
+
+  if rm -f "$target" && [ ! -e "$target" ] && [ ! -L "$target" ]; then
+    rm -rf "$rollback_dir"
+    return 0
+  fi
+
+  if [ ! -e "$target" ] && [ ! -L "$target" ]; then
+    agent_guidelines_restore_object "$rollback_file" "$target" || {
+      printf 'error: removal restore failed; recovery copy: %s\n' \
+        "$rollback_file" >&2
+      return 1
+    }
+  fi
+  rm -rf "$rollback_dir"
+  printf 'error: safe removal failed for %s; original retained\n' \
+    "$target" >&2
+  return 1
+}

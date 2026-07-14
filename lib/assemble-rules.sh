@@ -54,6 +54,11 @@
 #       the value is stripped so the cell completes the column header
 #       without doubling.
 
+ASSEMBLE_RULES_LIB_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd -P)"
+# shellcheck source=lib/safe-mutations.sh
+. "${ASSEMBLE_RULES_LIB_DIR}/safe-mutations.sh"
+unset ASSEMBLE_RULES_LIB_DIR
+
 AGENT_GUIDELINES_MARKER_BEGIN="<!-- BEGIN agent-guidelines project rules -->"
 AGENT_GUIDELINES_MARKER_END="<!-- END agent-guidelines project rules -->"
 
@@ -190,7 +195,10 @@ agent_guidelines_update_managed_block() {
 
   if [ ! -e "$target_file" ]; then
     mkdir -p "$(dirname "$target_file")"
-    cp "$block_file" "$target_file"
+    if ! agent_guidelines_replace_file_safely "$target_file" "$block_file"; then
+      rm -f "$temp_file"
+      return 1
+    fi
     rm -f "$temp_file"
     printf 'created'
     return
@@ -223,7 +231,14 @@ agent_guidelines_update_managed_block() {
   if cmp -s "$target_file" "$temp_file"; then
     result="unchanged"
   else
-    cp "$temp_file" "$target_file"
+    agent_guidelines_validate_managed_block_file "$target_file" || {
+      rm -f "$temp_file"
+      return 1
+    }
+    if ! agent_guidelines_replace_file_safely "$target_file" "$temp_file"; then
+      rm -f "$temp_file"
+      return 1
+    fi
     result="updated"
   fi
   rm -f "$temp_file"
@@ -257,11 +272,20 @@ agent_guidelines_remove_managed_block() {
   ' "$target_file" > "$temp_file"
 
   if grep -Eq '[^[:space:]]' "$temp_file"; then
-    cp "$temp_file" "$target_file"
+    agent_guidelines_validate_managed_block_file "$target_file" || {
+      rm -f "$temp_file"
+      return 1
+    }
+    if ! agent_guidelines_replace_file_safely "$target_file" "$temp_file"; then
+      rm -f "$temp_file"
+      return 1
+    fi
     rm -f "$temp_file"
     printf 'cleared'
   else
-    rm -f "$temp_file" "$target_file"
+    rm -f "$temp_file"
+    agent_guidelines_validate_managed_block_file "$target_file" || return 1
+    agent_guidelines_remove_file_safely "$target_file" || return 1
     printf 'removed'
   fi
 }

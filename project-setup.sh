@@ -857,7 +857,8 @@ prepend_preamble_if_created() {
   local temp_file
   temp_file="$(mktemp)"
   cat "$preamble_file" "$target_file" > "$temp_file"
-  mv "$temp_file" "$target_file"
+  agent_guidelines_replace_file_safely "$target_file" "$temp_file"
+  rm -f "$temp_file"
 }
 
 update_managed_block_with_preamble() {
@@ -1188,19 +1189,14 @@ install_hook_snippet() {
   local snippet_name="$2"
   local hook_path
   local snippet_path
+  local temp_file
 
   hook_path="$(git_path "hooks/$hook_name")"
   snippet_path="$ASSET_DIR/hooks/$snippet_name"
 
   validate_hook_snippet_target "$hook_name" "$snippet_name" || return 1
 
-  if should_mutate; then
-    mkdir -p "$(dirname "$hook_path")"
-  fi
   if [ ! -e "$hook_path" ]; then
-    if should_mutate; then
-      printf '#!/bin/sh\n\n' > "$hook_path"
-    fi
     add_status created "$hook_name hook"
   fi
 
@@ -1215,9 +1211,28 @@ install_hook_snippet() {
     fi
   else
     if should_mutate; then
-      printf '\n' >> "$hook_path"
-      cat "$snippet_path" >> "$hook_path"
-      printf '\n' >> "$hook_path"
+      temp_file="$(mktemp)"
+      if [ -e "$hook_path" ]; then
+        cat "$hook_path" > "$temp_file"
+      else
+        printf '#!/bin/sh\n' > "$temp_file"
+        chmod 644 "$temp_file"
+      fi
+      printf '\n' >> "$temp_file"
+      cat "$snippet_path" >> "$temp_file"
+      printf '\n' >> "$temp_file"
+      agent_guidelines_validate_marker_pair \
+        "$hook_path" "$begin_marker" \
+        "$(sed -n '$p' "$snippet_path")" \
+        "$hook_name $snippet_name" || {
+        rm -f "$temp_file"
+        return 1
+      }
+      if ! agent_guidelines_replace_file_safely "$hook_path" "$temp_file"; then
+        rm -f "$temp_file"
+        return 1
+      fi
+      rm -f "$temp_file"
     fi
     add_status updated "$hook_name $snippet_name"
   fi
@@ -1256,7 +1271,15 @@ replace_hook_block() {
   if cmp -s "$hook_path" "$temp_file"; then
     add_status unchanged "$label"
   else
-    cp "$temp_file" "$hook_path"
+    agent_guidelines_validate_marker_pair \
+      "$hook_path" "$begin_marker" "$end_marker" "$label" || {
+      rm -f "$temp_file"
+      return 1
+    }
+    if ! agent_guidelines_replace_file_safely "$hook_path" "$temp_file"; then
+      rm -f "$temp_file"
+      return 1
+    fi
     add_status updated "$label"
   fi
   rm -f "$temp_file"
@@ -1522,7 +1545,16 @@ remove_hook_snippet() {
       $0 == end { in_block = 0; next }
       !in_block { print }
     ' "$hook_path" > "$temp_file"
-    cp "$temp_file" "$hook_path"
+    agent_guidelines_validate_marker_pair \
+      "$hook_path" "$begin_marker" "$end_marker" \
+      "$hook_name $snippet_name" || {
+      rm -f "$temp_file"
+      return 1
+    }
+    if ! agent_guidelines_replace_file_safely "$hook_path" "$temp_file"; then
+      rm -f "$temp_file"
+      return 1
+    fi
     rm -f "$temp_file"
   fi
   add_status updated "$hook_name $snippet_name removed"
@@ -1543,7 +1575,7 @@ prune_empty_hook() {
   fi
 
   if should_mutate; then
-    rm -f "$hook_path"
+    agent_guidelines_remove_file_safely "$hook_path" || return 1
   fi
   add_status updated "$hook_name hook removed (only managed content)"
 }
@@ -1658,7 +1690,7 @@ remove_context_file_block() {
     if cmp -s <(sed -e 's/[[:space:]]*$//' "$target_file" |
         grep -v '^$') \
       <(sed -e 's/[[:space:]]*$//' "$preamble_file" | grep -v '^$'); then
-      rm -f "$target_file"
+      agent_guidelines_remove_file_safely "$target_file"
       status="removed"
     fi
     rm -f "$preamble_file"

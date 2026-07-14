@@ -31,6 +31,31 @@ write_block() {
 BLOCK_FILE="${TMP_ROOT}/block.md"
 write_block "$BLOCK_FILE"
 
+# Valid replacements and removals are atomic and preserve the target mode.
+ATOMIC_TARGET="${TMP_ROOT}/atomic.md"
+{
+  printf 'user sentinel\n\n'
+  printf '%s\n' "$AGENT_GUIDELINES_MARKER_BEGIN"
+  printf 'old managed content\n'
+  printf '%s\n' "$AGENT_GUIDELINES_MARKER_END"
+} > "$ATOMIC_TARGET"
+chmod 640 "$ATOMIC_TARGET"
+test "$(agent_guidelines_update_managed_block \
+  "$ATOMIC_TARGET" "$BLOCK_FILE")" = updated
+grep -Fxq 'user sentinel' "$ATOMIC_TARGET"
+grep -Fxq '## Managed replacement' "$ATOMIC_TARGET"
+test "$(agent_guidelines_stat_signature "$ATOMIC_TARGET" | \
+  cut -d: -f1)" = 640
+test "$(agent_guidelines_remove_managed_block "$ATOMIC_TARGET")" = cleared
+grep -Fxq 'user sentinel' "$ATOMIC_TARGET"
+test "$(agent_guidelines_stat_signature "$ATOMIC_TARGET" | \
+  cut -d: -f1)" = 640
+
+GENERATED_TARGET="${TMP_ROOT}/generated.md"
+cp -a "$BLOCK_FILE" "$GENERATED_TARGET"
+test "$(agent_guidelines_remove_managed_block "$GENERATED_TARGET")" = removed
+test ! -e "$GENERATED_TARGET"
+
 # A managed file symlink must never redirect an update into another file.
 EXTERNAL_FILE="${TMP_ROOT}/external.md"
 SYMLINK_TARGET="${TMP_ROOT}/linked.md"
@@ -79,6 +104,19 @@ for case_name in begin-only end-only duplicate-begin duplicate-end reversed; do
   cmp -s "$target" "${target}.before"
 done
 
+# A malformed late global context target stops before any earlier links or
+# contexts are created.
+export HOME="${TMP_ROOT}/late-global-home"
+mkdir -p "${HOME}/.codex"
+LATE_CONTEXT="${HOME}/.codex/AGENTS.md"
+printf '%s\nlate sentinel\n' \
+  "$AGENT_GUIDELINES_MARKER_BEGIN" > "$LATE_CONTEXT"
+cp -a "$LATE_CONTEXT" "${LATE_CONTEXT}.before"
+expect_fail "${ROOT_DIR}/setup.sh" --install --no-color
+cmp -s "$LATE_CONTEXT" "${LATE_CONTEXT}.before"
+test ! -e "${HOME}/.agent-guidelines/rules"
+test ! -e "${HOME}/.claude/skills/agent-memory"
+
 # Hook installation must preflight every marker pair before changing the hook.
 export HOME="${TMP_ROOT}/home"
 mkdir -p "$HOME"
@@ -95,6 +133,8 @@ git -C "$HOOK_REPO" commit -q -m "chore: seed fixture"
 "${ROOT_DIR}/project-setup.sh" --profile minimal "$HOOK_REPO" >/dev/null
 
 HOOK_FILE="${HOOK_REPO}/.git/hooks/pre-commit"
+test -x "$HOOK_FILE"
+test "$(agent_guidelines_stat_signature "$HOOK_FILE" | cut -d: -f1)" = 755
 HOOK_END="# END agent-guidelines main-branch guard"
 awk -v marker="$HOOK_END" '$0 != marker' "$HOOK_FILE" > "${HOOK_FILE}.tmp"
 mv "${HOOK_FILE}.tmp" "$HOOK_FILE"
