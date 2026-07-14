@@ -36,6 +36,17 @@ session start to recall what is relevant, at session end to record handoff
 state, or when the memory store has grown large enough to need
 reorganizing.
 
+### `avr`
+
+Operates and maintains 8-bit AVR projects and toolchains, including exact
+device and interface selection, project configuration, builds, artifacts,
+programming, debugging, device-state preservation, and recovery-aware
+troubleshooting.
+
+Use this skill for ATmega, ATtiny, AVR Dx/Ex, megaAVR, tinyAVR, or XMEGA
+projects that use AVR GCC, AVR-LibC, MPLAB XC8, MPLAB X, Device Family
+Packs, avrdude, UPDI, ISP, PDI, JTAG, or debugWIRE.
+
 ### `code-review`
 
 Reviews code, local changes, branches, files, functions, classes, or

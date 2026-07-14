@@ -12,6 +12,10 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
   situational workflows remain available without per-project opt-in.
   Project-local inclusion remains available for portable copies, pinned
   snapshots, and repository-owned distribution.
+- `avr` situational skill operates 8-bit AVR projects with exact device and
+  toolchain selection, build and artifact checks, programming and debug
+  safety gates, device-state preservation, and family-specific
+  troubleshooting references.
 - `esp-idf` situational skill operates ESP-IDF projects and toolchains with
   live environment verification, project and component conventions, build and
   artifact checks, explicit hardware-operation gates, and focused references
