@@ -24,14 +24,19 @@ skills into local tool configuration directories.
 
 - Use the directory specified by the user
 - If no directory is specified, use the current working directory
-- If the target directory does not exist, create it
+- If the target directory does not exist, create it only when it is not
+  beneath an existing repository worktree
+- Require an existing Git target to be the physical worktree root, not a
+  subdirectory
 - Resolve and print the absolute target path before making changes
 
 ## Preflight
 
 - Verify `git` is available
-- Verify `user.name` and `user.email` are configured by checking local,
-  global, then system git config
+- Reject ambient Git repository and object-store redirect variables so all
+  Git reads and writes remain tied to the target
+- Verify `user.name` and `user.email` in the target repository's Git
+  configuration context, which applies local, global, and system precedence
 - If either value is missing, stop and tell the user how to configure it:
 
 ```bash
@@ -86,15 +91,33 @@ git config --global user.email "you@example.com"
 ## Repository Setup
 
 - Check whether the target directory is already inside a git work tree
-- If it is not a git repository, run:
+- Resolve one default branch for setup state and both branch-policy hooks in
+  this order:
+  - an explicit `--default-branch <name>` selection
+  - the checksum-owned stored setup value
+  - the symbolic branch of an unborn repository
+  - one locally recorded remote default whose branch exists locally
+  - the sole local branch
+  - the checked-out `main` or `master` branch when several local branches
+    exist
+- Stop and require `--default-branch` when the remaining evidence is absent,
+  conflicting, or points only to a typed work branch
+- Validate the selected name as a Git branch and require an explicit name to
+  exist in an existing repository
+- Never rename or check out a branch automatically
+- Use `main` for a new repository unless `--default-branch` selects another
+  valid name
+- If the target is not a Git repository, initialize its Git metadata in a
+  recovery directory beside the target using the selected branch:
 
 ```bash
-git init --initial-branch=main
+git --git-dir=<recovery-dir>/git --work-tree=<target> \
+  init --initial-branch=<default-branch>
 ```
 
-- If it is already a git repository, do not reinitialize it
-- If the existing default branch is not `main`, note it but do not rename
-  branches automatically
+- Install the completed staged Git directory as `<target>/.git` only after all
+  repository setup succeeds
+- If the target is already a Git repository, do not reinitialize it
 - Report whether the repository was created or already existed
 
 ## Local Git Excludes
@@ -169,9 +192,17 @@ git init --initial-branch=main
 - Accept an existing rule source only when it is the exact canonical
   symlink selected by symlink mode or an exact snapshot selected by copy
   mode; stop without mutation on every other existing path
-- Treat `.agent-guidelines/config` as local setup state that records the
-  selected profile, changelog mode, versioning mode, rule and skill
-  source modes, and the included and excluded rules and skills
+- Treat `.agent-guidelines/config` as checksum-owned local setup state in a
+  strict, versioned, non-executable data format
+- Record `schema=1`, the selected profile, changelog and context modes, rule
+  and skill source modes, default branch, and repeated include and exclude
+  records for rules and skills; derive versioning mode from changelog mode
+- Load an existing state file only when its ownership record contains the
+  exact current checksum; reject malformed keys, invalid values, duplicate
+  records, unsupported schemas, NUL data, symlinks, and changed or unowned
+  state before mutation
+- Migrate an exact checksum-owned versionless setup file to schema 1 while
+  preserving its selections
 - Do not symlink `CLAUDE.md` or `AGENTS.md`; generate their managed
   blocks from the selected rule source instead
 - Read rule files from the first available source:
@@ -247,8 +278,8 @@ git init --initial-branch=main
   - `changelog-version.md`
   - `versioning-semver.md`
   - `backward-compatibility.md`
-- Include any selected future rule files that are not in the canonical
-  order alphabetically after known rules
+- Include selected rule files absent from the canonical order alphabetically
+  after known rules
 - Use the source file's existing title as the heading for each included
   rule
 - Do not rewrite, summarize, or otherwise change the rule text
@@ -325,8 +356,8 @@ Only when changelog maintenance is enabled:
 
 Only when the skill initializes a new git repository:
 
-- Create one initial commit after repository files are created and local
-  configuration is applied
+- Create one initial commit in the staged Git directory after repository files
+  are created and local configuration is applied
 - Stage only project files that were created for the repository:
   - `.gittemplate`
   - `.gitignore`
@@ -356,11 +387,20 @@ chore: initialize repository
   report why
 - If the target repository already has commits, never create an initial
   commit
+- If an existing repository has an unborn branch and an empty index, configure
+  it without creating a commit
+- If an existing unborn repository has staged content, stop before mutation
+  and leave its index unchanged
+- Use the Git identity resolved from the target configuration for both author
+  and committer metadata
 
 ## Git Hooks
 
-- Install or update local hooks only in the target repository's
-  `.git/hooks` directory
+- Resolve the target's effective hooks directory and require it to remain
+  beneath that repository's absolute Git directory
+- Reject absolute, shared, escaping, or linked-worktree-relative
+  `core.hooksPath` values whose effective hook path is outside that boundary
+- Install or update local hooks only in the validated target hooks directory
 - Create hook files when they do not exist
 - Preserve existing hook content
 - Start newly created hook files with `#!/bin/sh`
@@ -381,6 +421,10 @@ chore: initialize repository
 - Preserve the relative order of managed snippets within each hook file
 - Ensure updated hook files are executable
 - Do not install hooks globally or into other repositories
+- Make the pre-commit default-branch guard and pre-push branch-name guard read
+  the same `default_branch=` value from `.agent-guidelines/config` at runtime
+- Make both branch-policy hooks fail closed when the state file is missing,
+  linked, duplicated, or contains an invalid branch name
 
 ## Removal
 
@@ -402,6 +446,12 @@ chore: initialize repository
 
 ## Rerun and Idempotency
 
+- With no selection options, reload the exact checksum-owned setup state and
+  preserve its scalar values, include and exclude records, and source modes
+- Apply explicit scalar and selection options only to the named setting;
+  exclusion wins when the same identifier is both included and excluded
+- Switch between symlink and copy modes only for an exact recorded managed
+  object, and reconcile only the corresponding owned local exclude entry
 - Before writing any file, compare the intended content or managed block
   to the existing content
 - Do not rewrite files that are already correct
@@ -426,6 +476,7 @@ At the end, print:
 
 - Repository location
 - Current branch
+- Selected default branch policy
 - Git `user.name` and `user.email`
 - Selected profile:
   - minimal
@@ -449,4 +500,4 @@ At the end, print:
 - Updated files, hooks, and config values
 - Unchanged files, hooks, and config values
 - Skipped files and the reason each was skipped
-- Warnings and manual follow-up steps
+- Warnings and required manual actions
