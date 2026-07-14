@@ -1291,19 +1291,6 @@ MANAGED_EXCLUDE_RECORDS=(
   "skills|.agents/skills/"
 )
 
-MANAGED_EXCLUDE_LINES=(
-  "CLAUDE.md"
-  "CLAUDE.local.md"
-  "AGENTS.md"
-  ".claude/"
-  ".codex/"
-  ".agent-guidelines/config"
-  ".agent-guidelines/rules"
-  "opencode.json"
-  ".mcp.json"
-  ".agents/skills/"
-)
-
 # Managed hook snippets the removal flow strips; mirrors
 # install_hooks.
 MANAGED_HOOK_SNIPPETS=(
@@ -1498,9 +1485,7 @@ preflight_managed_targets() {
     "$TARGET_DIR/AGENTS.md" || return 1
 
   if target_has_git_repo; then
-    if [ "$MODE" != remove ]; then
-      validate_ownership_state
-    fi
+    validate_ownership_state
     validate_all_hook_snippet_targets || return 1
   fi
 }
@@ -1564,7 +1549,9 @@ prune_empty_hook() {
 }
 
 remove_managed_excludes() {
-  local exclude_file managed_list temp_file line
+  local exclude_file managed_list temp_file pair key line record_name
+  local record_path
+  local has_owned=false
 
   if ! target_has_git_repo; then
     add_status skipped "git info/exclude (target has no git repo)"
@@ -1572,26 +1559,48 @@ remove_managed_excludes() {
   fi
 
   exclude_file="$(git_path info/exclude)"
-  if [ ! -e "$exclude_file" ]; then
-    add_status unchanged "git info/exclude (absent)"
+  managed_list="$(mktemp)"
+  for pair in "${MANAGED_EXCLUDE_RECORDS[@]}"; do
+    key="${pair%%|*}"
+    line="${pair##*|}"
+    record_name="$(exclude_record_name "$key")"
+    record_path="$(ownership_record_path "$record_name")"
+    if [ -e "$record_path" ]; then
+      printf '%s\n' "$line" >> "$managed_list"
+      has_owned=true
+    fi
+  done
+
+  if [ "$has_owned" = false ]; then
+    rm -f "$managed_list"
+    add_status skipped "git info/exclude has no owned lines"
     return 0
   fi
 
-  managed_list="$(mktemp)"
-  for line in "${MANAGED_EXCLUDE_LINES[@]}"; do
-    printf '%s\n' "$line"
-  done > "$managed_list"
+  if ! should_mutate; then
+    rm -f "$managed_list"
+    add_status updated "owned exclude lines would be removed"
+    return 0
+  fi
 
   temp_file="$(mktemp)"
   grep -Fvxf "$managed_list" "$exclude_file" > "$temp_file" || true
 
   if cmp -s "$exclude_file" "$temp_file"; then
-    add_status unchanged "git info/exclude"
+    rm -f "$managed_list" "$temp_file"
+    die "owned exclude records did not match removable lines"
   else
-    if should_mutate; then
-      cp "$temp_file" "$exclude_file"
-    fi
-    add_status updated "managed exclude lines removed"
+    agent_guidelines_atomic_replace_file "$exclude_file" "$temp_file" || {
+      rm -f "$managed_list" "$temp_file"
+      die "could not remove owned exclude lines"
+    }
+    for pair in "${MANAGED_EXCLUDE_RECORDS[@]}"; do
+      key="${pair%%|*}"
+      record_name="$(exclude_record_name "$key")"
+      record_path="$(ownership_record_path "$record_name")"
+      [ -e "$record_path" ] && rm -f "$record_path"
+    done
+    add_status updated "owned exclude lines removed"
   fi
   rm -f "$managed_list" "$temp_file"
 }
@@ -1601,15 +1610,21 @@ remove_commit_template_config() {
     return 0
   fi
 
-  local current
+  local current record_path
+  record_path="$(ownership_record_path commit-template)"
+  if [ ! -e "$record_path" ]; then
+    add_status skipped "git commit.template has no ownership record"
+    return 0
+  fi
+
   current="$(git -C "$TARGET_DIR" config --local --get commit.template || true)"
   if [ "$current" != ".gittemplate" ]; then
-    add_status unchanged "git commit.template"
-    return 0
+    die "owned commit.template changed before removal"
   fi
 
   if should_mutate; then
     git -C "$TARGET_DIR" config --local --unset commit.template
+    rm -f "$record_path"
   fi
   add_status updated "git commit.template unset"
 }
@@ -1657,19 +1672,27 @@ remove_rule_source_state() {
   local config_path="$state_dir/config"
 
   if [ -L "$rules_path" ]; then
-    if should_mutate; then
-      rm -f "$rules_path"
+    if [ "$(readlink "$rules_path")" = "$CANONICAL_RULES_DIR" ]; then
+      if should_mutate; then
+        rm -f "$rules_path"
+      fi
+      add_status updated ".agent-guidelines/rules symlink removed"
+    else
+      add_status skipped ".agent-guidelines/rules is an unowned symlink"
     fi
-    add_status updated ".agent-guidelines/rules symlink removed"
   elif [ -d "$rules_path" ]; then
     add_status skipped ".agent-guidelines/rules snapshot left in place"
   fi
 
-  if [ -e "$config_path" ]; then
+  local config_record
+  config_record="$(ownership_record_path config)"
+  if [ -e "$config_record" ]; then
     if should_mutate; then
-      rm -f "$config_path"
+      rm -f "$config_path" "$config_record"
     fi
     add_status updated ".agent-guidelines/config removed"
+  elif [ -e "$config_path" ] || [ -L "$config_path" ]; then
+    add_status skipped ".agent-guidelines/config has no ownership record"
   fi
 
   if should_mutate && [ -d "$state_dir" ]; then
@@ -1679,7 +1702,7 @@ remove_rule_source_state() {
 
 remove_project_skill_links() {
   local skills_dir="$TARGET_DIR/.agents/skills"
-  local entry link_target
+  local entry link_target expected_target
 
   [ -d "$skills_dir" ] || return 0
 
@@ -1687,17 +1710,15 @@ remove_project_skill_links() {
     [ -e "$entry" ] || [ -L "$entry" ] || continue
     if [ -L "$entry" ]; then
       link_target="$(readlink "$entry")"
-      case "$link_target" in
-        "$CANONICAL_SKILLS_DIR"/*)
-          if should_mutate; then
-            rm -f "$entry"
-          fi
-          add_status updated ".agents/skills/$(basename "$entry") link removed"
-          ;;
-        *)
-          add_status skipped ".agents/skills/$(basename "$entry") points elsewhere"
-          ;;
-      esac
+      expected_target="$CANONICAL_SKILLS_DIR/$(basename "$entry")"
+      if [ "$link_target" = "$expected_target" ]; then
+        if should_mutate; then
+          rm -f "$entry"
+        fi
+        add_status updated ".agents/skills/$(basename "$entry") link removed"
+      else
+        add_status skipped ".agents/skills/$(basename "$entry") is unowned"
+      fi
     else
       add_status skipped ".agents/skills/$(basename "$entry") is a copy"
     fi
@@ -1705,6 +1726,14 @@ remove_project_skill_links() {
 
   if should_mutate; then
     rmdir "$skills_dir" "$TARGET_DIR/.agents" 2>/dev/null || true
+  fi
+}
+
+cleanup_ownership_state() {
+  target_has_git_repo || return 0
+  if should_mutate; then
+    rmdir "$(ownership_dir)" 2>/dev/null || true
+    rmdir "$(dirname "$(ownership_dir)")" 2>/dev/null || true
   fi
 }
 
@@ -1751,6 +1780,7 @@ run_remove() {
   remove_context_file_block "$TARGET_DIR/AGENTS.md" "AGENTS.md"
   remove_rule_source_state
   remove_project_skill_links
+  cleanup_ownership_state
 
   print_remove_summary
 }
