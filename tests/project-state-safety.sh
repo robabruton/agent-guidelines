@@ -103,12 +103,78 @@ test ! -e "$RERUN_REPO/.agents/skills/explain"
 grep -Fxq 'exclude_skill=explain' "$CONFIG"
 grep -Fxq 'include_skill=test-audit' "$CONFIG"
 grep -Fxq 'exclude_skill=test-audit' "$CONFIG"
+! grep -Fxq '.agents/skills/' "$RERUN_REPO/.git/info/exclude"
+test ! -e \
+  "$RERUN_REPO/.git/agent-guidelines/ownership-v1/exclude-skills"
 
 "${ROOT_DIR}/project-setup.sh" --include-skill explain "$RERUN_REPO" \
   > "${TMP_ROOT}/include.out"
 test -L "$RERUN_REPO/.agents/skills/explain"
 grep -Fxq 'include_skill=explain' "$CONFIG"
 ! grep -Fxq 'exclude_skill=explain' "$CONFIG"
+grep -Fxq '.agents/skills/' "$RERUN_REPO/.git/info/exclude"
+
+# Explicit source-mode changes replace only exact recorded objects and
+# reconcile their owned exclude entries.
+"${ROOT_DIR}/project-setup.sh" --skills-source copy "$RERUN_REPO" \
+  > "${TMP_ROOT}/skills-copy.out"
+test -d "$RERUN_REPO/.agents/skills/explain"
+test ! -L "$RERUN_REPO/.agents/skills/explain"
+grep -Fxq 'skills_source=copy' "$CONFIG"
+! grep -Fxq '.agents/skills/' "$RERUN_REPO/.git/info/exclude"
+
+TAMPERED_SKILL_REPO="${TMP_ROOT}/tampered-skill-repo"
+cp -a "$RERUN_REPO" "$TAMPERED_SKILL_REPO"
+printf '\ntampered copy\n' \
+  >> "$TAMPERED_SKILL_REPO/.agents/skills/explain/SKILL.md"
+cp -a "$TAMPERED_SKILL_REPO" "${TAMPERED_SKILL_REPO}.before"
+if "${ROOT_DIR}/project-setup.sh" --skills-source symlink \
+  "$TAMPERED_SKILL_REPO" >"${TMP_ROOT}/tampered-skill.out" \
+  2>"${TMP_ROOT}/tampered-skill.err"; then
+  echo "changed skill copy unexpectedly changed source mode" >&2
+  exit 1
+fi
+grep -Fq 'changed from its recorded managed copy' \
+  "${TMP_ROOT}/tampered-skill.err"
+diff -qr "$TAMPERED_SKILL_REPO" \
+  "${TAMPERED_SKILL_REPO}.before" >/dev/null
+
+"${ROOT_DIR}/project-setup.sh" --skills-source symlink "$RERUN_REPO" \
+  > "${TMP_ROOT}/skills-symlink.out"
+test -L "$RERUN_REPO/.agents/skills/explain"
+grep -Fxq 'skills_source=symlink' "$CONFIG"
+grep -Fxq '.agents/skills/' "$RERUN_REPO/.git/info/exclude"
+
+"${ROOT_DIR}/project-setup.sh" --rules-source copy "$RERUN_REPO" \
+  > "${TMP_ROOT}/rules-copy.out"
+test -d "$RERUN_REPO/.agent-guidelines/rules"
+test ! -L "$RERUN_REPO/.agent-guidelines/rules"
+grep -Fxq 'rules_source=copy' "$CONFIG"
+grep -Fxq 'skills_source=symlink' "$CONFIG"
+! grep -Fxq '.agent-guidelines/rules' \
+  "$RERUN_REPO/.git/info/exclude"
+
+TAMPERED_RULE_REPO="${TMP_ROOT}/tampered-rule-repo"
+cp -a "$RERUN_REPO" "$TAMPERED_RULE_REPO"
+printf '\ntampered snapshot\n' \
+  >> "$TAMPERED_RULE_REPO/.agent-guidelines/rules/agent-conduct.md"
+cp -a "$TAMPERED_RULE_REPO" "${TAMPERED_RULE_REPO}.before"
+if "${ROOT_DIR}/project-setup.sh" --rules-source symlink \
+  "$TAMPERED_RULE_REPO" >"${TMP_ROOT}/tampered-rule.out" \
+  2>"${TMP_ROOT}/tampered-rule.err"; then
+  echo "changed rule snapshot unexpectedly changed source mode" >&2
+  exit 1
+fi
+grep -Fq 'changed from its managed snapshot' \
+  "${TMP_ROOT}/tampered-rule.err"
+diff -qr "$TAMPERED_RULE_REPO" \
+  "${TAMPERED_RULE_REPO}.before" >/dev/null
+
+"${ROOT_DIR}/project-setup.sh" --rules-source symlink "$RERUN_REPO" \
+  > "${TMP_ROOT}/rules-symlink.out"
+test -L "$RERUN_REPO/.agent-guidelines/rules"
+grep -Fxq 'rules_source=symlink' "$CONFIG"
+grep -Fxq '.agent-guidelines/rules' "$RERUN_REPO/.git/info/exclude"
 
 # The owned versionless format migrates strictly without losing selections.
 LEGACY_REPO="${TMP_ROOT}/legacy-repo"
