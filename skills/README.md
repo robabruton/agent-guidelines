@@ -117,11 +117,13 @@ project concept.
 
 Operates and maintains ESP-IDF projects and local toolchains, including
 environment selection, project configuration, components, builds, tests,
-artifacts, flashing, monitoring, and troubleshooting.
+artifacts, flashing, monitoring, version-matched API and tool research, and
+troubleshooting.
 
 Use this skill when creating, inspecting, configuring, building, testing,
-flashing, monitoring, or troubleshooting projects that use ESP-IDF tooling,
-components, configuration, partition tables, or EIM-managed installations.
+flashing, monitoring, researching, or troubleshooting projects that use
+ESP-IDF tooling, components, configuration, partition tables, or EIM-managed
+installations.
 
 ### `firmware-review`
 
