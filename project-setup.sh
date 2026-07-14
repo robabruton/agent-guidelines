@@ -21,10 +21,28 @@ RULE_SOURCE_MODE="symlink"
 SKILL_SOURCE_MODE=""
 TARGET_DIR="."
 DRY_RUN=false
+PROFILE_SUPPLIED=false
+CHANGELOG_MODE_SUPPLIED=false
+CONTEXT_RULES_MODE_SUPPLIED=false
+RULE_SOURCE_MODE_SUPPLIED=false
+SKILL_SOURCE_MODE_SUPPLIED=false
 INCLUDE_RULES=()
 EXCLUDE_RULES=()
 INCLUDE_SKILLS=()
 EXCLUDE_SKILLS=()
+REQUESTED_INCLUDE_RULES=()
+REQUESTED_EXCLUDE_RULES=()
+REQUESTED_INCLUDE_SKILLS=()
+REQUESTED_EXCLUDE_SKILLS=()
+STORED_INCLUDE_SKILLS=()
+STORED_EXCLUDE_SKILLS=()
+STORED_SKILL_SOURCE_MODE=""
+LOADED_PROFILE=""
+LOADED_CHANGELOG_MODE=""
+LOADED_CONTEXT_RULES_MODE=""
+LOADED_RULE_SOURCE_MODE=""
+LOADED_SKILL_SOURCE_MODE=""
+CONFIG_LOADED=false
 
 CREATED=()
 UPDATED=()
@@ -174,11 +192,58 @@ validate_catalog_id() {
 validate_catalog_ids() {
   local identifier
 
-  for identifier in "${INCLUDE_RULES[@]}" "${EXCLUDE_RULES[@]}"; do
+  for identifier in \
+    "${REQUESTED_INCLUDE_RULES[@]}" \
+    "${REQUESTED_EXCLUDE_RULES[@]}"; do
     validate_catalog_id rule "$identifier"
   done
-  for identifier in "${INCLUDE_SKILLS[@]}" "${EXCLUDE_SKILLS[@]}"; do
+  for identifier in \
+    "${REQUESTED_INCLUDE_SKILLS[@]}" \
+    "${REQUESTED_EXCLUDE_SKILLS[@]}"; do
     validate_catalog_id skill "$identifier"
+  done
+}
+
+array_contains() {
+  local needle="$1"
+  shift
+  local item
+
+  for item in "$@"; do
+    [ "$item" = "$needle" ] && return 0
+  done
+  return 1
+}
+
+validate_selection_requests() {
+  local identifier
+  local seen=()
+
+  for identifier in "${REQUESTED_INCLUDE_RULES[@]}"; do
+    array_contains "$identifier" "${seen[@]}" &&
+      die "duplicate --include-rule value: $identifier"
+    seen+=("$identifier")
+  done
+
+  seen=()
+  for identifier in "${REQUESTED_EXCLUDE_RULES[@]}"; do
+    array_contains "$identifier" "${seen[@]}" &&
+      die "duplicate --exclude-rule value: $identifier"
+    seen+=("$identifier")
+  done
+
+  seen=()
+  for identifier in "${REQUESTED_INCLUDE_SKILLS[@]}"; do
+    array_contains "$identifier" "${seen[@]}" &&
+      die "duplicate --include-skill value: $identifier"
+    seen+=("$identifier")
+  done
+
+  seen=()
+  for identifier in "${REQUESTED_EXCLUDE_SKILLS[@]}"; do
+    array_contains "$identifier" "${seen[@]}" &&
+      die "duplicate --exclude-skill value: $identifier"
+    seen+=("$identifier")
   done
 }
 
@@ -188,46 +253,51 @@ parse_args() {
       --profile)
         [ "$#" -ge 2 ] || die "--profile requires a value"
         PROFILE="$2"
+        PROFILE_SUPPLIED=true
         shift 2
         ;;
       --changelog)
         [ "$#" -ge 2 ] || die "--changelog requires a value"
         CHANGELOG_MODE="$2"
+        CHANGELOG_MODE_SUPPLIED=true
         shift 2
         ;;
       --context-rules)
         [ "$#" -ge 2 ] || die "--context-rules requires a value"
         CONTEXT_RULES_MODE="$2"
+        CONTEXT_RULES_MODE_SUPPLIED=true
         shift 2
         ;;
       --rules-source)
         [ "$#" -ge 2 ] || die "--rules-source requires a value"
         RULE_SOURCE_MODE="$2"
+        RULE_SOURCE_MODE_SUPPLIED=true
         shift 2
         ;;
       --skills-source)
         [ "$#" -ge 2 ] || die "--skills-source requires a value"
         SKILL_SOURCE_MODE="$2"
+        SKILL_SOURCE_MODE_SUPPLIED=true
         shift 2
         ;;
       --include-rule)
         [ "$#" -ge 2 ] || die "--include-rule requires a value"
-        INCLUDE_RULES+=("$2")
+        REQUESTED_INCLUDE_RULES+=("$2")
         shift 2
         ;;
       --exclude-rule)
         [ "$#" -ge 2 ] || die "--exclude-rule requires a value"
-        EXCLUDE_RULES+=("$2")
+        REQUESTED_EXCLUDE_RULES+=("$2")
         shift 2
         ;;
       --include-skill)
         [ "$#" -ge 2 ] || die "--include-skill requires a value"
-        INCLUDE_SKILLS+=("$2")
+        REQUESTED_INCLUDE_SKILLS+=("$2")
         shift 2
         ;;
       --exclude-skill)
         [ "$#" -ge 2 ] || die "--exclude-skill requires a value"
-        EXCLUDE_SKILLS+=("$2")
+        REQUESTED_EXCLUDE_SKILLS+=("$2")
         shift 2
         ;;
       --remove)
@@ -264,11 +334,12 @@ parse_args() {
   case "$CHANGELOG_MODE" in auto|none|date|version) ;; *) die "invalid changelog mode: $CHANGELOG_MODE" ;; esac
   case "$CONTEXT_RULES_MODE" in auto|full|trimmed) ;; *) die "invalid context rules mode: $CONTEXT_RULES_MODE" ;; esac
   case "$RULE_SOURCE_MODE" in symlink|copy) ;; *) die "invalid rules source mode: $RULE_SOURCE_MODE" ;; esac
-  if [ -z "$SKILL_SOURCE_MODE" ]; then
+  if [ -z "$SKILL_SOURCE_MODE" ] && [ "$SKILL_SOURCE_MODE_SUPPLIED" = true ]; then
     SKILL_SOURCE_MODE="$RULE_SOURCE_MODE"
   fi
-  case "$SKILL_SOURCE_MODE" in symlink|copy) ;; *) die "invalid skills source mode: $SKILL_SOURCE_MODE" ;; esac
+  case "$SKILL_SOURCE_MODE" in ""|symlink|copy) ;; *) die "invalid skills source mode: $SKILL_SOURCE_MODE" ;; esac
   validate_catalog_ids
+  validate_selection_requests
 }
 
 resolve_target() {
@@ -575,6 +646,27 @@ remove_managed_symlink_safely() {
   fi
 }
 
+remove_managed_directory_safely() {
+  local target="$1"
+  local transaction_entry
+
+  agent_guidelines_transaction_is_active || {
+    printf 'error: managed directory removal requires a transaction: %s\n' \
+      "$target" >&2
+    return 1
+  }
+  transaction_entry="$(agent_guidelines_transaction_allocate_entry \
+    "$target" missing)" || return 1
+  if rm -rf "$target" && [ ! -e "$target" ] && [ ! -L "$target" ]; then
+    if agent_guidelines_transaction_complete_entry "$transaction_entry"; then
+      return 0
+    fi
+  fi
+  agent_guidelines_transaction_cancel_entry "$transaction_entry" || return 1
+  printf 'error: safe managed directory removal failed: %s\n' "$target" >&2
+  return 1
+}
+
 sha256_file() {
   local path="$1"
 
@@ -583,6 +675,405 @@ sha256_file() {
   else
     shasum -a 256 "$path" | awk '{ print $1 }'
   fi
+}
+
+validate_state_scalar() {
+  local key="$1"
+  local value="$2"
+
+  case "$key" in
+    profile)
+      case "$value" in minimal|codebase|released) ;; *) return 1 ;; esac
+      ;;
+    changelog)
+      case "$value" in none|date|version) ;; *) return 1 ;; esac
+      ;;
+    context_rules)
+      case "$value" in auto|full|trimmed) ;; *) return 1 ;; esac
+      ;;
+    rules_source|skills_source)
+      case "$value" in symlink|copy) ;; *) return 1 ;; esac
+      ;;
+    versioning)
+      case "$value" in none|semver) ;; *) return 1 ;; esac
+      ;;
+    *) return 1 ;;
+  esac
+}
+
+validate_loaded_selections() {
+  local identifier
+
+  for identifier in "${INCLUDE_RULES[@]}"; do
+    validate_catalog_id rule "$identifier"
+  done
+  for identifier in "${EXCLUDE_RULES[@]}"; do
+    validate_catalog_id rule "$identifier"
+  done
+  for identifier in "${INCLUDE_SKILLS[@]}"; do
+    validate_catalog_id skill "$identifier"
+  done
+  for identifier in "${EXCLUDE_SKILLS[@]}"; do
+    validate_catalog_id skill "$identifier"
+  done
+}
+
+append_loaded_selection() {
+  local kind="$1"
+  local identifier="$2"
+
+  case "$kind" in
+    include_rule)
+      array_contains "$identifier" "${INCLUDE_RULES[@]}" &&
+        die "duplicate stored include_rule: $identifier"
+      INCLUDE_RULES+=("$identifier")
+      ;;
+    exclude_rule)
+      array_contains "$identifier" "${EXCLUDE_RULES[@]}" &&
+        die "duplicate stored exclude_rule: $identifier"
+      EXCLUDE_RULES+=("$identifier")
+      ;;
+    include_skill)
+      array_contains "$identifier" "${INCLUDE_SKILLS[@]}" &&
+        die "duplicate stored include_skill: $identifier"
+      INCLUDE_SKILLS+=("$identifier")
+      ;;
+    exclude_skill)
+      array_contains "$identifier" "${EXCLUDE_SKILLS[@]}" &&
+        die "duplicate stored exclude_skill: $identifier"
+      EXCLUDE_SKILLS+=("$identifier")
+      ;;
+    *) die "invalid stored selection kind: $kind" ;;
+  esac
+}
+
+parse_schema_one_config() {
+  local path="$1"
+  local line key value
+  local schema_seen=false
+  local profile_seen=false
+  local changelog_seen=false
+  local context_seen=false
+  local rules_source_seen=false
+  local skills_source_seen=false
+
+  while IFS= read -r line || [ -n "$line" ]; do
+    case "$line" in
+      *=*)
+        key="${line%%=*}"
+        value="${line#*=}"
+        ;;
+      *) die "malformed setup state line: $line" ;;
+    esac
+
+    case "$key" in
+      schema)
+        [ "$schema_seen" = false ] || die "duplicate setup state key: schema"
+        [ "$value" = 1 ] || die "unsupported setup state schema: $value"
+        schema_seen=true
+        ;;
+      profile)
+        [ "$profile_seen" = false ] || die "duplicate setup state key: profile"
+        validate_state_scalar profile "$value" ||
+          die "invalid stored profile: $value"
+        LOADED_PROFILE="$value"
+        profile_seen=true
+        ;;
+      changelog)
+        [ "$changelog_seen" = false ] || die "duplicate setup state key: changelog"
+        validate_state_scalar changelog "$value" ||
+          die "invalid stored changelog mode: $value"
+        LOADED_CHANGELOG_MODE="$value"
+        changelog_seen=true
+        ;;
+      context_rules)
+        [ "$context_seen" = false ] || die "duplicate setup state key: context_rules"
+        validate_state_scalar context_rules "$value" ||
+          die "invalid stored context-rules mode: $value"
+        LOADED_CONTEXT_RULES_MODE="$value"
+        context_seen=true
+        ;;
+      rules_source)
+        [ "$rules_source_seen" = false ] || die "duplicate setup state key: rules_source"
+        validate_state_scalar rules_source "$value" ||
+          die "invalid stored rules-source mode: $value"
+        LOADED_RULE_SOURCE_MODE="$value"
+        rules_source_seen=true
+        ;;
+      skills_source)
+        [ "$skills_source_seen" = false ] || die "duplicate setup state key: skills_source"
+        validate_state_scalar skills_source "$value" ||
+          die "invalid stored skills-source mode: $value"
+        LOADED_SKILL_SOURCE_MODE="$value"
+        skills_source_seen=true
+        ;;
+      include_rule|exclude_rule|include_skill|exclude_skill)
+        [ -n "$value" ] || die "empty stored selection: $key"
+        append_loaded_selection "$key" "$value"
+        ;;
+      *) die "unknown setup state key: $key" ;;
+    esac
+  done < "$path"
+
+  [ "$schema_seen" = true ] || die "setup state is missing schema"
+  [ "$profile_seen" = true ] || die "setup state is missing profile"
+  [ "$changelog_seen" = true ] || die "setup state is missing changelog"
+  [ "$context_seen" = true ] || die "setup state is missing context_rules"
+  [ "$rules_source_seen" = true ] || die "setup state is missing rules_source"
+  [ "$skills_source_seen" = true ] || die "setup state is missing skills_source"
+}
+
+append_legacy_selections() {
+  local kind="$1"
+  local value="$2"
+  local identifiers=()
+  local identifier
+
+  [ -z "$value" ] || read -r -a identifiers <<< "$value"
+  for identifier in "${identifiers[@]}"; do
+    append_loaded_selection "$kind" "$identifier"
+  done
+}
+
+parse_legacy_config() {
+  local path="$1"
+  local line key value
+  local profile_seen=false
+  local changelog_seen=false
+  local versioning_seen=false
+  local context_seen=false
+  local rules_source_seen=false
+  local skills_source_seen=false
+  local include_rules_seen=false
+  local exclude_rules_seen=false
+  local include_skills_seen=false
+  local exclude_skills_seen=false
+  local legacy_versioning=""
+
+  while IFS= read -r line || [ -n "$line" ]; do
+    case "$line" in
+      *=*)
+        key="${line%%=*}"
+        value="${line#*=}"
+        ;;
+      *) die "malformed legacy setup state line: $line" ;;
+    esac
+
+    case "$key" in
+      profile)
+        [ "$profile_seen" = false ] || die "duplicate legacy setup state key: profile"
+        validate_state_scalar profile "$value" ||
+          die "invalid legacy profile: $value"
+        LOADED_PROFILE="$value"
+        profile_seen=true
+        ;;
+      changelog)
+        [ "$changelog_seen" = false ] || die "duplicate legacy setup state key: changelog"
+        validate_state_scalar changelog "$value" ||
+          die "invalid legacy changelog mode: $value"
+        LOADED_CHANGELOG_MODE="$value"
+        changelog_seen=true
+        ;;
+      versioning)
+        [ "$versioning_seen" = false ] || die "duplicate legacy setup state key: versioning"
+        validate_state_scalar versioning "$value" ||
+          die "invalid legacy versioning mode: $value"
+        legacy_versioning="$value"
+        versioning_seen=true
+        ;;
+      context_rules)
+        [ "$context_seen" = false ] || die "duplicate legacy setup state key: context_rules"
+        validate_state_scalar context_rules "$value" ||
+          die "invalid legacy context-rules mode: $value"
+        LOADED_CONTEXT_RULES_MODE="$value"
+        context_seen=true
+        ;;
+      rules_source)
+        [ "$rules_source_seen" = false ] || die "duplicate legacy setup state key: rules_source"
+        validate_state_scalar rules_source "$value" ||
+          die "invalid legacy rules-source mode: $value"
+        LOADED_RULE_SOURCE_MODE="$value"
+        rules_source_seen=true
+        ;;
+      skills_source)
+        [ "$skills_source_seen" = false ] || die "duplicate legacy setup state key: skills_source"
+        validate_state_scalar skills_source "$value" ||
+          die "invalid legacy skills-source mode: $value"
+        LOADED_SKILL_SOURCE_MODE="$value"
+        skills_source_seen=true
+        ;;
+      include_rules)
+        [ "$include_rules_seen" = false ] || die "duplicate legacy setup state key: include_rules"
+        append_legacy_selections include_rule "$value"
+        include_rules_seen=true
+        ;;
+      exclude_rules)
+        [ "$exclude_rules_seen" = false ] || die "duplicate legacy setup state key: exclude_rules"
+        append_legacy_selections exclude_rule "$value"
+        exclude_rules_seen=true
+        ;;
+      include_skills)
+        [ "$include_skills_seen" = false ] || die "duplicate legacy setup state key: include_skills"
+        append_legacy_selections include_skill "$value"
+        include_skills_seen=true
+        ;;
+      exclude_skills)
+        [ "$exclude_skills_seen" = false ] || die "duplicate legacy setup state key: exclude_skills"
+        append_legacy_selections exclude_skill "$value"
+        exclude_skills_seen=true
+        ;;
+      *) die "unknown legacy setup state key: $key" ;;
+    esac
+  done < "$path"
+
+  [ "$profile_seen" = true ] || die "legacy setup state is missing profile"
+  [ "$changelog_seen" = true ] || die "legacy setup state is missing changelog"
+  [ "$versioning_seen" = true ] || die "legacy setup state is missing versioning"
+  [ "$context_seen" = true ] || die "legacy setup state is missing context_rules"
+  [ "$rules_source_seen" = true ] || die "legacy setup state is missing rules_source"
+  [ "$skills_source_seen" = true ] || die "legacy setup state is missing skills_source"
+  [ "$include_rules_seen" = true ] || die "legacy setup state is missing include_rules"
+  [ "$exclude_rules_seen" = true ] || die "legacy setup state is missing exclude_rules"
+  [ "$include_skills_seen" = true ] || die "legacy setup state is missing include_skills"
+  [ "$exclude_skills_seen" = true ] || die "legacy setup state is missing exclude_skills"
+
+  local expected_versioning=none
+  [ "$LOADED_CHANGELOG_MODE" = version ] && expected_versioning=semver
+  [ "$legacy_versioning" = "$expected_versioning" ] ||
+    die "legacy setup state has inconsistent versioning mode"
+}
+
+parse_local_config() {
+  local path="$1"
+  local first_line
+
+  if LC_ALL=C od -An -v -t x1 "$path" |
+    grep -Eq '(^|[[:space:]])00([[:space:]]|$)'; then
+    die "setup state contains NUL data: $path"
+  fi
+
+  INCLUDE_RULES=()
+  EXCLUDE_RULES=()
+  INCLUDE_SKILLS=()
+  EXCLUDE_SKILLS=()
+  first_line="$(sed -n '1p' "$path")"
+  case "$first_line" in
+    schema=*) parse_schema_one_config "$path" ;;
+    *) parse_legacy_config "$path" ;;
+  esac
+  validate_loaded_selections
+}
+
+remove_rule_inclusion() {
+  local needle="$1"
+  local kept=()
+  local item
+  for item in "${INCLUDE_RULES[@]}"; do
+    [ "$item" = "$needle" ] || kept+=("$item")
+  done
+  INCLUDE_RULES=("${kept[@]}")
+}
+
+remove_rule_exclusion() {
+  local needle="$1"
+  local kept=()
+  local item
+  for item in "${EXCLUDE_RULES[@]}"; do
+    [ "$item" = "$needle" ] || kept+=("$item")
+  done
+  EXCLUDE_RULES=("${kept[@]}")
+}
+
+remove_skill_inclusion() {
+  local needle="$1"
+  local kept=()
+  local item
+  for item in "${INCLUDE_SKILLS[@]}"; do
+    [ "$item" = "$needle" ] || kept+=("$item")
+  done
+  INCLUDE_SKILLS=("${kept[@]}")
+}
+
+remove_skill_exclusion() {
+  local needle="$1"
+  local kept=()
+  local item
+  for item in "${EXCLUDE_SKILLS[@]}"; do
+    [ "$item" = "$needle" ] || kept+=("$item")
+  done
+  EXCLUDE_SKILLS=("${kept[@]}")
+}
+
+apply_selection_requests() {
+  local identifier
+
+  for identifier in "${REQUESTED_INCLUDE_RULES[@]}"; do
+    array_contains "$identifier" "${REQUESTED_EXCLUDE_RULES[@]}" ||
+      remove_rule_exclusion "$identifier"
+    array_contains "$identifier" "${INCLUDE_RULES[@]}" ||
+      INCLUDE_RULES+=("$identifier")
+  done
+  for identifier in "${REQUESTED_EXCLUDE_RULES[@]}"; do
+    array_contains "$identifier" "${REQUESTED_INCLUDE_RULES[@]}" ||
+      remove_rule_inclusion "$identifier"
+    array_contains "$identifier" "${EXCLUDE_RULES[@]}" ||
+      EXCLUDE_RULES+=("$identifier")
+  done
+  for identifier in "${REQUESTED_INCLUDE_SKILLS[@]}"; do
+    array_contains "$identifier" "${REQUESTED_EXCLUDE_SKILLS[@]}" ||
+      remove_skill_exclusion "$identifier"
+    array_contains "$identifier" "${INCLUDE_SKILLS[@]}" ||
+      INCLUDE_SKILLS+=("$identifier")
+  done
+  for identifier in "${REQUESTED_EXCLUDE_SKILLS[@]}"; do
+    array_contains "$identifier" "${REQUESTED_INCLUDE_SKILLS[@]}" ||
+      remove_skill_inclusion "$identifier"
+    array_contains "$identifier" "${EXCLUDE_SKILLS[@]}" ||
+      EXCLUDE_SKILLS+=("$identifier")
+  done
+}
+
+load_local_config() {
+  local config_path="$TARGET_DIR/.agent-guidelines/config"
+  local config_record
+  local checksum
+
+  if [ ! -e "$config_path" ] && [ ! -L "$config_path" ]; then
+    apply_selection_requests
+    [ -n "$SKILL_SOURCE_MODE" ] || SKILL_SOURCE_MODE="$RULE_SOURCE_MODE"
+    return
+  fi
+  [ -f "$config_path" ] && [ ! -L "$config_path" ] ||
+    die "setup state is not a regular file: $config_path"
+  target_has_git_repo ||
+    die "setup state exists without repository ownership: $config_path"
+
+  config_record="$(ownership_record_path config)"
+  checksum="$(sha256_file "$config_path")"
+  if [ -L "$config_record" ] || [ ! -f "$config_record" ] ||
+    [ "$(wc -l < "$config_record")" -ne 1 ] ||
+    ! grep -Fxq "sha256=$checksum" "$config_record"; then
+    die "setup state is unowned or its checksum changed: $config_path"
+  fi
+
+  parse_local_config "$config_path"
+  CONFIG_LOADED=true
+  STORED_INCLUDE_SKILLS=("${INCLUDE_SKILLS[@]}")
+  STORED_EXCLUDE_SKILLS=("${EXCLUDE_SKILLS[@]}")
+  STORED_SKILL_SOURCE_MODE="$LOADED_SKILL_SOURCE_MODE"
+
+  [ "$PROFILE_SUPPLIED" = true ] || PROFILE="$LOADED_PROFILE"
+  [ "$CHANGELOG_MODE_SUPPLIED" = true ] ||
+    CHANGELOG_MODE="$LOADED_CHANGELOG_MODE"
+  [ "$CONTEXT_RULES_MODE_SUPPLIED" = true ] ||
+    CONTEXT_RULES_MODE="$LOADED_CONTEXT_RULES_MODE"
+  [ "$RULE_SOURCE_MODE_SUPPLIED" = true ] ||
+    RULE_SOURCE_MODE="$LOADED_RULE_SOURCE_MODE"
+  [ "$SKILL_SOURCE_MODE_SUPPLIED" = true ] ||
+    SKILL_SOURCE_MODE="$LOADED_SKILL_SOURCE_MODE"
+
+  apply_selection_requests
+  [ -n "$SKILL_SOURCE_MODE" ] || SKILL_SOURCE_MODE="$RULE_SOURCE_MODE"
 }
 
 ownership_dir() {
@@ -1180,6 +1671,54 @@ preflight_rule_source_target() {
   fi
 }
 
+stored_skill_selected() {
+  local skill="$1"
+
+  array_contains "$skill" "${STORED_INCLUDE_SKILLS[@]}" || return 1
+  ! array_contains "$skill" "${STORED_EXCLUDE_SKILLS[@]}"
+}
+
+desired_skill_selected() {
+  local skill="$1"
+
+  array_contains "$skill" "${INCLUDE_SKILLS[@]}" || return 1
+  ! array_contains "$skill" "${EXCLUDE_SKILLS[@]}"
+}
+
+preflight_deselected_skill_targets() {
+  [ "$CONFIG_LOADED" = true ] || return 0
+
+  local skill source target current
+  for skill in "${STORED_INCLUDE_SKILLS[@]}"; do
+    stored_skill_selected "$skill" || continue
+    desired_skill_selected "$skill" && continue
+    source="$CANONICAL_SKILLS_DIR/$skill"
+    target="$TARGET_DIR/.agents/skills/$skill"
+    agent_guidelines_assert_path_beneath \
+      "$target" "$TARGET_DIR" ".agents/skills/$skill" || exit 1
+
+    if [ "$STORED_SKILL_SOURCE_MODE" = symlink ]; then
+      if [ -L "$target" ]; then
+        current="$(readlink "$target")"
+        [ "$current" = "$source" ] ||
+          die ".agents/skills/$skill points to an unmanaged target: $current"
+      elif [ -e "$target" ]; then
+        die ".agents/skills/$skill is not the recorded managed symlink"
+      fi
+    else
+      if [ -L "$target" ]; then
+        die ".agents/skills/$skill is a symlink, not the recorded managed copy"
+      elif [ -e "$target" ]; then
+        [ -d "$source" ] || die "recorded skill source is missing: $source"
+        [ -d "$target" ] ||
+          die ".agents/skills/$skill is not the recorded managed copy"
+        diff -qr "$source" "$target" >/dev/null ||
+          die ".agents/skills/$skill changed from its recorded managed copy"
+      fi
+    fi
+  done
+}
+
 preflight_skill_source_targets() {
   local agents_dir="$TARGET_DIR/.agents"
   local skills_dir="$agents_dir/skills"
@@ -1191,6 +1730,7 @@ preflight_skill_source_targets() {
     "$skills_dir" "$TARGET_DIR" ".agents/skills" || exit 1
   validate_managed_directory "$agents_dir" ".agents"
   validate_managed_directory "$skills_dir" ".agents/skills"
+  preflight_deselected_skill_targets
 
   for skill in "${INCLUDE_SKILLS[@]}"; do
     skill_excluded "$skill" && continue
@@ -1218,6 +1758,31 @@ preflight_skill_source_targets() {
           die ".agents/skills/$skill is not an exact managed copy"
       fi
     fi
+  done
+}
+
+remove_deselected_project_skills() {
+  [ "$CONFIG_LOADED" = true ] || return 0
+
+  local skill target
+  for skill in "${STORED_INCLUDE_SKILLS[@]}"; do
+    stored_skill_selected "$skill" || continue
+    desired_skill_selected "$skill" && continue
+    target="$TARGET_DIR/.agents/skills/$skill"
+    if [ ! -e "$target" ] && [ ! -L "$target" ]; then
+      add_status unchanged ".agents/skills/$skill (already absent)"
+      continue
+    fi
+    if should_mutate; then
+      if [ "$STORED_SKILL_SOURCE_MODE" = symlink ]; then
+        remove_managed_symlink_safely "$target" ||
+          die "could not remove deselected .agents/skills/$skill symlink"
+      else
+        remove_managed_directory_safely "$target" ||
+          die "could not remove deselected .agents/skills/$skill copy"
+      fi
+    fi
+    add_status updated ".agents/skills/$skill removed"
   done
 }
 
@@ -1268,17 +1833,27 @@ install_per_project_skills() {
 }
 
 write_local_config_content() {
+  local identifier
+
   {
+    printf 'schema=1\n'
     printf 'profile=%s\n' "$PROFILE"
     printf 'changelog=%s\n' "$CHANGELOG_MODE"
-    printf 'versioning=%s\n' "$(versioning_mode)"
     printf 'context_rules=%s\n' "$CONTEXT_RULES_MODE"
     printf 'rules_source=%s\n' "$RULE_SOURCE_MODE"
     printf 'skills_source=%s\n' "$SKILL_SOURCE_MODE"
-    printf 'include_rules=%s\n' "${INCLUDE_RULES[*]:-}"
-    printf 'exclude_rules=%s\n' "${EXCLUDE_RULES[*]:-}"
-    printf 'include_skills=%s\n' "${INCLUDE_SKILLS[*]:-}"
-    printf 'exclude_skills=%s\n' "${EXCLUDE_SKILLS[*]:-}"
+    for identifier in "${INCLUDE_RULES[@]}"; do
+      printf 'include_rule=%s\n' "$identifier"
+    done
+    for identifier in "${EXCLUDE_RULES[@]}"; do
+      printf 'exclude_rule=%s\n' "$identifier"
+    done
+    for identifier in "${INCLUDE_SKILLS[@]}"; do
+      printf 'include_skill=%s\n' "$identifier"
+    done
+    for identifier in "${EXCLUDE_SKILLS[@]}"; do
+      printf 'exclude_skill=%s\n' "$identifier"
+    done
   }
 }
 
@@ -2099,6 +2674,7 @@ main() {
   fi
 
   resolve_target
+  load_local_config
   require_git_identity
   infer_profile
   infer_changelog_mode
@@ -2124,6 +2700,7 @@ main() {
   configure_rule_source
   write_local_config
   assemble_agent_files
+  remove_deselected_project_skills
   install_per_project_skills
   create_initial_commit_if_needed
   install_hooks
