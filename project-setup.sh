@@ -43,6 +43,8 @@ LOADED_CONTEXT_RULES_MODE=""
 LOADED_RULE_SOURCE_MODE=""
 LOADED_SKILL_SOURCE_MODE=""
 CONFIG_LOADED=false
+GIT_USER_NAME=""
+GIT_USER_EMAIL=""
 
 CREATED=()
 UPDATED=()
@@ -366,12 +368,10 @@ validate_target_worktree_root() {
 require_git_identity() {
   command -v git >/dev/null 2>&1 || die "git is required"
 
-  local name
-  local email
-  name="$(git config --get user.name || true)"
-  email="$(git config --get user.email || true)"
+  GIT_USER_NAME="$(git -C "$TARGET_DIR" config --get user.name || true)"
+  GIT_USER_EMAIL="$(git -C "$TARGET_DIR" config --get user.email || true)"
 
-  if [ -z "$name" ] || [ -z "$email" ]; then
+  if [ -z "$GIT_USER_NAME" ] || [ -z "$GIT_USER_EMAIL" ]; then
     cat >&2 <<'EOF'
 git user.name and user.email must be configured before setup can continue.
 
@@ -2607,7 +2607,11 @@ create_initial_commit_if_needed() {
     return
   fi
 
-  git -C "$TARGET_DIR" commit -m "chore: initialize repository" >/dev/null
+  GIT_AUTHOR_NAME="$GIT_USER_NAME" \
+    GIT_AUTHOR_EMAIL="$GIT_USER_EMAIL" \
+    GIT_COMMITTER_NAME="$GIT_USER_NAME" \
+    GIT_COMMITTER_EMAIL="$GIT_USER_EMAIL" \
+    git -C "$TARGET_DIR" commit -m "chore: initialize repository" >/dev/null
   add_status created "initial commit"
 }
 
@@ -2629,11 +2633,7 @@ print_list() {
 
 print_summary() {
   local branch
-  local name
-  local email
   branch="$(git -C "$TARGET_DIR" symbolic-ref --quiet --short HEAD 2>/dev/null || printf 'detached')"
-  name="$(git config --get user.name || true)"
-  email="$(git config --get user.email || true)"
 
   printf '\nProject setup summary\n'
   if [ "$DRY_RUN" = true ]; then
@@ -2641,7 +2641,7 @@ print_summary() {
   fi
   printf 'Repository: %s\n' "$TARGET_DIR"
   printf 'Branch: %s\n' "$branch"
-  printf 'Git user: %s <%s>\n' "$name" "$email"
+  printf 'Git user: %s <%s>\n' "$GIT_USER_NAME" "$GIT_USER_EMAIL"
   printf 'Profile: %s\n' "$PROFILE"
   printf 'Changelog mode: %s\n' "$CHANGELOG_MODE"
   printf 'Versioning mode: %s\n' "$(versioning_mode)"
