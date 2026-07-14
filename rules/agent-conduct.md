@@ -14,8 +14,11 @@ summary: >-
 
 ## Hard Constraints
 
-- Back up the full target and verify the backup before any delete or
-  overwrite.
+- Back up the full target and verify the backup before deleting or
+  overwriting unowned data.
+- Replace owned generated data only after exact ownership and
+  expected-current-content checks; retain rollback copies across
+  multi-file operations.
 - Inspect the target before destroying it; if it contradicts its
   description or you did not create it, stop and ask.
 - Confirm before irreversible or outward-facing actions unless
@@ -33,13 +36,19 @@ rationale and detail behind each constraint:
 
 ## Backups
 
-- Back up the entire target, not just the parts you expect to find: a
-  listing showing one file does not prove only one file was ever
-  there, and untracked or ignored files are invisible to
-  version-control recovery.
-- The safe sequence: copy the target to a backup location, verify the
-  backup exists, then perform the removal, and only discard the backup
-  after confirming nothing was lost.
+- For unowned or user data, back up the entire target, not just the
+  parts you expect to find: a listing showing one file does not prove
+  only one file was ever there, and untracked or ignored files are
+  invisible to version-control recovery.
+- The safe sequence for unowned data is: copy the target to a backup
+  location, verify the copy against the source, then perform the
+  removal. Discard the backup only after confirming nothing was lost.
+- Owned generated data may be atomically replaced without a persistent
+  backup only when both ownership and the exact current state are
+  verified. Keep a verified rollback copy until every mutation in a
+  multi-file operation succeeds.
+- A test may delete its own disposable fixture. An ownership or state
+  mismatch always stops without mutation.
 
 ## Irreversible and Outward-Facing Actions
 
