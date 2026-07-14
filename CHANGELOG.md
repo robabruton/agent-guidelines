@@ -44,8 +44,9 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
   refuses foreign paths or mismatched owned state without mutation.
 - Project setup rejects nested worktree targets, ambient repository redirects,
   and hook paths outside the target Git directory. It uses the target's Git
-  identity, preserves existing unborn indexes, and stages new Git metadata for
-  recoverable installation only after setup succeeds.
+  identity, preserves existing unborn indexes, and commits only artifacts it
+  creates. New Git metadata is staged for recoverable installation, and failed
+  final verification retains a complete reported recovery state.
 
 ## 2026-07-13
 
