@@ -77,7 +77,7 @@ Field meanings:
   - `status` — current state, versions, active work.
   - `runbook` — operational commands or host details.
   - `reference` — deep background needed only for certain work.
-  - `feedback` — a user correction that should shape future work.
+  - `feedback` — a user correction that should shape subsequent tasks.
   - `user` — who the user is and their standing preferences.
 - `load` — the routing tier (see Organize, below): `always` (boot set),
   `recall` (load on demand when relevant), `archive` (out of the routine
