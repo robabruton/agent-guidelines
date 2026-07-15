@@ -13,6 +13,16 @@ mkdir -p "$TEST_HOME"
 git config --file "$TEST_HOME/.gitconfig" user.name "Test User"
 git config --file "$TEST_HOME/.gitconfig" user.email "test@example.com"
 
+sha256_file() {
+  local path="$1"
+
+  if command -v sha256sum >/dev/null 2>&1; then
+    sha256sum "$path" | awk '{ print $1 }'
+  else
+    shasum -a 256 "$path" | awk '{ print $1 }'
+  fi
+}
+
 expected_rule_count() {
   case "$1:$2" in
     minimal:none) printf '9' ;;
@@ -88,16 +98,18 @@ OVERSIZE_REPO="$TMP_ROOT/oversize"
 HOME="$TEST_HOME" "$ROOT_DIR/project-setup.sh" \
   --profile minimal --changelog none --harness codex \
   "$OVERSIZE_REPO" >/dev/null
-for line in $(seq 1 500); do
+line=1
+while [ "$line" -le 500 ]; do
   printf 'project note %04d adds stable local context padding\n' "$line"
+  line=$((line + 1))
 done >> "$OVERSIZE_REPO/AGENTS.md"
-before_hash="$(sha256sum "$OVERSIZE_REPO/AGENTS.md")"
+before_hash="$(sha256_file "$OVERSIZE_REPO/AGENTS.md")"
 if HOME="$TEST_HOME" "$ROOT_DIR/project-setup.sh" \
   "$OVERSIZE_REPO" >"$TMP_ROOT/oversize.out" 2>"$TMP_ROOT/oversize.err"; then
   echo "oversize project context unexpectedly succeeded" >&2
   exit 1
 fi
 grep -Fq 'project context exceeds 24576 bytes' "$TMP_ROOT/oversize.err"
-test "$(sha256sum "$OVERSIZE_REPO/AGENTS.md")" = "$before_hash"
+test "$(sha256_file "$OVERSIZE_REPO/AGENTS.md")" = "$before_hash"
 
 printf 'project context compatibility tests passed\n'

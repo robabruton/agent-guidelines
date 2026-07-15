@@ -143,7 +143,9 @@ grep -Fxq 'harness=none' "$NONE_REPO/.agent-guidelines/config"
 "$ROOT_DIR/project-setup.sh" \
   --profile minimal --changelog none --harness codex \
   --include-skill explain "$LEGACY_REPO" >/dev/null
-sed -i '/^harness=/d' "$LEGACY_REPO/.agent-guidelines/config"
+sed '/^harness=/d' "$LEGACY_REPO/.agent-guidelines/config" \
+  >"$TMP_ROOT/legacy.config"
+mv "$TMP_ROOT/legacy.config" "$LEGACY_REPO/.agent-guidelines/config"
 printf 'sha256=%s\n' \
   "$(sha256_file "$LEGACY_REPO/.agent-guidelines/config")" \
   >"$LEGACY_REPO/.git/agent-guidelines/ownership-v1/config"
