@@ -258,4 +258,4 @@ git -C "$DRY_REPO" log --oneline 2>/dev/null | grep -q . && {
   exit 1
 }
 
-printf 'project-setup smoke tests passed\n'
+printf 'project setup smoke tests passed\n'
