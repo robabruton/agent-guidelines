@@ -16,6 +16,11 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 - A profile-inference safety suite covers empty repositories, recognized
   source trees, package manifests, version files, dated and versioned
   changelogs, mixed headings, and tag-only repositories.
+- Verification enforces skill metadata and resource contracts, internal
+  Markdown link integrity, generated instruction budgets, and focused safety
+  suites. CI discovers every test on Linux and runs a portability subset under
+  macOS system Bash with read-only workflow permissions, an immutable checkout
+  pin, and a reported ShellCheck version.
 
 ### Changed
 
@@ -31,6 +36,16 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
   inference, canonical rule sources, initial-commit boundaries, and current
   command output. The skills catalog matches implemented AVR workflows and
   distinguishes portable metadata from Claude-specific routing extensions.
+- Agent memory reports recursively scan nested stores and distinguish entry,
+  router, and archive counts while retaining unresolved-link and metadata
+  diagnostics.
+
+### Fixed
+
+- Rule assembly recognizes indented backtick and tilde fences, setup commands
+  reject contradictory actions, options, and targets before mutation, and
+  runtime cleanup removes scratch paths after errors or signals without
+  discarding incomplete transaction recovery.
 
 ## 2026-07-14
 

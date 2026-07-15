@@ -10,6 +10,92 @@ AGENT_GUIDELINES_TRANSACTION_ACTIVE=false
 AGENT_GUIDELINES_TRANSACTION_DIR=""
 AGENT_GUIDELINES_TRANSACTION_RECOVERY_NOTE=""
 AGENT_GUIDELINES_TRANSACTION_RETAIN_ENTRY=""
+AGENT_GUIDELINES_RUNTIME_ACTIVE=false
+AGENT_GUIDELINES_RUNTIME_DIR=""
+AGENT_GUIDELINES_RUNTIME_PREVIOUS_TMPDIR=""
+AGENT_GUIDELINES_RUNTIME_PREVIOUS_TMPDIR_SET=false
+
+agent_guidelines_install_exit_traps() {
+  trap 'agent_guidelines_runtime_on_exit "$?"' EXIT
+  trap 'exit 129' HUP
+  trap 'exit 130' INT
+  trap 'exit 143' TERM
+}
+
+agent_guidelines_runtime_register_path() {
+  local path="$1"
+
+  [ "${AGENT_GUIDELINES_RUNTIME_ACTIVE:-false}" = true ] || return 0
+  [ -n "$path" ] || return 1
+  printf '%s\0' "$path" >> \
+    "${AGENT_GUIDELINES_RUNTIME_DIR}/cleanup-paths"
+}
+
+agent_guidelines_runtime_cleanup() {
+  local path
+  local failed=false
+
+  [ "${AGENT_GUIDELINES_RUNTIME_ACTIVE:-false}" = true ] || return 0
+  if [ -f "${AGENT_GUIDELINES_RUNTIME_DIR}/cleanup-paths" ]; then
+    while IFS= read -r -d '' path; do
+      if [ -e "$path" ] || [ -L "$path" ]; then
+        rm -rf -- "$path" || {
+          printf 'error: could not remove temporary path: %s\n' "$path" >&2
+          failed=true
+        }
+      fi
+    done < "${AGENT_GUIDELINES_RUNTIME_DIR}/cleanup-paths"
+  fi
+  rm -rf -- "$AGENT_GUIDELINES_RUNTIME_DIR" || {
+    printf 'error: could not remove runtime scratch directory: %s\n' \
+      "$AGENT_GUIDELINES_RUNTIME_DIR" >&2
+    failed=true
+  }
+
+  if [ "$AGENT_GUIDELINES_RUNTIME_PREVIOUS_TMPDIR_SET" = true ]; then
+    TMPDIR="$AGENT_GUIDELINES_RUNTIME_PREVIOUS_TMPDIR"
+    export TMPDIR
+  else
+    unset TMPDIR
+  fi
+  AGENT_GUIDELINES_RUNTIME_ACTIVE=false
+  AGENT_GUIDELINES_RUNTIME_DIR=""
+  AGENT_GUIDELINES_RUNTIME_PREVIOUS_TMPDIR=""
+  AGENT_GUIDELINES_RUNTIME_PREVIOUS_TMPDIR_SET=false
+
+  [ "$failed" = false ]
+}
+
+agent_guidelines_runtime_begin() {
+  local scratch_parent="${TMPDIR:-/tmp}"
+  local template
+
+  if [ "${AGENT_GUIDELINES_RUNTIME_ACTIVE:-false}" = true ]; then
+    printf 'error: runtime cleanup is already active\n' >&2
+    return 1
+  fi
+  if [ "${TMPDIR+x}" = x ]; then
+    AGENT_GUIDELINES_RUNTIME_PREVIOUS_TMPDIR="$TMPDIR"
+    AGENT_GUIDELINES_RUNTIME_PREVIOUS_TMPDIR_SET=true
+  else
+    AGENT_GUIDELINES_RUNTIME_PREVIOUS_TMPDIR=""
+    AGENT_GUIDELINES_RUNTIME_PREVIOUS_TMPDIR_SET=false
+  fi
+  case "$scratch_parent" in
+    /) template="/agent-guidelines-runtime.XXXXXX" ;;
+    *) template="${scratch_parent%/}/agent-guidelines-runtime.XXXXXX" ;;
+  esac
+  AGENT_GUIDELINES_RUNTIME_DIR="$(mktemp -d "$template")" || return 1
+  if ! : > "${AGENT_GUIDELINES_RUNTIME_DIR}/cleanup-paths"; then
+    rm -rf -- "$AGENT_GUIDELINES_RUNTIME_DIR"
+    AGENT_GUIDELINES_RUNTIME_DIR=""
+    return 1
+  fi
+  TMPDIR="$AGENT_GUIDELINES_RUNTIME_DIR"
+  export TMPDIR AGENT_GUIDELINES_RUNTIME_DIR
+  AGENT_GUIDELINES_RUNTIME_ACTIVE=true
+  agent_guidelines_install_exit_traps
+}
 
 agent_guidelines_path_type() {
   local path="$1"
@@ -471,11 +557,12 @@ agent_guidelines_transaction_rollback() {
   AGENT_GUIDELINES_TRANSACTION_DIR=""
 }
 
-agent_guidelines_transaction_on_exit() {
+agent_guidelines_runtime_on_exit() {
   local status="$1"
   local rollback_status=0
+  local cleanup_status=0
 
-  trap - EXIT
+  trap - EXIT HUP INT TERM
   set +e
   if agent_guidelines_transaction_is_active; then
     if [ "$status" -eq 0 ]; then
@@ -485,6 +572,11 @@ agent_guidelines_transaction_on_exit() {
     agent_guidelines_transaction_rollback
     rollback_status=$?
     [ "$rollback_status" -eq 0 ] || status=1
+  fi
+  if [ "$rollback_status" -eq 0 ]; then
+    agent_guidelines_runtime_cleanup
+    cleanup_status=$?
+    [ "$cleanup_status" -eq 0 ] || status=1
   fi
   if [ -n "${AGENT_GUIDELINES_TRANSACTION_RECOVERY_NOTE:-}" ]; then
     printf 'error: recovery state retained: %s\n' \
@@ -502,10 +594,14 @@ agent_guidelines_transaction_begin() {
   AGENT_GUIDELINES_TRANSACTION_DIR="$(mktemp -d)" || return 1
   AGENT_GUIDELINES_TRANSACTION_RECOVERY_NOTE=""
   AGENT_GUIDELINES_TRANSACTION_RETAIN_ENTRY=""
-  mkdir "${AGENT_GUIDELINES_TRANSACTION_DIR}/entries" || return 1
+  if ! mkdir "${AGENT_GUIDELINES_TRANSACTION_DIR}/entries"; then
+    rm -rf -- "$AGENT_GUIDELINES_TRANSACTION_DIR"
+    AGENT_GUIDELINES_TRANSACTION_DIR=""
+    return 1
+  fi
   printf '1\n' > "${AGENT_GUIDELINES_TRANSACTION_DIR}/next"
   AGENT_GUIDELINES_TRANSACTION_ACTIVE=true
-  trap 'agent_guidelines_transaction_on_exit "$?"' EXIT
+  agent_guidelines_install_exit_traps
 }
 
 agent_guidelines_transaction_commit() {
@@ -515,7 +611,11 @@ agent_guidelines_transaction_commit() {
   AGENT_GUIDELINES_TRANSACTION_ACTIVE=false
   AGENT_GUIDELINES_TRANSACTION_RECOVERY_NOTE=""
   AGENT_GUIDELINES_TRANSACTION_RETAIN_ENTRY=""
-  trap - EXIT
+  if [ "${AGENT_GUIDELINES_RUNTIME_ACTIVE:-false}" = true ]; then
+    agent_guidelines_install_exit_traps
+  else
+    trap - EXIT HUP INT TERM
+  fi
 }
 
 agent_guidelines_make_directory_safely() {
@@ -577,6 +677,10 @@ agent_guidelines_atomic_replace_file() {
   target_dir="$(dirname "$target")"
   agent_guidelines_make_directory_safely "$target_dir" || return 1
   temp_file="$(mktemp "${target_dir}/.agent-guidelines.XXXXXX")" || return 1
+  agent_guidelines_runtime_register_path "$temp_file" || {
+    rm -f "$temp_file"
+    return 1
+  }
   if ! cp "$prepared" "$temp_file"; then
     rm -f "$temp_file"
     return 1

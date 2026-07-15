@@ -1,76 +1,73 @@
-name: smoke
+name: verification
 
 on:
   push:
     branches: [main]
   pull_request:
 
+permissions:
+  contents: read
+
+# Action pins identify reviewed release commits. To update a pin, verify the
+# upstream release tag and commit, change the full SHA and version comment
+# together, and run both jobs.
 jobs:
-  smoke:
+  linux:
+    name: Linux verification
     runs-on: ubuntu-latest
     steps:
       - name: Check out the repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+        with:
+          persist-credentials: false
 
-      - name: Install shellcheck
-        run: sudo apt-get update && sudo apt-get install -y shellcheck
-
-      - name: Lint shell scripts (warning level and above)
+      - name: Install and report ShellCheck
         run: |
-          shellcheck -S warning \
-            setup.sh \
-            project-setup.sh \
-            lib/assemble-rules.sh \
-            lib/safe-mutations.sh \
-            tests/setup-smoke.sh \
-            tests/project-setup-smoke.sh \
-            tests/project-profile-inference-safety.sh \
-            tests/hooks-smoke.sh \
-            tests/hook-policy-generation-safety.sh \
-            tests/managed-block-safety.sh \
-            tests/setup-backup-safety.sh \
-            tests/project-source-safety.sh \
-            tests/project-copy-license-safety.sh \
-            tests/project-ownership-safety.sh \
-            tests/project-removal-safety.sh \
-            tests/project-state-safety.sh \
-            tests/project-git-scope-safety.sh \
-            tests/project-git-identity-safety.sh \
-            tests/project-initial-commit-safety.sh \
-            tests/project-git-recovery-safety.sh \
-            tests/project-default-branch-safety.sh \
-            tests/policy-contract-safety.sh \
-            scripts/generate-hook-policy.sh \
-            scripts/generate-rules-readme.sh \
-            skills/agent-memory/scripts/agent-memory-report.sh
+          sudo apt-get update
+          sudo apt-get install -y shellcheck
+          shellcheck --version
+
+      - name: Lint every tracked shell script
+        run: |
+          shell_files=()
+          while IFS= read -r file; do
+            shell_files+=("$file")
+          done < <(git ls-files '*.sh')
+          shellcheck -S warning "${shell_files[@]}"
 
       - name: Validate rule frontmatter
         run: |
           fail=0
-          for f in rules/*.md; do
-            if [ "$(basename "$f")" = README.md ]; then
+          for file in rules/*.md; do
+            if [ "$(basename "$file")" = README.md ]; then
               continue
             fi
-            if [ "$(head -1 "$f")" != "---" ]; then
-              echo "missing frontmatter delimiter: $f"
+            if [ "$(head -1 "$file")" != "---" ]; then
+              echo "missing frontmatter delimiter: $file"
               fail=1
             fi
-            if ! head -10 "$f" | grep -Eq '^when:[[:space:]]+.+'; then
-              echo "missing or empty when field: $f"
+            if ! head -10 "$file" | grep -Eq '^when:[[:space:]]+.+'; then
+              echo "missing or empty when field: $file"
               fail=1
             fi
-            if ! head -10 "$f" | grep -Eq '^load:[[:space:]]+(always|recall)$'; then
-              echo "missing or invalid load field: $f"
+            if ! head -10 "$file" |
+              grep -Eq '^load:[[:space:]]+(always|recall)$'; then
+              echo "missing or invalid load field: $file"
               fail=1
             fi
           done
           test "$fail" -eq 0
 
-      - name: Verify rules README matches rule frontmatter
-        run: bash scripts/generate-rules-readme.sh --check
+      - name: Verify generated policy assets
+        run: |
+          bash scripts/generate-rules-readme.sh --check
+          bash scripts/generate-hook-policy.sh --check
 
-      - name: Verify generated hook policy assets
-        run: bash scripts/generate-hook-policy.sh --check
+      - name: Validate skill contracts
+        run: bash scripts/validate-skills.sh
+
+      - name: Validate Markdown links
+        run: bash scripts/check-markdown-links.sh
 
       # The always-tier rule bodies load into every conversation's
       # context; growth here must be a deliberate, reviewed decision.
@@ -79,97 +76,97 @@ jobs:
         run: |
           budget=3300
           total=0
-          for f in rules/*.md; do
-            grep -q '^load: always$' "$f" || continue
+          for file in rules/*.md; do
+            grep -q '^load: always$' "$file" || continue
             words=$(awk 'NR==1&&/^---[[:space:]]*$/{fm=1;next}
                          fm&&/^---[[:space:]]*$/{fm=0;next}
-                         !fm{print}' "$f" | wc -w)
-            echo "$f: $words words"
+                         !fm{print}' "$file" | wc -w)
+            echo "$file: $words words"
             total=$((total + words))
           done
           echo "always-tier body total: $total words (budget $budget)"
           test "$total" -le "$budget"
 
-      - name: Verify rule and skill names referenced by scripts exist
+      - name: Verify referenced rules exist
         run: |
           eval "$(sed -n '/^MINIMAL_RULES=(/,/^)/p;
                          /^CODEBASE_EXTRA_RULES=(/,/^)/p;
                          /^RELEASED_EXTRA_RULES=(/,/^)/p;
                          /^CANONICAL_RULE_ORDER=(/,/^)/p' project-setup.sh)"
-          eval "$(sed -n '/^GLOBAL_SKILLS=(/,/^)/p' setup.sh)"
           fail=0
-          for name in "${MINIMAL_RULES[@]}" "${CODEBASE_EXTRA_RULES[@]}" \
-                     "${RELEASED_EXTRA_RULES[@]}" "${CANONICAL_RULE_ORDER[@]}"; do
+          for name in "${MINIMAL_RULES[@]}" \
+                      "${CODEBASE_EXTRA_RULES[@]}" \
+                      "${RELEASED_EXTRA_RULES[@]}" \
+                      "${CANONICAL_RULE_ORDER[@]}"; do
             if [ ! -f "rules/${name}.md" ]; then
               echo "rule referenced by project-setup.sh but missing: ${name}"
               fail=1
             fi
           done
-          for name in "${GLOBAL_SKILLS[@]}"; do
-            if [ ! -d "skills/${name}" ]; then
-              echo "skill referenced by setup.sh but missing: ${name}"
-              fail=1
-            fi
-          done
           test "$fail" -eq 0
 
-      - name: Configure git identity (required by project-setup.sh)
+      - name: Configure Git identity
         run: |
           git config --global user.name "CI"
           git config --global user.email "ci@example.invalid"
 
-      - name: Run setup-smoke
-        run: bash tests/setup-smoke.sh
+      - name: Run every test
+        run: |
+          for test_file in tests/*.sh; do
+            echo "::group::$test_file"
+            bash "$test_file"
+            echo "::endgroup::"
+          done
 
-      - name: Run project-setup-smoke
-        run: bash tests/project-setup-smoke.sh
+  macos:
+    name: macOS portability smoke
+    runs-on: macos-latest
+    defaults:
+      run:
+        shell: /bin/bash -e {0}
+    steps:
+      - name: Check out the repository
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+        with:
+          persist-credentials: false
 
-      - name: Run project-profile-inference-safety
-        run: bash tests/project-profile-inference-safety.sh
+      - name: Report platform tools
+        run: |
+          /bin/bash --version
+          git --version
 
-      - name: Run managed-block-safety
-        run: bash tests/managed-block-safety.sh
+      - name: Check shell syntax with system Bash
+        run: |
+          while IFS= read -r file; do
+            /bin/bash -n "$file"
+          done < <(git ls-files '*.sh')
 
-      - name: Run setup-backup-safety
-        run: bash tests/setup-backup-safety.sh
+      - name: Configure Git identity
+        run: |
+          git config --global user.name "CI"
+          git config --global user.email "ci@example.invalid"
 
-      - name: Run project-source-safety
-        run: bash tests/project-source-safety.sh
+      - name: Verify portable generators and validators
+        run: |
+          /bin/bash scripts/generate-rules-readme.sh --check
+          /bin/bash scripts/generate-hook-policy.sh --check
+          /bin/bash scripts/validate-skills.sh
+          /bin/bash scripts/check-markdown-links.sh
 
-      - name: Run project-copy-license-safety
-        run: bash tests/project-copy-license-safety.sh
-
-      - name: Run project-ownership-safety
-        run: bash tests/project-ownership-safety.sh
-
-      - name: Run project-removal-safety
-        run: bash tests/project-removal-safety.sh
-
-      - name: Run project-state-safety
-        run: bash tests/project-state-safety.sh
-
-      - name: Run project-git-scope-safety
-        run: bash tests/project-git-scope-safety.sh
-
-      - name: Run project-git-identity-safety
-        run: bash tests/project-git-identity-safety.sh
-
-      - name: Run project-initial-commit-safety
-        run: bash tests/project-initial-commit-safety.sh
-
-      - name: Run project-git-recovery-safety
-        run: bash tests/project-git-recovery-safety.sh
-
-      - name: Run project-default-branch-safety
-        run: bash tests/project-default-branch-safety.sh
-
-      # Ubuntu's /bin/sh is dash, so this run also proves the hook
-      # snippets execute under a strict POSIX shell.
-      - name: Run hooks-smoke
-        run: bash tests/hooks-smoke.sh
-
-      - name: Run hook-policy-generation-safety
-        run: bash tests/hook-policy-generation-safety.sh
-
-      - name: Run policy-contract-safety
-        run: bash tests/policy-contract-safety.sh
+      - name: Run portability smoke tests
+        run: |
+          smoke_tests=(
+            tests/agent-memory-report-safety.sh
+            tests/option-parsing-safety.sh
+            tests/project-context-compatibility.sh
+            tests/project-harness-compatibility.sh
+            tests/project-setup-smoke.sh
+            tests/rule-assembly-safety.sh
+            tests/setup-smoke.sh
+            tests/temp-cleanup-safety.sh
+          )
+          for test_file in "${smoke_tests[@]}"; do
+            echo "::group::$test_file"
+            /bin/bash "$test_file"
+            echo "::endgroup::"
+          done

@@ -43,10 +43,12 @@ SKILL_HARNESSES=(
 )
 
 ACTION="install"
+ACTION_SUPPLIED=false
 DRY_RUN=false
 FORCE=false
 COLOR_MODE="auto"
 BACKUP_PATH="${HOME}/.agent-guidelines/backups"
+BACKUP_PATH_SUPPLIED=false
 BACKUP_RUN_DIR=""
 LAST_BACKUP_PATH=""
 
@@ -118,8 +120,8 @@ Options:
                   into this repository but are outside the managed set
   --dry-run       Preview install, remove, or prune actions without
                   changing files
-  --force         Back up conflicting files before replacing them
-  --backup-path   Path for forced replacement backups
+  --force         Back up conflicting files during install before replacing
+  --backup-path   Path for replacement backups (requires --force)
   --no-color      Disable colored output
   -h, --help      Show this help
 
@@ -188,22 +190,17 @@ die() {
 }
 
 parse_args() {
+  local requested_action
+
   while [ "$#" -gt 0 ]; do
     case "$1" in
-      --install)
-        ACTION="install"
-        shift
-        ;;
-      --remove)
-        ACTION="remove"
-        shift
-        ;;
-      --status)
-        ACTION="status"
-        shift
-        ;;
-      --prune)
-        ACTION="prune"
+      --install|--remove|--status|--prune)
+        requested_action="${1#--}"
+        if [ "$ACTION_SUPPLIED" = true ]; then
+          die "multiple actions are not allowed: --$ACTION and $1"
+        fi
+        ACTION="$requested_action"
+        ACTION_SUPPLIED=true
         shift
         ;;
       --dry-run)
@@ -217,11 +214,13 @@ parse_args() {
       --backup-path)
         [ "$#" -gt 1 ] || die "--backup-path requires a path"
         BACKUP_PATH="$2"
+        BACKUP_PATH_SUPPLIED=true
         shift 2
         ;;
       --backup-path=*)
         BACKUP_PATH="${1#*=}"
         [ -n "$BACKUP_PATH" ] || die "--backup-path requires a path"
+        BACKUP_PATH_SUPPLIED=true
         shift
         ;;
       --no-color)
@@ -237,6 +236,15 @@ parse_args() {
         ;;
     esac
   done
+
+  if [ "$ACTION" != install ] && [ "$FORCE" = true ]; then
+    die "--force is only valid with --install"
+  fi
+  if [ "$BACKUP_PATH_SUPPLIED" = true ]; then
+    [ "$FORCE" = true ] || die "--backup-path requires --force"
+    [ "$ACTION" = install ] ||
+      die "--backup-path is only valid with --install"
+  fi
 }
 
 real_path() {
@@ -900,6 +908,7 @@ print_summary() {
 }
 
 main() {
+  agent_guidelines_runtime_begin || die "could not create runtime scratch directory"
   parse_args "$@"
   setup_colors
   build_links
