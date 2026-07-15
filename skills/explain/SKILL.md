@@ -1,6 +1,6 @@
 ---
 name: explain
-description: Explain code, files, workflows, commands, or project concepts clearly without editing files or turning the response into a review.
+description: Explain code, files, workflows, commands, or project concepts clearly without editing files or producing review findings. Use for understanding; use code-review for inspection findings and debug for a concrete failure that needs a fix.
 when_to_use: Use when the user asks to understand a file, function, command, workflow, architecture, data flow, branch, error path, or project concept.
 argument-hint: "[file|directory|symbol|command|workflow|project|changes]"
 allowed-tools: Read Grep Glob
