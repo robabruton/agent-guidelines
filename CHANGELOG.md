@@ -61,6 +61,9 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
   identity, preserves existing unborn indexes, and commits only artifacts it
   creates. New Git metadata is staged for recoverable installation, and failed
   final verification retains a complete reported recovery state.
+- Project setup scopes context and skill preflight to selected or previously
+  managed harness surfaces. Removal preserves unowned skill-tree parent
+  symlinks without traversing them.
 
 ## 2026-07-13
 

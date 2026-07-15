@@ -19,6 +19,10 @@ NONE_REPO="$TMP_ROOT/none"
 LEGACY_REPO="$TMP_ROOT/legacy"
 UNRELATED_REPO="$TMP_ROOT/unrelated-claude"
 FOREIGN_CLAUDE="$TMP_ROOT/foreign-claude"
+UNRELATED_AGENTS_REPO="$TMP_ROOT/unrelated-agents"
+FOREIGN_AGENTS="$TMP_ROOT/foreign-agents"
+IRRELEVANT_CLAUDE_REPO="$TMP_ROOT/irrelevant-claude-context"
+IRRELEVANT_AGENTS_REPO="$TMP_ROOT/irrelevant-agents-context"
 
 sha256_file() {
   local path="$1"
@@ -155,7 +159,7 @@ test -L "$LEGACY_REPO/.claude/skills/explain"
 test -L "$LEGACY_REPO/.agents/skills/explain"
 
 # A non-Claude selection does not inspect or traverse unrelated Claude state.
-mkdir -p "$UNRELATED_REPO" "$FOREIGN_CLAUDE"
+mkdir -p "$UNRELATED_REPO" "$FOREIGN_CLAUDE/skills"
 ln -s "$FOREIGN_CLAUDE" "$UNRELATED_REPO/.claude"
 "$ROOT_DIR/project-setup.sh" \
   --profile minimal --changelog none --harness codex \
@@ -163,5 +167,32 @@ ln -s "$FOREIGN_CLAUDE" "$UNRELATED_REPO/.claude"
 "$ROOT_DIR/project-setup.sh" --remove "$UNRELATED_REPO" >/dev/null
 test -L "$UNRELATED_REPO/.claude"
 test "$(readlink "$UNRELATED_REPO/.claude")" = "$FOREIGN_CLAUDE"
+test -d "$FOREIGN_CLAUDE/skills"
+
+# A Claude-only selection applies the same boundary to shared harness state.
+mkdir -p "$UNRELATED_AGENTS_REPO" "$FOREIGN_AGENTS/skills"
+ln -s "$FOREIGN_AGENTS" "$UNRELATED_AGENTS_REPO/.agents"
+"$ROOT_DIR/project-setup.sh" \
+  --profile minimal --changelog none --harness claude \
+  "$UNRELATED_AGENTS_REPO" >/dev/null
+"$ROOT_DIR/project-setup.sh" --remove "$UNRELATED_AGENTS_REPO" >/dev/null
+test -L "$UNRELATED_AGENTS_REPO/.agents"
+test "$(readlink "$UNRELATED_AGENTS_REPO/.agents")" = "$FOREIGN_AGENTS"
+test -d "$FOREIGN_AGENTS/skills"
+
+# Unselected context files do not participate in installation preflight.
+mkdir -p "$IRRELEVANT_CLAUDE_REPO" "$IRRELEVANT_AGENTS_REPO"
+printf '%s\n' '<!-- BEGIN agent-guidelines project rules -->' \
+  >"$IRRELEVANT_CLAUDE_REPO/CLAUDE.md"
+printf '%s\n' '<!-- BEGIN agent-guidelines project rules -->' \
+  >"$IRRELEVANT_AGENTS_REPO/AGENTS.md"
+"$ROOT_DIR/project-setup.sh" \
+  --profile minimal --changelog none --harness codex \
+  "$IRRELEVANT_CLAUDE_REPO" >/dev/null
+"$ROOT_DIR/project-setup.sh" \
+  --profile minimal --changelog none --harness claude \
+  "$IRRELEVANT_AGENTS_REPO" >/dev/null
+test "$(wc -l <"$IRRELEVANT_CLAUDE_REPO/CLAUDE.md")" -eq 1
+test "$(wc -l <"$IRRELEVANT_AGENTS_REPO/AGENTS.md")" -eq 1
 
 printf 'project harness compatibility tests passed\n'

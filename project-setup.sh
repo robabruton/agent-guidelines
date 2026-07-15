@@ -2128,6 +2128,15 @@ has_selected_skills() {
   return 1
 }
 
+has_stored_selected_skills() {
+  local skill
+
+  for skill in "${STORED_INCLUDE_SKILLS[@]}"; do
+    stored_skill_selected "$skill" && return 0
+  done
+  return 1
+}
+
 harness_selected() {
   local needle="$1"
 
@@ -2147,6 +2156,16 @@ needs_claude_context() {
 needs_agents_context() {
   [ "${#HARNESSES[@]}" -eq 0 ] ||
     harness_selected codex || harness_selected opencode || harness_selected pi
+}
+
+stored_needs_claude_context() {
+  [ "${#STORED_HARNESSES[@]}" -eq 0 ] || stored_harness_selected claude
+}
+
+stored_needs_agents_context() {
+  [ "${#STORED_HARNESSES[@]}" -eq 0 ] ||
+    stored_harness_selected codex || stored_harness_selected opencode ||
+    stored_harness_selected pi
 }
 
 needs_claude_skill_tree() {
@@ -2276,13 +2295,17 @@ preflight_skill_source_targets() {
   local claude_skills_dir="$claude_dir/skills"
   local skill root
 
-  agent_guidelines_assert_path_beneath \
-    "$agents_dir" "$TARGET_DIR" ".agents" || exit 1
-  agent_guidelines_assert_path_beneath \
-    "$agents_skills_dir" "$TARGET_DIR" ".agents/skills" || exit 1
-  validate_managed_directory "$agents_dir" ".agents"
-  validate_managed_directory "$agents_skills_dir" ".agents/skills"
-  if needs_claude_skill_tree || stored_needs_claude_skill_tree; then
+  if { has_selected_skills && needs_agents_skill_tree; } ||
+    { has_stored_selected_skills && stored_needs_agents_skill_tree; }; then
+    agent_guidelines_assert_path_beneath \
+      "$agents_dir" "$TARGET_DIR" ".agents" || exit 1
+    agent_guidelines_assert_path_beneath \
+      "$agents_skills_dir" "$TARGET_DIR" ".agents/skills" || exit 1
+    validate_managed_directory "$agents_dir" ".agents"
+    validate_managed_directory "$agents_skills_dir" ".agents/skills"
+  fi
+  if { has_selected_skills && needs_claude_skill_tree; } ||
+    { has_stored_selected_skills && stored_needs_claude_skill_tree; }; then
     agent_guidelines_assert_path_beneath \
       "$claude_dir" "$TARGET_DIR" ".claude" || exit 1
     agent_guidelines_assert_path_beneath \
@@ -2833,14 +2856,20 @@ preflight_project_files() {
 }
 
 preflight_managed_targets() {
-  agent_guidelines_assert_path_beneath \
-    "$TARGET_DIR/CLAUDE.md" "$TARGET_DIR" "CLAUDE.md" || return 1
-  agent_guidelines_assert_path_beneath \
-    "$TARGET_DIR/AGENTS.md" "$TARGET_DIR" "AGENTS.md" || return 1
-  agent_guidelines_validate_managed_block_file \
-    "$TARGET_DIR/CLAUDE.md" || return 1
-  agent_guidelines_validate_managed_block_file \
-    "$TARGET_DIR/AGENTS.md" || return 1
+  if needs_claude_context ||
+    { [ "$CONFIG_LOADED" = true ] && stored_needs_claude_context; }; then
+    agent_guidelines_assert_path_beneath \
+      "$TARGET_DIR/CLAUDE.md" "$TARGET_DIR" "CLAUDE.md" || return 1
+    agent_guidelines_validate_managed_block_file \
+      "$TARGET_DIR/CLAUDE.md" || return 1
+  fi
+  if needs_agents_context ||
+    { [ "$CONFIG_LOADED" = true ] && stored_needs_agents_context; }; then
+    agent_guidelines_assert_path_beneath \
+      "$TARGET_DIR/AGENTS.md" "$TARGET_DIR" "AGENTS.md" || return 1
+    agent_guidelines_validate_managed_block_file \
+      "$TARGET_DIR/AGENTS.md" || return 1
+  fi
 
   if target_has_git_repo; then
     validate_ownership_state
@@ -2865,12 +2894,16 @@ preflight_removal_source_targets() {
   agent_guidelines_assert_path_beneath \
     "$config_path" "$TARGET_DIR" ".agent-guidelines/config" || return 1
 
-  agent_guidelines_assert_path_beneath \
-    "$agents_dir" "$TARGET_DIR" ".agents" || return 1
-  validate_managed_directory "$agents_dir" ".agents"
-  agent_guidelines_assert_path_beneath \
-    "$skills_dir" "$TARGET_DIR" ".agents/skills" || return 1
-  validate_managed_directory "$skills_dir" ".agents/skills"
+  if [ ! -L "$agents_dir" ]; then
+    agent_guidelines_assert_path_beneath \
+      "$agents_dir" "$TARGET_DIR" ".agents" || return 1
+    validate_managed_directory "$agents_dir" ".agents"
+    if [ ! -L "$skills_dir" ]; then
+      agent_guidelines_assert_path_beneath \
+        "$skills_dir" "$TARGET_DIR" ".agents/skills" || return 1
+      validate_managed_directory "$skills_dir" ".agents/skills"
+    fi
+  fi
   if [ ! -L "$claude_dir" ]; then
     agent_guidelines_assert_path_beneath \
       "$claude_dir" "$TARGET_DIR" ".claude" || return 1
@@ -3109,12 +3142,12 @@ remove_rule_source_state() {
 }
 
 remove_project_skill_links() {
-  local root skills_dir entry link_target expected_target label
+  local root parent_dir skills_dir entry link_target expected_target label
 
   for root in .claude/skills .agents/skills; do
+    parent_dir="${root%%/*}"
     skills_dir="$TARGET_DIR/$root"
-    if [ -L "$skills_dir" ] ||
-      { [ "$root" = .claude/skills ] && [ -L "$TARGET_DIR/.claude" ]; }; then
+    if [ -L "$skills_dir" ] || [ -L "$TARGET_DIR/$parent_dir" ]; then
       add_status skipped "$root is unowned"
       continue
     fi
@@ -3148,8 +3181,14 @@ cleanup_ownership_state() {
     rmdir "$(ownership_dir)" 2>/dev/null || true
     rmdir "$(dirname "$(ownership_dir)")" 2>/dev/null || true
     rmdir "$TARGET_DIR/.agent-guidelines" 2>/dev/null || true
-    rmdir "$TARGET_DIR/.agents/skills" "$TARGET_DIR/.agents" 2>/dev/null || true
-    rmdir "$TARGET_DIR/.claude/skills" "$TARGET_DIR/.claude" 2>/dev/null || true
+    if [ ! -L "$TARGET_DIR/.agents" ]; then
+      rmdir "$TARGET_DIR/.agents/skills" "$TARGET_DIR/.agents" \
+        2>/dev/null || true
+    fi
+    if [ ! -L "$TARGET_DIR/.claude" ]; then
+      rmdir "$TARGET_DIR/.claude/skills" "$TARGET_DIR/.claude" \
+        2>/dev/null || true
+    fi
   fi
 }
 
