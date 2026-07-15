@@ -44,6 +44,25 @@ extract_markdown_links() {
   ' "$1"
 }
 
+physical_path() {
+  local path="$1"
+  local target
+
+  while [ -L "$path" ]; do
+    target="$(readlink "$path")" || return 1
+    case "$target" in
+      /*) path="$target" ;;
+      *) path="$(dirname "$path")/$target" ;;
+    esac
+  done
+  if [ -d "$path" ]; then
+    (cd "$path" && pwd -P)
+  else
+    printf '%s/%s\n' \
+      "$(cd "$(dirname "$path")" && pwd -P)" "$(basename "$path")"
+  fi
+}
+
 fail=0
 file_count=0
 link_count=0
@@ -87,11 +106,12 @@ while IFS= read -r -d '' relative_file; do
       continue
     fi
 
-    if [ -d "$candidate" ]; then
-      resolved="$(cd "$candidate" && pwd -P)"
-    else
-      resolved="$(cd "$(dirname "$candidate")" && pwd -P)/$(basename "$candidate")"
-    fi
+    resolved="$(physical_path "$candidate")" || {
+      printf 'error: %s has an unresolvable link target: %s\n' \
+        "$relative_file" "$target" >&2
+      fail=1
+      continue
+    }
     case "$resolved" in
       "$REPO_DIR"|"$REPO_DIR"/*) ;;
       *)

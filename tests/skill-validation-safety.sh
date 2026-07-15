@@ -58,6 +58,36 @@ replace_file "$TMP_ROOT/description-length.md" \
 expect_failure "$fixture" 'description exceeds 1024 characters' \
   description-length
 
+fixture="$(new_fixture valid-block-description)"
+awk '
+  /^description:/ {
+    print "description: >-"
+    print "  Operate AVR projects with explicit device selection and"
+    print "  use this skill for direct firmware work."
+    next
+  }
+  { print }
+' "$fixture/skills/avr/SKILL.md" >"$TMP_ROOT/valid-block-description.md"
+replace_file "$TMP_ROOT/valid-block-description.md" \
+  "$fixture/skills/avr/SKILL.md"
+"$ROOT_DIR/scripts/validate-skills.sh" "$fixture" >/dev/null
+
+fixture="$(new_fixture description-block-length)"
+awk '
+  /^description:/ {
+    print "description: >-"
+    printf "  "
+    for (i = 0; i < 1025; i++) printf "x"
+    print ""
+    next
+  }
+  { print }
+' "$fixture/skills/avr/SKILL.md" >"$TMP_ROOT/description-block-length.md"
+replace_file "$TMP_ROOT/description-block-length.md" \
+  "$fixture/skills/avr/SKILL.md"
+expect_failure "$fixture" 'description exceeds 1024 characters' \
+  description-block-length
+
 fixture="$(new_fixture missing-extension)"
 grep -Fv 'when_to_use:' "$fixture/skills/avr/SKILL.md" \
   >"$TMP_ROOT/missing-extension.md"
@@ -81,6 +111,15 @@ sed 's#references/project-layout.md#references/missing.md#' \
 replace_file "$TMP_ROOT/missing-reference.md" "$fixture/skills/avr/SKILL.md"
 expect_failure "$fixture" 'references a missing path: references/missing.md' \
   missing-reference
+
+fixture="$(new_fixture escaping-reference)"
+printf '# Outside skill\n' > "$TMP_ROOT/outside-skill.md"
+ln -s "$TMP_ROOT/outside-skill.md" \
+  "$fixture/skills/avr/references/escape.md"
+printf '\n[Escape](references/escape.md)\n' \
+  >> "$fixture/skills/avr/SKILL.md"
+expect_failure "$fixture" \
+  'has an out-of-scope reference: references/escape.md' escaping-reference
 
 fixture="$(new_fixture catalog-drift)"
 grep -Fv '### `avr`' "$fixture/skills/README.md" \

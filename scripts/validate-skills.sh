@@ -26,9 +26,46 @@ frontmatter_value() {
     index($0, field ":") == 1 {
       value = substr($0, length(field) + 2)
       sub(/^[[:space:]]+/, "", value)
+      header = value
+      sub(/[[:space:]]+#.*$/, "", header)
+      if (header ~ /^[>|]([+-]?[0-9]?|[0-9]?[+-]?)$/) {
+        in_block = 1
+        next
+      }
       print value
+      exit
     }
+    in_block && $0 == "" {
+      print
+      next
+    }
+    in_block && /^[[:space:]]/ {
+      value = $0
+      sub(/^[[:space:]]+/, "", value)
+      print value
+      next
+    }
+    in_block { exit }
   ' "$file"
+}
+
+physical_path() {
+  local path="$1"
+  local target
+
+  while [ -L "$path" ]; do
+    target="$(readlink "$path")" || return 1
+    case "$target" in
+      /*) path="$target" ;;
+      *) path="$(dirname "$path")/$target" ;;
+    esac
+  done
+  if [ -d "$path" ]; then
+    (cd "$path" && pwd -P)
+  else
+    printf '%s/%s\n' \
+      "$(cd "$(dirname "$path")" && pwd -P)" "$(basename "$path")"
+  fi
 }
 
 extract_markdown_links() {
@@ -47,6 +84,7 @@ validate_reference() {
   local skill_dir="$1"
   local skill_file="$2"
   local reference="$3"
+  local candidate resolved skill_root
 
   reference="${reference%%#*}"
   case "$reference" in
@@ -57,9 +95,20 @@ validate_reference() {
       ;;
   esac
 
-  if [ ! -e "$skill_dir/$reference" ]; then
+  candidate="$skill_dir/$reference"
+  if [ ! -e "$candidate" ]; then
     report_error "$skill_file references a missing path: $reference"
+    return
   fi
+  resolved="$(physical_path "$candidate")" || {
+    report_error "$skill_file could not resolve reference: $reference"
+    return
+  }
+  skill_root="$(cd "$skill_dir" && pwd -P)"
+  case "$resolved" in
+    "$skill_root"|"$skill_root"/*) ;;
+    *) report_error "$skill_file has an out-of-scope reference: $reference" ;;
+  esac
 }
 
 validate_skill() {
@@ -67,7 +116,8 @@ validate_skill() {
   local directory_name="${skill_dir##*/}"
   local skill_file="$skill_dir/SKILL.md"
   local frontmatter_file="$TMP_ROOT/${directory_name}.frontmatter"
-  local end_line line field metadata_active=false
+  local end_line line field value metadata_active=false
+  local scalar_block_active=false
   local name description when_to_use argument_hint compatibility allowed_tools
   local reference
   local name_count description_count when_count argument_count
@@ -93,7 +143,8 @@ validate_skill() {
     case "$line" in
       ""|\#*) continue ;;
       [[:space:]]*)
-        if [ "$metadata_active" != true ]; then
+        if [ "$metadata_active" != true ] &&
+          [ "$scalar_block_active" != true ]; then
           report_error "$skill_file has unsupported nested frontmatter"
         fi
         continue
@@ -102,8 +153,16 @@ validate_skill() {
 
     field="${line%%:*}"
     metadata_active=false
+    scalar_block_active=false
     case "$field" in
       name|description|license|compatibility|allowed-tools|when_to_use|argument-hint)
+        value="${line#*:}"
+        value="${value%%#*}"
+        value="${value//[[:space:]]/}"
+        if printf '%s\n' "$value" |
+          grep -Eq '^[>|]([+-]?[0-9]?|[0-9]?[+-]?)$'; then
+          scalar_block_active=true
+        fi
         ;;
       metadata)
         metadata_active=true

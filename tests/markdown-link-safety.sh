@@ -58,6 +58,14 @@ printf '[Outside](../outside.md)\n' >> "$fixture/README.md"
 expect_failure "$fixture" \
   'README.md links outside the repository: ../outside.md' escape
 
+fixture="$(new_fixture symlink-escape)"
+printf '# Outside symlink\n' > "$TMP_ROOT/outside-symlink.md"
+ln -s "$TMP_ROOT/outside-symlink.md" "$fixture/docs/escape.md"
+printf '[Symlink escape](docs/escape.md)\n' >> "$fixture/README.md"
+git -C "$fixture" add README.md docs/escape.md
+expect_failure "$fixture" \
+  'README.md links outside the repository: docs/escape.md' symlink-escape
+
 mkdir -p "$TMP_ROOT/not-a-repository"
 expect_failure "$TMP_ROOT/not-a-repository" 'error: not a Git repository:' \
   not-a-repository
