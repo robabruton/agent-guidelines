@@ -104,20 +104,38 @@ target repository:
 
 Global installation is sufficient for normal local use. Per-project
 skills remain opt-in via `--include-skill` (repeatable) when a repository
-needs a portable copy or pinned snapshot. They land in
-`<project>/.agents/skills/<skill>/`, where the supported harnesses
-discover them. `--exclude-skill` cancels a matching project-local
-selection in the same invocation; it does not hide a globally installed
-skill.
+needs a portable copy or pinned snapshot. Every invocation that selects
+project-local skills also names at least one consumer with repeatable
+`--harness claude|codex|opencode|pi` options. Setup installs only the
+skill trees those consumers need:
+
+| Selected consumers | Project skill tree |
+| --- | --- |
+| Claude Code | `.claude/skills/` |
+| Codex or Pi | `.agents/skills/` |
+| OpenCode alone or with Codex/Pi | `.agents/skills/` |
+| Claude Code and OpenCode, without Codex/Pi | `.claude/skills/` |
+
+Selections that need both trees receive canonical-identical links or
+copies. `--exclude-skill` cancels a matching project-local selection in
+the same invocation; it does not hide a globally installed skill.
 
 By default, project-local skills use the same source mode as rules
 (`--rules-source`); `--skills-source symlink|copy` overrides that
-independently. Symlink mode adds `.agents/skills/` to the repository's
-local `.git/info/exclude` so the links stay out of git; copy mode tracks
-the copied skill tree as a normal project asset.
+independently. Symlink mode locally excludes the selected skill trees so
+the links stay out of git; copy mode tracks them as normal project assets.
+
+Named harness selections also limit project context files: Claude Code
+uses `CLAUDE.md`, while Codex, OpenCode, and Pi use `AGENTS.md`. With no
+named harness and no project-local skills, setup emits both files for
+compatibility. Each file contains a self-contained compact policy with
+the hard constraints from every selected always-loaded rule and a complete
+router for situational rules. Setup rejects a candidate file above 24,576
+bytes before mutation. `compact` is the canonical `--context-rules` mode;
+the compatibility values `auto`, `full`, and `trimmed` migrate to it.
 
 Reruns load the selected profile, changelog and context modes, source
-modes, default branch, and rule and skill selections from the
+modes, harnesses, default branch, and rule and skill selections from the
 checksum-owned `.agent-guidelines/config` file. The file uses a versioned,
 non-executable data format. Omitted options preserve the stored selection;
 explicit options update only the named settings. Malformed, changed, or
@@ -162,6 +180,7 @@ or append at the end because no marker pair was found.
 
 ```bash
 ./project-setup.sh --profile codebase \
+  --harness codex \
   --include-skill test-audit \
   --include-skill firmware-review \
   /path/to/project

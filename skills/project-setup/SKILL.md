@@ -139,9 +139,10 @@ git --git-dir=<recovery-dir>/git --work-tree=<target> \
   - `CLAUDE.md`
   - `CLAUDE.local.md`
   - `AGENTS.md`
-  - `.claude/`
   - `.codex/`
   - `.agent-guidelines/config`
+- Exclude `.claude/` unless selected Claude project skills use tracked copy
+  mode
 - Exclude `.agent-guidelines/rules` when it is a symlink to a local
   canonical rules directory
 - Exclude `opencode.json` only when it is private local configuration,
@@ -153,7 +154,13 @@ git --git-dir=<recovery-dir>/git --work-tree=<target> \
 
 ## Project Rule Assembly
 
-- Create or update both `CLAUDE.md` and `AGENTS.md`
+- Accept repeatable `--harness claude|codex|opencode|pi` selections
+- Create or update `CLAUDE.md` when Claude Code is selected
+- Create or update `AGENTS.md` when Codex, OpenCode, or Pi is selected
+- Create or update both files when no harness is selected, preserving
+  compatibility for projects without project-local skills
+- Remove only the managed block from a context file made unnecessary by an
+  explicit selection change
 - Treat these files as local agent instruction files unless the target
   repository already tracks them intentionally
 - Preserve all user-managed content outside managed marker blocks
@@ -168,23 +175,18 @@ git --git-dir=<recovery-dir>/git --work-tree=<target> \
 - If the marker block does not exist, append it to the end of the file
   after one blank line
 - If the file does not exist, create it with only the managed block
-- The managed block has two forms, selected by `--context-rules`:
-  - `full`: every selected rule body is inlined into the block
-  - `trimmed`: the block carries a rule selection header, one line
-    stating the profile, changelog, and versioning modes, and a router
-    table mapping each selected rule's trigger to its
-    `.agent-guidelines/rules/<rule>.md` path; rule bodies are read on
-    demand from those paths, and the always-tier rule text comes from
-    the global context file installed by `setup.sh`
-  - `auto` (default): per file — `CLAUDE.md` is trimmed when the
-    global `~/.claude/CLAUDE.md` carries the managed block marker,
-    and `AGENTS.md` is trimmed when any global `AGENTS.md` installed
-    by `setup.sh` does; otherwise the file gets the full form. This
-    keeps rules from loading twice in harnesses that read both a
-    global and a project context file, while machines without the
-    global install still get self-contained project files
-- Record the requested mode as `context_rules=` in
-  `.agent-guidelines/config`
+- Build one self-contained compact block independent of global setup:
+  - include the authoritative hard constraints from every selected
+    always-loaded rule
+  - include a complete trigger and path router for all selected rules
+  - direct the harness to read every triggered rule completely from
+    `.agent-guidelines/rules/<rule>.md`
+- Reject a candidate context file above 24,576 bytes before mutation,
+  including its preserved content, generated preamble, and managed block
+- Use `compact` as the canonical `--context-rules` value
+- Accept `auto`, `full`, and `trimmed` as compatibility values and migrate
+  them to `compact`
+- Record `context_rules=compact` in `.agent-guidelines/config`
 - Keep rule source files separate from generated agent instruction files
 - Prefer a symlinked rule source so projects can refresh generated
   instructions from updated central rules
@@ -200,8 +202,11 @@ git --git-dir=<recovery-dir>/git --work-tree=<target> \
 - Treat `.agent-guidelines/config` as checksum-owned local setup state in a
   strict, versioned, non-executable data format
 - Record `schema=1`, the selected profile, changelog and context modes, rule
-  and skill source modes, default branch, and repeated include and exclude
-  records for rules and skills; derive versioning mode from changelog mode
+  and skill source modes, harnesses, default branch, and repeated include and
+  exclude records for rules and skills; derive versioning mode from changelog
+  mode
+- Record `harness=none` for an empty selection; migrate skill-bearing state
+  without harness metadata to all supported consumers
 - Load an existing state file only when its ownership record contains the
   exact current checksum; reject malformed keys, invalid values, duplicate
   records, unsupported schemas, NUL data, symlinks, and changed or unowned
@@ -296,16 +301,22 @@ git --git-dir=<recovery-dir>/git --work-tree=<target> \
 - Install a project-local skill only when the user opts in for a portable
   copy or pinned snapshot with `include skill <id>` (`--include-skill` for
   the script)
+- Require at least one explicit harness selection whenever project-local
+  skills are selected; do not infer consumers from installed tools
 - Use `exclude skill <id>` (`--exclude-skill`) to cancel a matching
   project-local selection in the same invocation; it does not hide a globally
   installed skill
-- Install selected skills into `.agents/skills/<skill>/` in the target
-  repository, where the supported harnesses discover project skills
+- Install Claude Code skills into `.claude/skills/<skill>/`
+- Install Codex and Pi skills into `.agents/skills/<skill>/`
+- Install OpenCode skills into `.claude/skills/<skill>/` when Claude Code is
+  also selected and neither Codex nor Pi is selected; otherwise use
+  `.agents/skills/<skill>/`
+- Install both trees when the complete selection requires both, using the
+  same canonical source for each
 - Use the same source mode as rules unless the user overrides it
   (`--skills-source symlink|copy`)
-- In symlink mode, link each skill directory to its canonical source
-  and add `.agents/skills/` to `.git/info/exclude` so the links stay
-  out of git
+- In symlink mode, link each skill directory to its canonical source and
+  locally exclude the applicable skill trees so the links stay out of git
 - In copy mode, copy the skill directory as a tracked project asset
 - Accept an existing skill path only when it is the exact canonical
   symlink selected by symlink mode or an exact copy selected by copy
@@ -370,13 +381,13 @@ Only when the skill initializes a new git repository:
   - `CHANGELOG.md` when changelog maintenance is selected
   - `.agent-guidelines/rules/` when copy mode is selected for a
     portable rule snapshot
+  - `.claude/skills/` when selected skills use Claude copy mode
   - `.agents/skills/` when skills are selected in copy mode
 - Do not stage or commit local agent instruction files:
   - `CLAUDE.md`
   - `CLAUDE.local.md`
   - `AGENTS.md`
-  - `.claude/`
-  - `.codex/`
+- Do not stage other `.claude/` or `.codex/` content
 - Do not stage or commit local git configuration:
   - `.git/info/exclude`
   - `.git/hooks/`
@@ -500,6 +511,7 @@ At the end, print:
 - Skill source mode:
   - symlink
   - copy
+- Selected harnesses and the corresponding context mode for each file
 - Included rules and included skills, in their applied order
 - Created files, hooks, config values, and commits
 - Updated files, hooks, and config values

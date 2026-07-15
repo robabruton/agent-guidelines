@@ -138,7 +138,7 @@ Options:
   --rules-source symlink|copy
   --skills-source symlink|copy   (defaults to --rules-source)
   --harness claude|codex|opencode|pi
-                  select a project skill consumer (repeatable;
+                  select a project context and skill consumer (repeatable;
                   required when project skills are selected)
   --default-branch <name>        preserve this branch as repository default
                                  when automatic detection is ambiguous
