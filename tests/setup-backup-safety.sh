@@ -18,6 +18,18 @@ expect_fail() {
   fi
 }
 
+# Verified copies retain portable file modes as well as object contents.
+MODE_SOURCE="${TMP_ROOT}/mode-source"
+MODE_COPY="${TMP_ROOT}/mode-copy"
+printf 'mode payload\n' > "$MODE_SOURCE"
+cp -a "$MODE_SOURCE" "$MODE_COPY"
+chmod 640 "$MODE_SOURCE"
+chmod 600 "$MODE_COPY"
+expect_fail agent_guidelines_verify_copy "$MODE_SOURCE" "$MODE_COPY"
+grep -Fq 'backup mode mismatch' "${TMP_ROOT}/expected.err"
+chmod 640 "$MODE_COPY"
+agent_guidelines_verify_copy "$MODE_SOURCE" "$MODE_COPY"
+
 export HOME="${TMP_ROOT}/force-home"
 BACKUP_PARENT="${TMP_ROOT}/backups"
 CONFLICT="${HOME}/.claude/skills/code-review"

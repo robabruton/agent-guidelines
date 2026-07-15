@@ -48,6 +48,9 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
   discarding incomplete transaction recovery.
 - Project setup preserves strict nounset checking under macOS system Bash
   while safely handling omitted selections and empty result sets.
+- Safe mutation backups verify complete object structure, contents, symlink
+  targets, and file modes without requiring unprivileged copies to reproduce
+  filesystem-assigned ownership IDs.
 
 ## 2026-07-14
 
