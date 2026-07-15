@@ -16,6 +16,7 @@ COPY_LICENSE_NOTICE="${ASSET_DIR}/polyform-noncommercial-notice.txt"
 . "${SCRIPT_DIR}/lib/safe-mutations.sh"
 
 MODE="install"
+MODE_SUPPLIED=false
 PROFILE="auto"
 CHANGELOG_MODE="auto"
 CONTEXT_RULES_MODE="auto"
@@ -25,6 +26,7 @@ RULE_SOURCE_MODE="symlink"
 SKILL_SOURCE_MODE=""
 DEFAULT_BRANCH=""
 TARGET_DIR="."
+TARGET_DIR_SUPPLIED=false
 DRY_RUN=false
 PROFILE_SUPPLIED=false
 CHANGELOG_MODE_SUPPLIED=false
@@ -128,7 +130,7 @@ CANONICAL_RULE_ORDER=(
 
 usage() {
   cat <<'EOF'
-Usage: ./project-setup.sh [options] [target-dir]
+Usage: ./project-setup.sh [options] [--] [target-dir]
 
 Options:
   --profile minimal|codebase|released
@@ -153,6 +155,7 @@ Options:
   --include-skill <id>           (repeatable)
   --exclude-skill <id>           (repeatable)
   --dry-run                      preview actions without modifying anything
+  --                             end options for a dash-leading target
   -h, --help
 
 Dry-run notes:
@@ -476,7 +479,10 @@ parse_args() {
         shift 2
         ;;
       --remove)
+        [ "$MODE_SUPPLIED" = false ] ||
+          die "--remove may be specified only once"
         MODE="remove"
+        MODE_SUPPLIED=true
         shift
         ;;
       --dry-run)
@@ -487,15 +493,45 @@ parse_args() {
         usage
         exit 0
         ;;
+      --)
+        shift
+        [ "$#" -le 1 ] || die "multiple target directories are not allowed"
+        if [ "$#" -eq 1 ]; then
+          [ "$TARGET_DIR_SUPPLIED" = false ] ||
+            die "multiple target directories are not allowed"
+          TARGET_DIR="$1"
+          TARGET_DIR_SUPPLIED=true
+        fi
+        break
+        ;;
       --*)
         die "unknown option: $1"
         ;;
       *)
+        [ "$TARGET_DIR_SUPPLIED" = false ] ||
+          die "multiple target directories are not allowed"
         TARGET_DIR="$1"
+        TARGET_DIR_SUPPLIED=true
         shift
         ;;
     esac
   done
+
+  if [ "$MODE" = remove ] && {
+    [ "$PROFILE_SUPPLIED" = true ] ||
+      [ "$CHANGELOG_MODE_SUPPLIED" = true ] ||
+      [ "$CONTEXT_RULES_MODE_SUPPLIED" = true ] ||
+      [ "$RULE_SOURCE_MODE_SUPPLIED" = true ] ||
+      [ "$SKILL_SOURCE_MODE_SUPPLIED" = true ] ||
+      [ "$DEFAULT_BRANCH_SUPPLIED" = true ] ||
+      [ "$HARNESSES_SUPPLIED" = true ] ||
+      [ "${#REQUESTED_INCLUDE_RULES[@]}" -gt 0 ] ||
+      [ "${#REQUESTED_EXCLUDE_RULES[@]}" -gt 0 ] ||
+      [ "${#REQUESTED_INCLUDE_SKILLS[@]}" -gt 0 ] ||
+      [ "${#REQUESTED_EXCLUDE_SKILLS[@]}" -gt 0 ]
+  }; then
+    die "--remove cannot be combined with install selection options"
+  fi
 
   case "$PROFILE" in auto|minimal|codebase|released) ;; *) die "invalid profile: $PROFILE" ;; esac
   case "$CHANGELOG_MODE" in
@@ -574,7 +610,7 @@ resolve_target() {
   elif [ ! -d "$TARGET_DIR" ]; then
     die "--dry-run target directory does not exist: $TARGET_DIR"
   fi
-  TARGET_DIR="$(cd "$TARGET_DIR" && pwd -P)"
+  TARGET_DIR="$(cd -- "$TARGET_DIR" && pwd -P)"
 }
 
 validate_target_worktree_root() {
@@ -3361,7 +3397,7 @@ print_remove_summary() {
 
 run_remove() {
   [ -d "$TARGET_DIR" ] || die "target directory does not exist: $TARGET_DIR"
-  TARGET_DIR="$(cd "$TARGET_DIR" && pwd -P)"
+  TARGET_DIR="$(cd -- "$TARGET_DIR" && pwd -P)"
 
   validate_target_worktree_root
   preflight_removal_source_targets || return 1
