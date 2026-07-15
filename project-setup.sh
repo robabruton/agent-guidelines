@@ -189,9 +189,11 @@ should_mutate() {
 }
 
 copy_license_required() {
-  [ "$RULE_SOURCE_MODE" = copy ] || {
-    [ "$SKILL_SOURCE_MODE" = copy ] && has_selected_skills
-  }
+  [ "$RULE_SOURCE_MODE" = copy ] ||
+    [ "$SKILL_SOURCE_MODE" = copy ] ||
+    { [ "$CONFIG_LOADED" = true ] &&
+      { [ "$STORED_RULE_SOURCE_MODE" = copy ] ||
+        [ "$STORED_SKILL_SOURCE_MODE" = copy ]; }; }
 }
 
 validate_copy_license_notice() {
