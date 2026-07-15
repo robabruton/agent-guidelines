@@ -4,6 +4,24 @@ All notable changes to this project will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## 2026-07-15
+
+### Added
+
+- One canonical generator emits planned-work, development-provenance, and
+  branch-name hook policy. CI verifies the tracked assets, and a focused
+  safety suite pins the review-only date, diagnostic, and ownership contracts.
+
+### Changed
+
+- Planned-work and development-provenance hooks apply the same
+  high-confidence checks to staged content, commit messages, and branch names.
+  Functional integrations, current limitations, deprecation contracts, and
+  grounded review notes remain valid.
+- Rules and skills use one branch-prefix set and consistent policies for
+  deterministic dates, diagnostic suppressions, docstring thresholds,
+  current-scope notes, and factual changelog transitions.
+
 ## 2026-07-14
 
 ### Added
