@@ -2607,6 +2607,29 @@ preflight_managed_targets() {
   fi
 }
 
+preflight_removal_source_targets() {
+  local state_dir="$TARGET_DIR/.agent-guidelines"
+  local rules_path="$state_dir/rules"
+  local config_path="$state_dir/config"
+  local agents_dir="$TARGET_DIR/.agents"
+  local skills_dir="$agents_dir/skills"
+
+  agent_guidelines_assert_path_beneath \
+    "$state_dir" "$TARGET_DIR" ".agent-guidelines" || return 1
+  validate_managed_directory "$state_dir" ".agent-guidelines"
+  agent_guidelines_assert_path_beneath \
+    "$rules_path" "$TARGET_DIR" ".agent-guidelines/rules" || return 1
+  agent_guidelines_assert_path_beneath \
+    "$config_path" "$TARGET_DIR" ".agent-guidelines/config" || return 1
+
+  agent_guidelines_assert_path_beneath \
+    "$agents_dir" "$TARGET_DIR" ".agents" || return 1
+  validate_managed_directory "$agents_dir" ".agents"
+  agent_guidelines_assert_path_beneath \
+    "$skills_dir" "$TARGET_DIR" ".agents/skills" || return 1
+  validate_managed_directory "$skills_dir" ".agents/skills"
+}
+
 remove_hook_snippet() {
   local hook_name="$1"
   local snippet_name="$2"
@@ -2891,6 +2914,7 @@ run_remove() {
   TARGET_DIR="$(cd "$TARGET_DIR" && pwd -P)"
 
   validate_target_worktree_root
+  preflight_removal_source_targets || return 1
   preflight_managed_targets || return 1
   if should_mutate; then
     agent_guidelines_transaction_begin
