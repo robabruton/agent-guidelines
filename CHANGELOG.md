@@ -46,6 +46,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
   reject contradictory actions, options, and targets before mutation, and
   runtime cleanup removes scratch paths after errors or signals without
   discarding incomplete transaction recovery.
+- Project setup preserves strict nounset checking under macOS system Bash
+  while safely handling omitted selections and empty result sets.
 
 ## 2026-07-14
 

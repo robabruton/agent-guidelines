@@ -287,7 +287,9 @@ preflight_copy_license_sources() {
     { [ "$CONFIG_LOADED" = true ] &&
       [ "$STORED_SKILL_SOURCE_MODE" = copy ]; }; then
     needs_notice=true
-    for skill in "${INCLUDE_SKILLS[@]}" "${STORED_INCLUDE_SKILLS[@]}"; do
+    for skill in \
+      "${INCLUDE_SKILLS[@]+"${INCLUDE_SKILLS[@]}"}" \
+      "${STORED_INCLUDE_SKILLS[@]+"${STORED_INCLUDE_SKILLS[@]}"}"; do
       [ -d "$CANONICAL_SKILLS_DIR/$skill" ] || continue
       validate_licensed_copy_source "$CANONICAL_SKILLS_DIR/$skill" \
         "canonical skill source"
@@ -341,13 +343,13 @@ validate_catalog_ids() {
   local identifier
 
   for identifier in \
-    "${REQUESTED_INCLUDE_RULES[@]}" \
-    "${REQUESTED_EXCLUDE_RULES[@]}"; do
+    "${REQUESTED_INCLUDE_RULES[@]+"${REQUESTED_INCLUDE_RULES[@]}"}" \
+    "${REQUESTED_EXCLUDE_RULES[@]+"${REQUESTED_EXCLUDE_RULES[@]}"}"; do
     validate_catalog_id rule "$identifier"
   done
   for identifier in \
-    "${REQUESTED_INCLUDE_SKILLS[@]}" \
-    "${REQUESTED_EXCLUDE_SKILLS[@]}"; do
+    "${REQUESTED_INCLUDE_SKILLS[@]+"${REQUESTED_INCLUDE_SKILLS[@]}"}" \
+    "${REQUESTED_EXCLUDE_SKILLS[@]+"${REQUESTED_EXCLUDE_SKILLS[@]}"}"; do
     validate_catalog_id skill "$identifier"
   done
 }
@@ -367,36 +369,40 @@ validate_selection_requests() {
   local identifier
   local seen=()
 
-  for identifier in "${REQUESTED_INCLUDE_RULES[@]}"; do
-    array_contains "$identifier" "${seen[@]}" &&
+  for identifier in \
+    "${REQUESTED_INCLUDE_RULES[@]+"${REQUESTED_INCLUDE_RULES[@]}"}"; do
+    array_contains "$identifier" "${seen[@]+"${seen[@]}"}" &&
       die "duplicate --include-rule value: $identifier"
     seen+=("$identifier")
   done
 
   seen=()
-  for identifier in "${REQUESTED_EXCLUDE_RULES[@]}"; do
-    array_contains "$identifier" "${seen[@]}" &&
+  for identifier in \
+    "${REQUESTED_EXCLUDE_RULES[@]+"${REQUESTED_EXCLUDE_RULES[@]}"}"; do
+    array_contains "$identifier" "${seen[@]+"${seen[@]}"}" &&
       die "duplicate --exclude-rule value: $identifier"
     seen+=("$identifier")
   done
 
   seen=()
-  for identifier in "${REQUESTED_INCLUDE_SKILLS[@]}"; do
-    array_contains "$identifier" "${seen[@]}" &&
+  for identifier in \
+    "${REQUESTED_INCLUDE_SKILLS[@]+"${REQUESTED_INCLUDE_SKILLS[@]}"}"; do
+    array_contains "$identifier" "${seen[@]+"${seen[@]}"}" &&
       die "duplicate --include-skill value: $identifier"
     seen+=("$identifier")
   done
 
   seen=()
-  for identifier in "${REQUESTED_EXCLUDE_SKILLS[@]}"; do
-    array_contains "$identifier" "${seen[@]}" &&
+  for identifier in \
+    "${REQUESTED_EXCLUDE_SKILLS[@]+"${REQUESTED_EXCLUDE_SKILLS[@]}"}"; do
+    array_contains "$identifier" "${seen[@]+"${seen[@]}"}" &&
       die "duplicate --exclude-skill value: $identifier"
     seen+=("$identifier")
   done
 
   seen=()
-  for identifier in "${HARNESSES[@]}"; do
-    array_contains "$identifier" "${seen[@]}" &&
+  for identifier in "${HARNESSES[@]+"${HARNESSES[@]}"}"; do
+    array_contains "$identifier" "${seen[@]+"${seen[@]}"}" &&
       die "duplicate --harness value: $identifier"
     seen+=("$identifier")
   done
@@ -405,7 +411,7 @@ validate_selection_requests() {
 validate_harnesses() {
   local harness
 
-  for harness in "${HARNESSES[@]}"; do
+  for harness in "${HARNESSES[@]+"${HARNESSES[@]}"}"; do
     case "$harness" in
       claude|codex|opencode|pi) ;;
       *) die "invalid harness: $harness" ;;
@@ -525,10 +531,10 @@ parse_args() {
       [ "$SKILL_SOURCE_MODE_SUPPLIED" = true ] ||
       [ "$DEFAULT_BRANCH_SUPPLIED" = true ] ||
       [ "$HARNESSES_SUPPLIED" = true ] ||
-      [ "${#REQUESTED_INCLUDE_RULES[@]}" -gt 0 ] ||
-      [ "${#REQUESTED_EXCLUDE_RULES[@]}" -gt 0 ] ||
-      [ "${#REQUESTED_INCLUDE_SKILLS[@]}" -gt 0 ] ||
-      [ "${#REQUESTED_EXCLUDE_SKILLS[@]}" -gt 0 ]
+      [ "${REQUESTED_INCLUDE_RULES[0]+set}" = set ] ||
+      [ "${REQUESTED_EXCLUDE_RULES[0]+set}" = set ] ||
+      [ "${REQUESTED_INCLUDE_SKILLS[0]+set}" = set ] ||
+      [ "${REQUESTED_EXCLUDE_SKILLS[0]+set}" = set ]
   }; then
     die "--remove cannot be combined with install selection options"
   fi
@@ -573,7 +579,7 @@ normalize_context_rules_mode() {
 
 resolve_project_harnesses() {
   has_selected_skills || return 0
-  [ "${#HARNESSES[@]}" -gt 0 ] && return
+  [ "${HARNESSES[0]+set}" = set ] && return
 
   if [ "$CONFIG_LOADED" = true ] &&
     [ "$LEGACY_HARNESS_STATE" = true ]; then
@@ -673,16 +679,17 @@ resolve_remote_default_candidates() {
     branch="${remainder#*/}"
     [ "$branch" != "$remainder" ] || continue
     target_branch_exists "$branch" || continue
-    array_contains "$branch" "${candidates[@]}" ||
+    array_contains "$branch" "${candidates[@]+"${candidates[@]}"}" ||
       candidates+=("$branch")
   done < <(git -C "$TARGET_DIR" for-each-ref \
     --format='%(symref)' 'refs/remotes/*/HEAD')
 
-  if [ "${#candidates[@]}" -eq 1 ]; then
+  if [ "${candidates[1]+set}" != set ] &&
+    [ "${candidates[0]+set}" = set ]; then
     printf '%s\n' "${candidates[0]}"
     return 0
   fi
-  if [ "${#candidates[@]}" -gt 1 ]; then
+  if [ "${candidates[1]+set}" = set ]; then
     printf 'error: remote default branches disagree; use --default-branch\n' \
       >&2
     return 2
@@ -730,7 +737,8 @@ resolve_default_branch() {
       done < <(git -C "$TARGET_DIR" for-each-ref \
         --format='%(refname:short)' refs/heads)
 
-      if [ "${#local_branches[@]}" -eq 1 ]; then
+      if [ "${local_branches[1]+set}" != set ] &&
+        [ "${local_branches[0]+set}" = set ]; then
         DEFAULT_BRANCH="${local_branches[0]}"
       elif [ "$current" = main ] || [ "$current" = master ]; then
         DEFAULT_BRANCH="$current"
@@ -1153,16 +1161,16 @@ validate_state_scalar() {
 validate_loaded_selections() {
   local identifier
 
-  for identifier in "${INCLUDE_RULES[@]}"; do
+  for identifier in "${INCLUDE_RULES[@]+"${INCLUDE_RULES[@]}"}"; do
     validate_catalog_id rule "$identifier"
   done
-  for identifier in "${EXCLUDE_RULES[@]}"; do
+  for identifier in "${EXCLUDE_RULES[@]+"${EXCLUDE_RULES[@]}"}"; do
     validate_catalog_id rule "$identifier"
   done
-  for identifier in "${INCLUDE_SKILLS[@]}"; do
+  for identifier in "${INCLUDE_SKILLS[@]+"${INCLUDE_SKILLS[@]}"}"; do
     validate_catalog_id skill "$identifier"
   done
-  for identifier in "${EXCLUDE_SKILLS[@]}"; do
+  for identifier in "${EXCLUDE_SKILLS[@]+"${EXCLUDE_SKILLS[@]}"}"; do
     validate_catalog_id skill "$identifier"
   done
 }
@@ -1173,22 +1181,26 @@ append_loaded_selection() {
 
   case "$kind" in
     include_rule)
-      array_contains "$identifier" "${INCLUDE_RULES[@]}" &&
+      array_contains "$identifier" \
+        "${INCLUDE_RULES[@]+"${INCLUDE_RULES[@]}"}" &&
         die "duplicate stored include_rule: $identifier"
       INCLUDE_RULES+=("$identifier")
       ;;
     exclude_rule)
-      array_contains "$identifier" "${EXCLUDE_RULES[@]}" &&
+      array_contains "$identifier" \
+        "${EXCLUDE_RULES[@]+"${EXCLUDE_RULES[@]}"}" &&
         die "duplicate stored exclude_rule: $identifier"
       EXCLUDE_RULES+=("$identifier")
       ;;
     include_skill)
-      array_contains "$identifier" "${INCLUDE_SKILLS[@]}" &&
+      array_contains "$identifier" \
+        "${INCLUDE_SKILLS[@]+"${INCLUDE_SKILLS[@]}"}" &&
         die "duplicate stored include_skill: $identifier"
       INCLUDE_SKILLS+=("$identifier")
       ;;
     exclude_skill)
-      array_contains "$identifier" "${EXCLUDE_SKILLS[@]}" &&
+      array_contains "$identifier" \
+        "${EXCLUDE_SKILLS[@]+"${EXCLUDE_SKILLS[@]}"}" &&
         die "duplicate stored exclude_skill: $identifier"
       EXCLUDE_SKILLS+=("$identifier")
       ;;
@@ -1202,7 +1214,7 @@ append_loaded_harness() {
   if [ "$harness" = none ]; then
     [ "$LOADED_HARNESS_NONE" = false ] ||
       die "duplicate stored harness: none"
-    [ "${#LOADED_HARNESSES[@]}" -eq 0 ] ||
+    [ "${LOADED_HARNESSES[0]+set}" != set ] ||
       die "stored harness none conflicts with named harnesses"
     LOADED_HARNESS_NONE=true
     return
@@ -1213,7 +1225,8 @@ append_loaded_harness() {
   esac
   [ "$LOADED_HARNESS_NONE" = false ] ||
     die "stored harness $harness conflicts with none"
-  array_contains "$harness" "${LOADED_HARNESSES[@]}" &&
+  array_contains "$harness" \
+    "${LOADED_HARNESSES[@]+"${LOADED_HARNESSES[@]}"}" &&
     die "duplicate stored harness: $harness"
   LOADED_HARNESSES+=("$harness")
 }
@@ -1304,7 +1317,7 @@ parse_schema_one_config() {
   [ "$context_seen" = true ] || die "setup state is missing context_rules"
   [ "$rules_source_seen" = true ] || die "setup state is missing rules_source"
   [ "$skills_source_seen" = true ] || die "setup state is missing skills_source"
-  if [ "${#LOADED_HARNESSES[@]}" -eq 0 ] &&
+  if [ "${LOADED_HARNESSES[0]+set}" != set ] &&
     [ "$LOADED_HARNESS_NONE" = false ]; then
     LEGACY_HARNESS_STATE=true
   fi
@@ -1317,7 +1330,7 @@ append_legacy_selections() {
   local identifier
 
   [ -z "$value" ] || read -r -a identifiers <<< "$value"
-  for identifier in "${identifiers[@]}"; do
+  for identifier in "${identifiers[@]+"${identifiers[@]}"}"; do
     append_loaded_selection "$kind" "$identifier"
   done
 }
@@ -1459,67 +1472,79 @@ remove_rule_inclusion() {
   local needle="$1"
   local kept=()
   local item
-  for item in "${INCLUDE_RULES[@]}"; do
+  for item in "${INCLUDE_RULES[@]+"${INCLUDE_RULES[@]}"}"; do
     [ "$item" = "$needle" ] || kept+=("$item")
   done
-  INCLUDE_RULES=("${kept[@]}")
+  INCLUDE_RULES=("${kept[@]+"${kept[@]}"}")
 }
 
 remove_rule_exclusion() {
   local needle="$1"
   local kept=()
   local item
-  for item in "${EXCLUDE_RULES[@]}"; do
+  for item in "${EXCLUDE_RULES[@]+"${EXCLUDE_RULES[@]}"}"; do
     [ "$item" = "$needle" ] || kept+=("$item")
   done
-  EXCLUDE_RULES=("${kept[@]}")
+  EXCLUDE_RULES=("${kept[@]+"${kept[@]}"}")
 }
 
 remove_skill_inclusion() {
   local needle="$1"
   local kept=()
   local item
-  for item in "${INCLUDE_SKILLS[@]}"; do
+  for item in "${INCLUDE_SKILLS[@]+"${INCLUDE_SKILLS[@]}"}"; do
     [ "$item" = "$needle" ] || kept+=("$item")
   done
-  INCLUDE_SKILLS=("${kept[@]}")
+  INCLUDE_SKILLS=("${kept[@]+"${kept[@]}"}")
 }
 
 remove_skill_exclusion() {
   local needle="$1"
   local kept=()
   local item
-  for item in "${EXCLUDE_SKILLS[@]}"; do
+  for item in "${EXCLUDE_SKILLS[@]+"${EXCLUDE_SKILLS[@]}"}"; do
     [ "$item" = "$needle" ] || kept+=("$item")
   done
-  EXCLUDE_SKILLS=("${kept[@]}")
+  EXCLUDE_SKILLS=("${kept[@]+"${kept[@]}"}")
 }
 
 apply_selection_requests() {
   local identifier
 
-  for identifier in "${REQUESTED_INCLUDE_RULES[@]}"; do
-    array_contains "$identifier" "${REQUESTED_EXCLUDE_RULES[@]}" ||
+  for identifier in \
+    "${REQUESTED_INCLUDE_RULES[@]+"${REQUESTED_INCLUDE_RULES[@]}"}"; do
+    array_contains "$identifier" \
+      "${REQUESTED_EXCLUDE_RULES[@]+"${REQUESTED_EXCLUDE_RULES[@]}"}" ||
       remove_rule_exclusion "$identifier"
-    array_contains "$identifier" "${INCLUDE_RULES[@]}" ||
+    array_contains "$identifier" \
+      "${INCLUDE_RULES[@]+"${INCLUDE_RULES[@]}"}" ||
       INCLUDE_RULES+=("$identifier")
   done
-  for identifier in "${REQUESTED_EXCLUDE_RULES[@]}"; do
-    array_contains "$identifier" "${REQUESTED_INCLUDE_RULES[@]}" ||
+  for identifier in \
+    "${REQUESTED_EXCLUDE_RULES[@]+"${REQUESTED_EXCLUDE_RULES[@]}"}"; do
+    array_contains "$identifier" \
+      "${REQUESTED_INCLUDE_RULES[@]+"${REQUESTED_INCLUDE_RULES[@]}"}" ||
       remove_rule_inclusion "$identifier"
-    array_contains "$identifier" "${EXCLUDE_RULES[@]}" ||
+    array_contains "$identifier" \
+      "${EXCLUDE_RULES[@]+"${EXCLUDE_RULES[@]}"}" ||
       EXCLUDE_RULES+=("$identifier")
   done
-  for identifier in "${REQUESTED_INCLUDE_SKILLS[@]}"; do
-    array_contains "$identifier" "${REQUESTED_EXCLUDE_SKILLS[@]}" ||
+  for identifier in \
+    "${REQUESTED_INCLUDE_SKILLS[@]+"${REQUESTED_INCLUDE_SKILLS[@]}"}"; do
+    array_contains "$identifier" \
+      "${REQUESTED_EXCLUDE_SKILLS[@]+"${REQUESTED_EXCLUDE_SKILLS[@]}"}" ||
       remove_skill_exclusion "$identifier"
-    array_contains "$identifier" "${INCLUDE_SKILLS[@]}" ||
+    array_contains "$identifier" \
+      "${INCLUDE_SKILLS[@]+"${INCLUDE_SKILLS[@]}"}" ||
       INCLUDE_SKILLS+=("$identifier")
   done
-  for identifier in "${REQUESTED_EXCLUDE_SKILLS[@]}"; do
-    array_contains "$identifier" "${REQUESTED_INCLUDE_SKILLS[@]}" ||
+  for identifier in \
+    "${REQUESTED_EXCLUDE_SKILLS[@]+"${REQUESTED_EXCLUDE_SKILLS[@]}"}"; do
+    array_contains "$identifier" \
+      "${REQUESTED_INCLUDE_SKILLS[@]+"${REQUESTED_INCLUDE_SKILLS[@]}"}" ||
       remove_skill_inclusion "$identifier"
-    array_contains "$identifier" "${EXCLUDE_SKILLS[@]}" ||
+    array_contains "$identifier" \
+      "${EXCLUDE_SKILLS[@]+"${EXCLUDE_SKILLS[@]}"}" ||
       EXCLUDE_SKILLS+=("$identifier")
   done
 }
@@ -1549,9 +1574,15 @@ load_local_config() {
 
   parse_local_config "$config_path"
   CONFIG_LOADED=true
-  STORED_INCLUDE_SKILLS=("${INCLUDE_SKILLS[@]}")
-  STORED_EXCLUDE_SKILLS=("${EXCLUDE_SKILLS[@]}")
-  STORED_HARNESSES=("${LOADED_HARNESSES[@]}")
+  STORED_INCLUDE_SKILLS=(
+    "${INCLUDE_SKILLS[@]+"${INCLUDE_SKILLS[@]}"}"
+  )
+  STORED_EXCLUDE_SKILLS=(
+    "${EXCLUDE_SKILLS[@]+"${EXCLUDE_SKILLS[@]}"}"
+  )
+  STORED_HARNESSES=(
+    "${LOADED_HARNESSES[@]+"${LOADED_HARNESSES[@]}"}"
+  )
   STORED_RULE_SOURCE_MODE="$LOADED_RULE_SOURCE_MODE"
   STORED_SKILL_SOURCE_MODE="$LOADED_SKILL_SOURCE_MODE"
 
@@ -1565,7 +1596,9 @@ load_local_config() {
   [ "$SKILL_SOURCE_MODE_SUPPLIED" = true ] ||
     SKILL_SOURCE_MODE="$LOADED_SKILL_SOURCE_MODE"
   if [ "$HARNESSES_SUPPLIED" = false ]; then
-    HARNESSES=("${LOADED_HARNESSES[@]}")
+    HARNESSES=(
+      "${LOADED_HARNESSES[@]+"${LOADED_HARNESSES[@]}"}"
+    )
   fi
   if [ "$DEFAULT_BRANCH_SUPPLIED" = false ] &&
     [ -n "$LOADED_DEFAULT_BRANCH" ]; then
@@ -1884,12 +1917,13 @@ selected_rules_raw() {
       ;;
   esac
 
-  for rule in "${INCLUDE_RULES[@]}"; do
+  for rule in "${INCLUDE_RULES[@]+"${INCLUDE_RULES[@]}"}"; do
     rules+=("$rule")
   done
 
   for rule in "${rules[@]}"; do
-    if contains_rule "$rule" "${EXCLUDE_RULES[@]}" &&
+    if contains_rule "$rule" \
+      "${EXCLUDE_RULES[@]+"${EXCLUDE_RULES[@]}"}" &&
       ! is_mode_required_rule "$rule"; then
       continue
     fi
@@ -1937,7 +1971,7 @@ assemble_compact_rules_block() {
     [ -n "$rule" ] && rules+=("$rule")
   done < <(selected_rules_ordered)
 
-  for rule in "${rules[@]}"; do
+  for rule in "${rules[@]+"${rules[@]}"}"; do
     path="$RULE_SOURCE_DIR/$rule.md"
     [ -f "$path" ] || die "selected rule unavailable: $rule"
     load="$(agent_guidelines_read_frontmatter_field "$path" load)"
@@ -1955,7 +1989,7 @@ assemble_compact_rules_block() {
       "$PROFILE" "$CHANGELOG_MODE" "$(versioning_mode)"
 
     printf '### Core Policy\n\n'
-    for rule in "${always_rules[@]}"; do
+    for rule in "${always_rules[@]+"${always_rules[@]}"}"; do
       constraint_file="$(mktemp)"
       agent_guidelines_format_hard_constraints \
         "$RULE_SOURCE_DIR/$rule.md" > "$constraint_file"
@@ -1970,7 +2004,8 @@ assemble_compact_rules_block() {
 
     printf '### Rule Router\n\n'
     agent_guidelines_build_router_table \
-      "$RULE_SOURCE_DIR" ".agent-guidelines/rules" "${rules[@]}"
+      "$RULE_SOURCE_DIR" ".agent-guidelines/rules" \
+      "${rules[@]+"${rules[@]}"}"
     printf '\n%s\n' "$AGENT_GUIDELINES_MARKER_END"
   } > "$block_file"
 
@@ -2142,7 +2177,7 @@ assemble_agent_files() {
 skill_excluded() {
   local needle="$1"
   local skill
-  for skill in "${EXCLUDE_SKILLS[@]}"; do
+  for skill in "${EXCLUDE_SKILLS[@]+"${EXCLUDE_SKILLS[@]}"}"; do
     [ "$skill" = "$needle" ] && return 0
   done
   return 1
@@ -2150,7 +2185,7 @@ skill_excluded() {
 
 selected_skills_filtered() {
   local skill
-  for skill in "${INCLUDE_SKILLS[@]}"; do
+  for skill in "${INCLUDE_SKILLS[@]+"${INCLUDE_SKILLS[@]}"}"; do
     if ! skill_excluded "$skill"; then
       printf '%s\n' "$skill"
     fi
@@ -2291,21 +2326,25 @@ preflight_rule_source_target() {
 stored_skill_selected() {
   local skill="$1"
 
-  array_contains "$skill" "${STORED_INCLUDE_SKILLS[@]}" || return 1
-  ! array_contains "$skill" "${STORED_EXCLUDE_SKILLS[@]}"
+  array_contains "$skill" \
+    "${STORED_INCLUDE_SKILLS[@]+"${STORED_INCLUDE_SKILLS[@]}"}" || return 1
+  ! array_contains "$skill" \
+    "${STORED_EXCLUDE_SKILLS[@]+"${STORED_EXCLUDE_SKILLS[@]}"}"
 }
 
 desired_skill_selected() {
   local skill="$1"
 
-  array_contains "$skill" "${INCLUDE_SKILLS[@]}" || return 1
-  ! array_contains "$skill" "${EXCLUDE_SKILLS[@]}"
+  array_contains "$skill" \
+    "${INCLUDE_SKILLS[@]+"${INCLUDE_SKILLS[@]}"}" || return 1
+  ! array_contains "$skill" \
+    "${EXCLUDE_SKILLS[@]+"${EXCLUDE_SKILLS[@]}"}"
 }
 
 has_selected_skills() {
   local skill
 
-  for skill in "${INCLUDE_SKILLS[@]}"; do
+  for skill in "${INCLUDE_SKILLS[@]+"${INCLUDE_SKILLS[@]}"}"; do
     desired_skill_selected "$skill" && return 0
   done
   return 1
@@ -2314,7 +2353,8 @@ has_selected_skills() {
 has_stored_selected_skills() {
   local skill
 
-  for skill in "${STORED_INCLUDE_SKILLS[@]}"; do
+  for skill in \
+    "${STORED_INCLUDE_SKILLS[@]+"${STORED_INCLUDE_SKILLS[@]}"}"; do
     stored_skill_selected "$skill" && return 0
   done
   return 1
@@ -2323,30 +2363,32 @@ has_stored_selected_skills() {
 harness_selected() {
   local needle="$1"
 
-  array_contains "$needle" "${HARNESSES[@]}"
+  array_contains "$needle" "${HARNESSES[@]+"${HARNESSES[@]}"}"
 }
 
 stored_harness_selected() {
   local needle="$1"
 
-  array_contains "$needle" "${STORED_HARNESSES[@]}"
+  array_contains "$needle" \
+    "${STORED_HARNESSES[@]+"${STORED_HARNESSES[@]}"}"
 }
 
 needs_claude_context() {
-  [ "${#HARNESSES[@]}" -eq 0 ] || harness_selected claude
+  [ "${HARNESSES[0]+set}" != set ] || harness_selected claude
 }
 
 needs_agents_context() {
-  [ "${#HARNESSES[@]}" -eq 0 ] ||
+  [ "${HARNESSES[0]+set}" != set ] ||
     harness_selected codex || harness_selected opencode || harness_selected pi
 }
 
 stored_needs_claude_context() {
-  [ "${#STORED_HARNESSES[@]}" -eq 0 ] || stored_harness_selected claude
+  [ "${STORED_HARNESSES[0]+set}" != set ] ||
+    stored_harness_selected claude
 }
 
 stored_needs_agents_context() {
-  [ "${#STORED_HARNESSES[@]}" -eq 0 ] ||
+  [ "${STORED_HARNESSES[0]+set}" != set ] ||
     stored_harness_selected codex || stored_harness_selected opencode ||
     stored_harness_selected pi
 }
@@ -2356,7 +2398,7 @@ needs_claude_skill_tree() {
 }
 
 needs_agents_skill_tree() {
-  if [ "${#HARNESSES[@]}" -eq 0 ]; then
+  if [ "${HARNESSES[0]+set}" != set ]; then
     return 0
   fi
   harness_selected codex || harness_selected pi || {
@@ -2507,7 +2549,8 @@ preflight_skill_source_targets() {
   if [ "$CONFIG_LOADED" = true ]; then
     while IFS= read -r root; do
       [ -n "$root" ] || continue
-      for skill in "${STORED_INCLUDE_SKILLS[@]}"; do
+      for skill in \
+        "${STORED_INCLUDE_SKILLS[@]+"${STORED_INCLUDE_SKILLS[@]}"}"; do
         stored_skill_selected "$skill" || continue
         if desired_skill_selected "$skill" && desired_skill_root "$root" &&
           [ "$STORED_SKILL_SOURCE_MODE" = "$SKILL_SOURCE_MODE" ]; then
@@ -2524,7 +2567,7 @@ preflight_skill_source_targets() {
 
   while IFS= read -r root; do
     [ -n "$root" ] || continue
-    for skill in "${INCLUDE_SKILLS[@]}"; do
+    for skill in "${INCLUDE_SKILLS[@]+"${INCLUDE_SKILLS[@]}"}"; do
       skill_excluded "$skill" && continue
       if [ ! -d "$CANONICAL_SKILLS_DIR/$skill" ]; then
         if [ "$CONFIG_LOADED" = true ] && stored_skill_selected "$skill"; then
@@ -2548,7 +2591,8 @@ remove_deselected_project_skills() {
   local skill root target label
   while IFS= read -r root; do
     [ -n "$root" ] || continue
-    for skill in "${STORED_INCLUDE_SKILLS[@]}"; do
+    for skill in \
+      "${STORED_INCLUDE_SKILLS[@]+"${STORED_INCLUDE_SKILLS[@]}"}"; do
       stored_skill_selected "$skill" || continue
       if desired_skill_selected "$skill" && desired_skill_root "$root"; then
         continue
@@ -2581,7 +2625,8 @@ reconcile_selected_skill_source_modes() {
   while IFS= read -r root; do
     [ -n "$root" ] || continue
     desired_skill_root "$root" || continue
-    for skill in "${STORED_INCLUDE_SKILLS[@]}"; do
+    for skill in \
+      "${STORED_INCLUDE_SKILLS[@]+"${STORED_INCLUDE_SKILLS[@]}"}"; do
       stored_skill_selected "$skill" || continue
       desired_skill_selected "$skill" || continue
       target="$TARGET_DIR/$root/$skill"
@@ -2606,7 +2651,7 @@ preflight_source_targets() {
 }
 
 install_per_project_skills() {
-  if [ "${#INCLUDE_SKILLS[@]}" -eq 0 ]; then
+  if [ "${INCLUDE_SKILLS[0]+set}" != set ]; then
     return
   fi
 
@@ -2619,7 +2664,7 @@ install_per_project_skills() {
         die "could not create $root directory"
     fi
 
-    for skill in "${INCLUDE_SKILLS[@]}"; do
+    for skill in "${INCLUDE_SKILLS[@]+"${INCLUDE_SKILLS[@]}"}"; do
       label="$root/$skill"
       if skill_excluded "$skill"; then
         add_status skipped "$label (excluded)"
@@ -2660,23 +2705,23 @@ write_local_config_content() {
     printf 'skills_source=%s\n' "$SKILL_SOURCE_MODE"
     [ -z "$DEFAULT_BRANCH" ] ||
       printf 'default_branch=%s\n' "$DEFAULT_BRANCH"
-    if [ "${#HARNESSES[@]}" -eq 0 ]; then
+    if [ "${HARNESSES[0]+set}" != set ]; then
       printf 'harness=none\n'
     else
       for harness in claude codex opencode pi; do
         harness_selected "$harness" && printf 'harness=%s\n' "$harness"
       done
     fi
-    for identifier in "${INCLUDE_RULES[@]}"; do
+    for identifier in "${INCLUDE_RULES[@]+"${INCLUDE_RULES[@]}"}"; do
       printf 'include_rule=%s\n' "$identifier"
     done
-    for identifier in "${EXCLUDE_RULES[@]}"; do
+    for identifier in "${EXCLUDE_RULES[@]+"${EXCLUDE_RULES[@]}"}"; do
       printf 'exclude_rule=%s\n' "$identifier"
     done
-    for identifier in "${INCLUDE_SKILLS[@]}"; do
+    for identifier in "${INCLUDE_SKILLS[@]+"${INCLUDE_SKILLS[@]}"}"; do
       printf 'include_skill=%s\n' "$identifier"
     done
-    for identifier in "${EXCLUDE_SKILLS[@]}"; do
+    for identifier in "${EXCLUDE_SKILLS[@]+"${EXCLUDE_SKILLS[@]}"}"; do
       printf 'exclude_skill=%s\n' "$identifier"
     done
   }
@@ -3393,10 +3438,10 @@ print_remove_summary() {
   if [ "$DRY_RUN" = true ]; then
     updated_label="Would remove or update:"
   fi
-  print_list "$updated_label" "${UPDATED[@]}"
-  print_list "Unchanged:" "${UNCHANGED[@]}"
-  print_list "Skipped:" "${SKIPPED[@]}"
-  print_list "Warnings:" "${WARNINGS[@]}"
+  print_list "$updated_label" "${UPDATED[@]+"${UPDATED[@]}"}"
+  print_list "Unchanged:" "${UNCHANGED[@]+"${UNCHANGED[@]}"}"
+  print_list "Skipped:" "${SKIPPED[@]+"${SKIPPED[@]}"}"
+  print_list "Warnings:" "${WARNINGS[@]+"${WARNINGS[@]}"}"
 }
 
 run_remove() {
@@ -3467,7 +3512,8 @@ create_initial_commit_if_needed() {
   fi
 
   local path
-  for path in "${INITIAL_COMMIT_PATHS[@]}"; do
+  for path in \
+    "${INITIAL_COMMIT_PATHS[@]+"${INITIAL_COMMIT_PATHS[@]}"}"; do
     [ -e "$TARGET_DIR/$path" ] && git -C "$TARGET_DIR" add "$path"
   done
 
@@ -3520,26 +3566,36 @@ print_summary() {
     "${CLAUDE_CONTEXT_MODE:-unresolved}" "${AGENTS_CONTEXT_MODE:-unresolved}"
   printf 'Rule source mode: %s\n' "$RULE_SOURCE_MODE"
   printf 'Skill source mode: %s\n' "$SKILL_SOURCE_MODE"
-  if [ "${#HARNESSES[@]}" -eq 0 ]; then
+  if [ "${HARNESSES[0]+set}" != set ]; then
     printf 'Harnesses: none (dual context compatibility)\n\n'
   else
     printf 'Harnesses: %s\n\n' "${HARNESSES[*]}"
   fi
 
   local included_rules=()
+  local included_rule_count=0
   local r
   while IFS= read -r r; do
-    [ -n "$r" ] && included_rules+=("$r")
+    if [ -n "$r" ]; then
+      included_rules+=("$r")
+      included_rule_count=$((included_rule_count + 1))
+    fi
   done < <(selected_rules_ordered)
 
   local included_skills=()
+  local included_skill_count=0
   local s
   while IFS= read -r s; do
-    [ -n "$s" ] && included_skills+=("$s")
+    if [ -n "$s" ]; then
+      included_skills+=("$s")
+      included_skill_count=$((included_skill_count + 1))
+    fi
   done < <(selected_skills_filtered)
 
-  print_list "Rules included (${#included_rules[@]}):" "${included_rules[@]}"
-  print_list "Skills included (${#included_skills[@]}):" "${included_skills[@]}"
+  print_list "Rules included ($included_rule_count):" \
+    "${included_rules[@]+"${included_rules[@]}"}"
+  print_list "Skills included ($included_skill_count):" \
+    "${included_skills[@]+"${included_skills[@]}"}"
 
   local created_label="Created:"
   local updated_label="Updated:"
@@ -3548,11 +3604,11 @@ print_summary() {
     updated_label="Would update:"
   fi
 
-  print_list "$created_label" "${CREATED[@]}"
-  print_list "$updated_label" "${UPDATED[@]}"
-  print_list "Unchanged:" "${UNCHANGED[@]}"
-  print_list "Skipped:" "${SKIPPED[@]}"
-  print_list "Warnings:" "${WARNINGS[@]}"
+  print_list "$created_label" "${CREATED[@]+"${CREATED[@]}"}"
+  print_list "$updated_label" "${UPDATED[@]+"${UPDATED[@]}"}"
+  print_list "Unchanged:" "${UNCHANGED[@]+"${UNCHANGED[@]}"}"
+  print_list "Skipped:" "${SKIPPED[@]+"${SKIPPED[@]}"}"
+  print_list "Warnings:" "${WARNINGS[@]+"${WARNINGS[@]}"}"
 }
 
 main() {
