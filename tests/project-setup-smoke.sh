@@ -23,12 +23,13 @@ DRY_OUT="${TMP_ROOT}/dry.out"
 
 assert_agent_rules() {
   local file="$1"
-  local expected_heading="$2"
+  local expected_rule="$2"
 
   test -f "$file"
   grep -Fq "<!-- BEGIN agent-guidelines project rules -->" "$file"
   grep -Eq "^### Git Workflow Rules$" "$file"
-  grep -Fq "$expected_heading" "$file"
+  grep -Fq "| $expected_rule |" "$file"
+  grep -Fq ".agent-guidelines/rules/${expected_rule}.md" "$file"
   grep -Fq "<!-- END agent-guidelines project rules -->" "$file"
   if grep -Eq "^# " "$file"; then
     echo "stray H1 in $file" >&2
@@ -73,8 +74,8 @@ fi
 test -L "${SYMLINK_REPO}/.agent-guidelines/rules"
 test -f "${SYMLINK_REPO}/.git/hooks/pre-commit"
 grep -Fq "Changelog mode: date" "$SYMLINK_FIRST_OUT"
-assert_agent_rules "${SYMLINK_REPO}/CLAUDE.md" "# Date-Based Changelog Rules"
-assert_agent_rules "${SYMLINK_REPO}/AGENTS.md" "# Date-Based Changelog Rules"
+assert_agent_rules "${SYMLINK_REPO}/CLAUDE.md" "changelog-date"
+assert_agent_rules "${SYMLINK_REPO}/AGENTS.md" "changelog-date"
 assert_agent_preamble "${SYMLINK_REPO}/CLAUDE.md"
 assert_agent_preamble "${SYMLINK_REPO}/AGENTS.md"
 
@@ -123,8 +124,8 @@ test -f "${COPY_REPO}/.agent-guidelines/rules/versioning-semver.md"
 git -C "$COPY_REPO" ls-files --error-unmatch \
   .agent-guidelines/rules/versioning-semver.md >/dev/null
 grep -Fq "Versioning mode: semver" "$COPY_OUT"
-assert_agent_rules "${COPY_REPO}/CLAUDE.md" "# Semantic Versioning Rules"
-assert_agent_rules "${COPY_REPO}/AGENTS.md" "# Semantic Versioning Rules"
+assert_agent_rules "${COPY_REPO}/CLAUDE.md" "versioning-semver"
+assert_agent_rules "${COPY_REPO}/AGENTS.md" "versioning-semver"
 
 test -d "${COPY_REPO}/.agents/skills/firmware-review"
 test ! -L "${COPY_REPO}/.agents/skills/firmware-review"
