@@ -2,20 +2,19 @@
 when: writing or modifying functions, types, modules, macros, or other documented code symbols
 load: recall
 summary: >-
-  Mandatory documentation for every function, type, constant, macro,
-  and module-scoped variable you write or materially change, with a
-  small list of trivial exceptions. Specifies voice (third-person
+  Documentation contracts for public symbols, non-trivial logic, and
+  behavior-defining types, constants, macros, and state, with trivial
+  exceptions. Specifies voice (third-person
   declarative), what to document, what to skip, and the idiomatic
   doc format per language — Doxygen, Google-style, JSDoc, Rustdoc,
   Godoc, Javadoc, LDoc.
 ---
 # Docstring Rules
 
-Every function, type, constant, macro, and module-scoped variable you
-write or materially change MUST have an appropriate documentation
-comment unless it is trivial and self-evident. Docstrings are part of
-the code, not an afterthought — write them as you write the code, not as
-a separate pass.
+Every public symbol, non-trivial function, and behavior-defining type,
+constant, macro, or module-scoped variable you write or materially
+change MUST have an appropriate documentation comment. Docstrings are
+part of the code; write them with the code.
 
 ## Voice and Style
 
@@ -40,16 +39,17 @@ a separate pass.
   comments
 - All classes, interfaces, records, traits, protocols, and other
   user-defined types
-- All macros (constants and parameterized)
-- All module-scoped and global variables
+- Macros, constants, and module-scoped variables that affect behavior
+  or configuration
 - All callbacks, handlers, ISRs, and lifecycle hooks
 - File-level headers for non-trivial source files
 
 ## What to Skip
 
 - Trivial getters/setters with no side effects
-- Static helper functions that are a few lines long and self-evident
-  from their name
+- Trivial constructors, wrappers, and one-line helpers with no side
+  effects or edge cases
+- Private or static helpers that are short, local, and self-evident
 - Do NOT add docstrings to code you didn't write or modify
 
 ## Language Formats
