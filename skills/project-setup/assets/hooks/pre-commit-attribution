@@ -1,7 +1,7 @@
 # BEGIN agent-guidelines staged attribution guard
 # Rejects high-confidence development authorship from added staged
 # lines while allowing functional integration language. The canonical
-# Pattern source: scripts/generate-hook-policy.sh. POSIX sh.
+# Policy source: scripts/generate-hook-policy.sh. POSIX sh.
 attribution_pattern='((co-)?authored''-by:|generated''-by:|written''-by:|reviewed''-by:|planned''-by:|developed''-by:|^[[:space:]>*-]*(generated|written|reviewed|planned|implemented|authored|co-authored|developed|coded)[[:space:]]+(by|with|using)[[:space:]]+(an?[[:space:]]+)?(ai|llm|assistant|agent|bot|automation|code[[:space:]]+assistant|coding[[:space:]]+(agent|tool))([^[:alnum:]_]|$)|(^|[^[:alnum:]_])(project|code|changes?|commit|implementation|documentation|docs|feature|fix)[[:space:]]+(was[[:space:]]+)?(generated|written|reviewed|planned|implemented|authored|co-authored|developed|coded)[[:space:]]+(by|with|using)[[:space:]]+(an?[[:space:]]+)?(ai|llm|assistant|agent|bot|automation|code[[:space:]]+assistant|coding[[:space:]]+(agent|tool))([^[:alnum:]_]|$)|(^|[^[:alnum:]_])(ai|llm|assistant|agent|bot|automation|code[[:space:]]+assistant|coding[[:space:]]+(agent|tool))[[:space:]-]+(generated|written|reviewed|planned|implemented|authored|co-authored|developed|coded)[[:space:]]+(project|code|changes?|commit|implementation|documentation|docs|feature|fix)([^[:alnum:]_]|$))'
 
 attribution_hits="$(git diff --cached --name-only --diff-filter=ACMR | while IFS= read -r staged_file; do

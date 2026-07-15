@@ -25,6 +25,7 @@ jobs:
             tests/setup-smoke.sh \
             tests/project-setup-smoke.sh \
             tests/hooks-smoke.sh \
+            tests/hook-policy-generation-safety.sh \
             tests/managed-block-safety.sh \
             tests/setup-backup-safety.sh \
             tests/project-source-safety.sh \
@@ -162,6 +163,9 @@ jobs:
       # snippets execute under a strict POSIX shell.
       - name: Run hooks-smoke
         run: bash tests/hooks-smoke.sh
+
+      - name: Run hook-policy-generation-safety
+        run: bash tests/hook-policy-generation-safety.sh
 
       - name: Run policy-contract-safety
         run: bash tests/policy-contract-safety.sh

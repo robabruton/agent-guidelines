@@ -4,10 +4,13 @@
 set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd -P)"
-HOOK_DIR="${SCRIPT_DIR}/../skills/project-setup/assets/hooks"
+REPO_ROOT="$(cd "${SCRIPT_DIR}/.." && pwd -P)"
+HOOK_DIR="${REPO_ROOT}/skills/project-setup/assets/hooks"
 
 CHECK=false
 TEMP_DIR=""
+MUTATION_COMPLETE=false
+REPLACED_HOOKS=()
 
 # Adjacent quotes keep the generated guard from matching its own pattern.
 PLANNED_WORK_PATTERN="(will[[:space:]_-]+be[[:space:]_-]+added|will[[:space:]_-]+land|will[[:space:]_-]+follow|coming[[:space:]_-]+soon|next[[:space:]_-]+session|future[[:space:]_-]+work|we[[:space:]_-]+(plan|intend)[[:space:]_-]+to|planned[[:space:]_-]+for|(^|[^[:alnum:]_])(TO''DO|FIX''ME)([^[:alnum:]_]|$))"
@@ -36,11 +39,57 @@ die() {
   exit 1
 }
 
-# Removes the private generation directory.
+# Restores hook targets replaced during an incomplete generation pass.
+rollback_targets() {
+  local hook_name backup restore target
+  local rollback_failed=false
+
+  for hook_name in "${REPLACED_HOOKS[@]}"; do
+    backup="${TEMP_DIR}/backup-${hook_name}"
+    restore="${TEMP_DIR}/restore-${hook_name}"
+    target="${HOOK_DIR}/${hook_name}"
+    if cp -p "$backup" "$restore" && mv "$restore" "$target"; then
+      printf 'restored %s\n' "$target" >&2
+    else
+      printf 'error: failed to restore %s from %s\n' \
+        "$target" "$backup" >&2
+      rollback_failed=true
+    fi
+  done
+
+  [ "$rollback_failed" = false ]
+}
+
+# Rolls back an incomplete write pass and removes private temporary data.
 cleanup() {
+  local status=$?
+
+  trap - EXIT
+  if [ "$MUTATION_COMPLETE" != true ] &&
+    [ "${#REPLACED_HOOKS[@]}" -gt 0 ]; then
+    rollback_targets || status=1
+  fi
   if [ -n "$TEMP_DIR" ]; then
     rm -rf "$TEMP_DIR"
   fi
+  exit "$status"
+}
+
+# Verifies that a changed target is an unmodified tracked generator asset.
+verify_owned_target() {
+  local hook_name="$1"
+  local target="${HOOK_DIR}/${hook_name}"
+  local relative="skills/project-setup/assets/hooks/${hook_name}"
+  local indexed="${TEMP_DIR}/indexed-${hook_name}"
+
+  [ -f "$target" ] && [ ! -L "$target" ] ||
+    die "generated hook target is not a regular file: $target"
+  git -C "$REPO_ROOT" diff --cached --quiet -- "$relative" ||
+    die "generated hook target has staged changes: $target"
+  git -C "$REPO_ROOT" show ":${relative}" > "$indexed" 2>/dev/null ||
+    die "generated hook target is not tracked: $target"
+  cmp -s "$target" "$indexed" ||
+    die "generated hook target has uncommitted changes: $target"
 }
 
 # Emits the staged-content planned-work guard.
@@ -101,7 +150,7 @@ emit_pre_commit_attribution() {
 # BEGIN agent-guidelines staged attribution guard
 # Rejects high-confidence development authorship from added staged
 # lines while allowing functional integration language. The canonical
-# Pattern source: scripts/generate-hook-policy.sh. POSIX sh.
+# Policy source: scripts/generate-hook-policy.sh. POSIX sh.
 attribution_pattern='${ATTRIBUTION_PATTERN}'
 
 attribution_hits="\$(git diff --cached --name-only --diff-filter=ACMR | while IFS= read -r staged_file; do
@@ -218,8 +267,9 @@ render_hook() {
 
 # Generates or checks every policy-bearing hook asset.
 main() {
-  local hook_name generated target
+  local hook_name generated target backup
   local stale=false
+  local changed_hooks=()
   local hook_names=(
     pre-commit-attribution
     pre-commit-banned-phrases
@@ -242,28 +292,56 @@ main() {
 
   for hook_name in "${hook_names[@]}"; do
     generated="$TEMP_DIR/$hook_name"
-    target="$HOOK_DIR/$hook_name"
     render_hook "$hook_name" > "$generated"
+  done
 
-    if [ "$CHECK" = true ]; then
+  if [ "$CHECK" = true ]; then
+    for hook_name in "${hook_names[@]}"; do
+      generated="$TEMP_DIR/$hook_name"
+      target="$HOOK_DIR/$hook_name"
       if ! cmp -s "$target" "$generated"; then
         printf 'stale generated hook asset: %s\n' "$target" >&2
         diff -u "$target" "$generated" >&2 || true
         stale=true
       fi
-    elif cmp -s "$target" "$generated"; then
+    done
+    [ "$stale" = false ] || exit 1
+    printf 'generated hook policy assets are current\n'
+    MUTATION_COMPLETE=true
+    return 0
+  fi
+
+  for hook_name in "${hook_names[@]}"; do
+    generated="$TEMP_DIR/$hook_name"
+    target="$HOOK_DIR/$hook_name"
+    if cmp -s "$target" "$generated"; then
       printf 'unchanged %s\n' "$target"
     else
-      chmod 0644 "$generated"
-      mv "$generated" "$target"
-      printf 'wrote %s\n' "$target"
+      changed_hooks+=("$hook_name")
     fi
   done
 
-  [ "$stale" = false ] || exit 1
-  if [ "$CHECK" = true ]; then
-    printf 'generated hook policy assets are current\n'
-  fi
+  for hook_name in "${changed_hooks[@]}"; do
+    generated="$TEMP_DIR/$hook_name"
+    target="$HOOK_DIR/$hook_name"
+    backup="$TEMP_DIR/backup-$hook_name"
+    verify_owned_target "$hook_name"
+    cp -p "$target" "$backup"
+    cmp -s "$target" "$backup" || die "failed to verify backup: $backup"
+    chmod 0644 "$generated"
+  done
+
+  for hook_name in "${changed_hooks[@]}"; do
+    generated="$TEMP_DIR/$hook_name"
+    target="$HOOK_DIR/$hook_name"
+    REPLACED_HOOKS+=("$hook_name")
+    mv "$generated" "$target" || die "failed to replace generated hook: $target"
+  done
+  MUTATION_COMPLETE=true
+
+  for hook_name in "${changed_hooks[@]}"; do
+    printf 'wrote %s\n' "$HOOK_DIR/$hook_name"
+  done
 }
 
 main "$@"
