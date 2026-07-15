@@ -201,6 +201,11 @@ grep -Fxq 'context_rules=compact' "$LEGACY_REPO/.agent-guidelines/config"
 grep -Fxq 'include_skill=explain' "$LEGACY_REPO/.agent-guidelines/config"
 grep -Fxq 'include_skill=test-audit' "$LEGACY_REPO/.agent-guidelines/config"
 grep -Fxq 'exclude_skill=test-audit' "$LEGACY_REPO/.agent-guidelines/config"
+for harness in claude codex opencode pi; do
+  grep -Fxq "harness=$harness" "$LEGACY_REPO/.agent-guidelines/config"
+done
+test -L "$LEGACY_REPO/.claude/skills/explain"
+test -L "$LEGACY_REPO/.agents/skills/explain"
 
 # Owned malformed, unknown, duplicated, executable-looking, and NUL-bearing
 # state fails before mutation.
@@ -234,6 +239,25 @@ printf 'include_skill=explain\n' \
 refresh_config_ownership "$DUPLICATE_SELECTION_REPO"
 expect_unchanged_failure "$DUPLICATE_SELECTION_REPO" \
   'duplicate stored include_skill: explain'
+
+INVALID_HARNESS_REPO="${TMP_ROOT}/invalid-harness-repo"
+cp -a "$RERUN_REPO" "$INVALID_HARNESS_REPO"
+sed 's/^harness=codex$/harness=unknown/' \
+  "$INVALID_HARNESS_REPO/.agent-guidelines/config" \
+  >"${TMP_ROOT}/invalid-harness.config"
+cp "${TMP_ROOT}/invalid-harness.config" \
+  "$INVALID_HARNESS_REPO/.agent-guidelines/config"
+refresh_config_ownership "$INVALID_HARNESS_REPO"
+expect_unchanged_failure "$INVALID_HARNESS_REPO" \
+  'invalid stored harness: unknown'
+
+CONFLICTING_HARNESS_REPO="${TMP_ROOT}/conflicting-harness-repo"
+cp -a "$RERUN_REPO" "$CONFLICTING_HARNESS_REPO"
+printf 'harness=none\n' \
+  >>"$CONFLICTING_HARNESS_REPO/.agent-guidelines/config"
+refresh_config_ownership "$CONFLICTING_HARNESS_REPO"
+expect_unchanged_failure "$CONFLICTING_HARNESS_REPO" \
+  'stored harness none conflicts with named harnesses'
 
 SHELL_VALUE_REPO="${TMP_ROOT}/shell-value-repo"
 SHELL_SENTINEL="${TMP_ROOT}/shell-value-ran"
