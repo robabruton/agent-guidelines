@@ -130,6 +130,17 @@ printf 'Reviewer fol%s: verify the retained size limit.\n' "low-up" \
 git add file-g.txt
 git commit -q -m "docs: add file g"
 
+# A present deprecation contract is valid; a speculative replacement is not.
+printf 'Option X is deprecated and is removed in version 3.\n' > file-g2.txt
+git add file-g2.txt
+git commit -q -m "docs: describe deprecation contract"
+
+printf 'A replacement is %s soon.\n' "coming" > file-g3.txt
+git add file-g3.txt
+expect_fail git commit -m "docs: promise replacement"
+git reset -q -- file-g3.txt
+rm -f file-g3.txt
+
 # A matching basename outside the two managed rule paths is not exempt.
 printf 'banned: %s soon\n' "coming" > no-plans-on-main.md
 git add no-plans-on-main.md

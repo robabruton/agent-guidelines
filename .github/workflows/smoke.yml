@@ -37,6 +37,7 @@ jobs:
             tests/project-initial-commit-safety.sh \
             tests/project-git-recovery-safety.sh \
             tests/project-default-branch-safety.sh \
+            tests/policy-contract-safety.sh \
             scripts/generate-hook-policy.sh \
             scripts/generate-rules-readme.sh \
             skills/agent-memory/scripts/agent-memory-report.sh
@@ -161,3 +162,6 @@ jobs:
       # snippets execute under a strict POSIX shell.
       - name: Run hooks-smoke
         run: bash tests/hooks-smoke.sh
+
+      - name: Run policy-contract-safety
+        run: bash tests/policy-contract-safety.sh
