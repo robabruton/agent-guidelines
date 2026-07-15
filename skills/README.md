@@ -44,8 +44,8 @@ programming, debugging, device-state preservation, and recovery-aware
 troubleshooting.
 
 Use this skill for ATmega, ATtiny, AVR Dx/Ex, megaAVR, tinyAVR, or XMEGA
-projects that use AVR GCC, AVR-LibC, MPLAB XC8, MPLAB X, Device Family
-Packs, avrdude, UPDI, ISP, PDI, JTAG, or debugWIRE.
+projects that use AVR GCC, AVR-LibC, Make or CMake, avrdude, UPDI, ISP,
+PDI, JTAG, or debugWIRE.
 
 ### `code-review`
 
