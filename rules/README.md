@@ -55,12 +55,9 @@ recover from and hold regardless of task or model.
 
 ### `development-attribution`
 
-Excludes AI-tool authorship from the project record. No trailer
-lines naming AI tools or code assistants, no references to AI tools
-as authors of committed work, no naming of agent tooling in ignore
-files or build configs, and no hardcoded model or vendor names in
-source. Functional references to AI as a user-facing feature are
-allowed; references to AI as a developer or contributor are not.
+Excludes development-tool authorship from the project record while
+allowing factual product integrations, APIs, configuration, paths,
+compatibility notes, and user-facing behavior.
 
 ### `git-messages`
 
@@ -91,10 +88,8 @@ happened, not work that is intended. Forbids speculative planning
 content — plans for later phases, lists of unfinished work,
 forward-looking promises — in any tracked file, commit message,
 pull request description, merge commit body, or branch name.
-Includes a banned-phrase checklist run before staging, a matching
-pre-commit guard installed by `project-setup.sh`, and a pointer to
-where plans legitimately belong (durable agent memory, untracked
-`local/` files, scratch branches).
+Automatic hooks reject explicit promises and unfinished-work
+markers; contextual wording remains a manual review decision.
 
 ## On-Demand Rules
 

@@ -2,12 +2,9 @@
 when: always
 load: always
 summary: >-
-  Excludes AI-tool authorship from the project record. No trailer
-  lines naming AI tools or code assistants, no references to AI tools
-  as authors of committed work, no naming of agent tooling in ignore
-  files or build configs, and no hardcoded model or vendor names in
-  source. Functional references to AI as a user-facing feature are
-  allowed; references to AI as a developer or contributor are not.
+  Excludes development-tool authorship from the project record while
+  allowing factual product integrations, APIs, configuration, paths,
+  compatibility notes, and user-facing behavior.
 ---
 # Development Attribution Rules
 
@@ -18,28 +15,22 @@ summary: >-
 - Never present AI tools, LLMs, code assistants, or automation tools
   as having developed, written, generated, reviewed, or planned any
   part of the project.
-- Never name agent or assistant tooling in any tracked file — ignore
-  files, build configs, and paths included, not just prose.
-- Never hardcode model or vendor names in source code, comments,
-  docstrings, or committed documentation.
-- References to AI as user-facing project functionality are allowed;
-  references to AI as a development author or contributor are not.
+- Keep model selection configurable rather than hardcoding a provider
+  or model identifier into source behavior.
+- Name tools, vendors, models, paths, and configuration keys when they
+  are factual parts of functionality, compatibility, or usage.
 - When in doubt, ask.
 
 ## Details and Rationale
 
-- These bans cover all tracked content: code comments, documentation,
-  README content, changelog entries, and every other committed file.
-- The hooks installed by `project-setup.sh` reject authorship trailers
-  in commit messages and staged content regardless of who is named,
-  since a pattern cannot tell tool names from human names. Credit
-  human collaborators in commit body prose rather than trailers.
+- The authorship ban covers commit messages and all tracked content.
+- Hooks installed by `project-setup.sh` reject high-confidence
+  development provenance in commit messages and added staged lines.
+  Contextual or ambiguous wording still requires manual review.
 - Functional references describe project functionality, integrations,
-  APIs, or user-facing behavior — they must not imply a tool was a
-  development contributor.
-- If a build or packaging step would otherwise sweep in local tooling
-  files, exclude them with an allowlist of the project's own files
-  rather than by naming the tooling.
-- Model names change, tie the code to one vendor, and go stale; keep
-  model selection in configuration and use generic language ("the
-  configured model", "the provider/model identifier") in code and docs.
+  APIs, generated product output, provider-specific configuration,
+  compatibility, or user-facing behavior. They must not imply a tool
+  was a development contributor.
+- Prefer generic source interfaces such as "the configured model";
+  documentation and configuration may name supported providers and
+  models when users need those names to operate the product.

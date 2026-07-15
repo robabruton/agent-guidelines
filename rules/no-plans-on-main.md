@@ -7,10 +7,8 @@ summary: >-
   content — plans for later phases, lists of unfinished work,
   forward-looking promises — in any tracked file, commit message,
   pull request description, merge commit body, or branch name.
-  Includes a banned-phrase checklist run before staging, a matching
-  pre-commit guard installed by `project-setup.sh`, and a pointer to
-  where plans legitimately belong (durable agent memory, untracked
-  `local/` files, scratch branches).
+  Automatic hooks reject explicit promises and unfinished-work
+  markers; contextual wording remains a manual review decision.
 ---
 # No Plans in Permanent History
 
@@ -20,8 +18,8 @@ summary: >-
   plans, "what's next" notes, promises of later work — reach any
   tracked file, commit message, pull/merge request description, merge
   commit body, or branch name.
-- Scan those five artifacts against the banned-phrase list below
-  before the first commit, every time.
+- Scan those five artifacts for planned work before the first commit,
+  every time; hooks cover only the high-confidence forms below.
 - Keep plans in a durable agent memory store, an untracked `local/`
   file, or a scratch branch that never merges.
 - Write tracked documentation in the present tense, describing only
@@ -30,10 +28,9 @@ summary: >-
 Permanent history is every commit message, every file on the default
 branch, every release artifact. The project should always look
 intentional: a tracked plan invites drift when priorities shift, and
-the discrepancy makes the work look planned-but-undone. The
-pre-commit guard installed by `project-setup.sh` rejects the phrase
-list below in staged content; the other artifacts rely on the manual
-scan. The rationale and detail behind each constraint:
+the discrepancy makes the work look planned-but-undone. Hooks installed
+by `project-setup.sh` reject explicit forms on the surfaces they guard;
+contextual review still applies to every permanent artifact.
 
 ## Where Plans Belong Instead
 
@@ -50,7 +47,22 @@ permanent history:
   easy to find and one `local/` ignore entry covers everything.
 - A branch that is used as personal scratch space and never merged.
 
-## Banned-Phrase Pre-Stage Checklist
+## Automatic Checks
+
+The staged-content and commit-message guards reject these
+high-confidence forms, case-insensitively:
+
+- "will be added", "will land", "will follow", "coming soon",
+  "next session", and "future work"
+- "we plan to", "we intend to", and "planned for"
+- standalone `TODO` and `FIXME` markers
+
+The branch guard rejects the same explicit promises plus invalid
+branch prefixes. Only the canonical rule itself is exempt from staged
+phrase scanning, at exactly `rules/no-plans-on-main.md` or
+`.agent-guidelines/rules/no-plans-on-main.md`.
+
+## Manual Review
 
 Scan these five artifacts separately for forward-looking or
 provenance-revealing phrasing before they become permanent, and
@@ -66,24 +78,18 @@ rewrite to describe the present before proceeding:
    overlooked, yet it lands on the default branch as the merge
    commit's subject (`Merge branch '<name>'`).
 
-Phrases to catch (case-insensitive):
-
-- "will be added", "will land", "will follow", "coming soon", "next
-  session", "future work", "roadmap"
-- "followup", "follow-up", "followups", "follow-ups", "next-step",
-  "next-steps", "to-do", "upcoming" (and any other "more work after
-  this" phrasing — conversational language flows into branch names
-  without scrutiny)
-- "not yet", "does not yet", "until X migrates", "when X needs"
-- "first caller", "first migration", "first concrete" (and similar
-  "first <noun>" constructions that imply more is planned)
-- "TODO" / "FIXME" markers for unimplemented work in tracked source
-- Named hypothetical alternatives ("X or Y later", "we will swap to
-  ...")
+Words such as "roadmap", "follow-up", "upcoming", "not yet", "first",
+and "later" require context; they are not automatic failures. Reject
+them when they promise, schedule, or inventory unfinished work. Allow
+them when they accurately describe current behavior, compatibility,
+history, or reviewer attention without promising another change.
 
 ## Allowed
 
 - Descriptions of what currently exists and how it behaves.
+- Factual current limitations and deprecation or removal contracts.
+- Reviewer notes grounded in the current change.
+- Functional integration language and factual changelog transitions.
 - A standard `[Unreleased]` changelog heading while real changes
   accumulate for a release.
 - A changelog entry describing work that just landed.
