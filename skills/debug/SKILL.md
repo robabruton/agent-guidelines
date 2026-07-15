@@ -1,6 +1,6 @@
 ---
 name: debug
-description: Drive a live failure to a verified root-cause fix — reproduce, isolate, diagnose, fix, and land the regression test.
+description: Drive a live failure to a verified root-cause fix — reproduce, isolate, diagnose, fix, and land the regression test. Use for concrete failing tests, errors, crashes, wrong results, or regressions; use code-review for inspection at rest and explain for understanding without a fix.
 when_to_use: Use when there is a concrete failing behavior to fix — a failing test, an error message, a crash, a wrong result, or a regression. For inspecting code at rest use code-review; for understanding code without fixing it use explain.
 argument-hint: "[failing-test|error-message|command|bug-description]"
 ---

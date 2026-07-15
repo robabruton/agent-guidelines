@@ -1,6 +1,6 @@
 ---
 name: code-review
-description: Review code, local changes, branches, files, functions, classes, or small projects for correctness, maintainability, edge cases, and integration risk.
+description: Review code, local changes, branches, files, functions, classes, or small projects for correctness, maintainability, edge cases, and integration risk. Use for inspection at rest; use debug for a concrete failure that needs a fix and explain for understanding without review findings.
 when_to_use: Use when the user asks for a general code review, quality check, bug hunt, pre-commit review, branch review, or review of local software work.
 argument-hint: "[file|directory|symbol|branch|changes|project]"
 allowed-tools: Read Grep Glob

@@ -1,34 +1,24 @@
 ---
 name: project-setup
-description: Initialize or update a repository with project rules, git hooks, commit standards, and agent configuration
+description: Initialize or update new and existing repositories with shared project rules, git hooks, commit standards, changelog behavior, and agent configuration. Use when applying or refreshing this repository's project setup workflow.
 when_to_use: Use when setting up a new repository or refreshing an existing repository with shared rules, local git hooks, changelog behavior, and agent instruction files.
 argument-hint: "[target-dir] [options]"
 ---
 
-Set up a project repository with reusable development standards. This
-skill is idempotent: it checks what already exists, adds missing setup,
-and avoids overwriting user-managed files.
-
-Use this skill for both new repositories and existing repositories that
-need project rules, git configuration, local hooks, or agent instruction
-files refreshed.
-
-The repository command that implements this target-repository workflow
-is `project-setup.sh`; when it is available, run it instead of
-performing the steps manually, and treat it as the authoritative
-definition of profiles, rule selection, and file handling. Keep it
-distinct from `setup.sh`, which links this repository's rules and
+Use `project-setup.sh` for this target-repository workflow and treat it as
+the authoritative definition of profiles, rule selection, and file handling.
+Keep it distinct from `setup.sh`, which links this repository's rules and
 skills into local tool configuration directories.
 
 ## Target Directory
 
-- Use the directory specified by the user
-- If no directory is specified, use the current working directory
+- Use the directory specified by the user, or the current working directory
 - If the target directory does not exist, create it only when it is not
   beneath an existing repository worktree
 - Require an existing Git target to be the physical worktree root, not a
   subdirectory
-- Resolve and print the absolute target path before making changes
+- Resolve the physical absolute target path before making changes and print it
+  in the final summary
 
 ## Preflight
 
@@ -44,29 +34,22 @@ git config --global user.name "Your Name"
 git config --global user.email "you@example.com"
 ```
 
-- Inspect existing project files before asking setup questions
-- Select a project profile:
-  - `minimal` for empty, docs-only, or lightweight repositories
-  - `codebase` for normal software projects with source, scripts,
-    tests, dependency manifests, or build tooling
-  - `released` for projects with users, releases, packages, APIs,
-    plugins, CLIs, deployable services, or compatibility promises
-- Infer `released` when version metadata, version-like tags, package
-  metadata, public API indicators, or an existing versioned changelog
-  are present
-- Infer `codebase` when source files, tests, scripts, dependency
-  manifests, or package managers are present
-- Infer `minimal` for empty repositories, docs-only repositories, or
-  unclear repositories
-- Ask only when the profile cannot be inferred confidently
+- Use an explicit option or checksum-owned stored selection before inference
+- Otherwise infer `released` when a versioned changelog or any of
+  `package.json`, `pyproject.toml`, `Cargo.toml`, `go.mod`, or `VERSION`
+  exists
+- Otherwise infer `codebase` when a source file with a recognized C, C++, Go,
+  JavaScript, TypeScript, Python, Rust, Java, or shell extension exists within
+  three directory levels
+- Otherwise infer `minimal`
+- Keep inference non-interactive; use `--profile` to override it
 - If `CHANGELOG.md` exists:
   - Treat changelog maintenance as enabled
   - Infer `version` changelog mode if it contains `## [Unreleased]` or
     version headings such as `## [1.2.3] - YYYY-MM-DD`
   - Infer `date` changelog mode if it contains date headings such as
     `## 2026-04-21` and no version headings
-  - If the format is mixed or unclear, summarize what was found and ask
-    the user which mode to use
+  - Prefer `version` when both heading forms occur
 - If `CHANGELOG.md` does not exist:
   - Default to `version` changelog mode for the `released` profile
   - Default to `none` changelog mode for `minimal` and `codebase`
@@ -75,14 +58,9 @@ git config --global user.email "you@example.com"
     `CHANGELOG.md`
   - If changelog mode is `none`, omit changelog rules and do not create
     `CHANGELOG.md`
-- Inspect version indicators such as `package.json`, `pyproject.toml`,
-  `Cargo.toml`, `go.mod`, `VERSION`, and tags matching `vX.Y.Z`
-- Use version files and version-like tags as evidence that the project
-  may use semantic versioning
 - Use `versioning mode: semver` when changelog mode is `version`
 - Use `versioning mode: none` when changelog mode is `none` or `date`
-- Existing changelog structure takes priority over versioning guesses
-- Print a short summary of the selected options before continuing
+- Existing changelog headings take priority over profile defaults
 - Use `date` and `version` as the canonical changelog mode names in
   output, config, and generated instructions
 - Accept `dated` and `dates` as aliases for `date`
@@ -218,14 +196,13 @@ git --git-dir=<recovery-dir>/git --work-tree=<target> \
   preserving its selections
 - Do not symlink `CLAUDE.md` or `AGENTS.md`; generate their managed
   blocks from the selected rule source instead
-- Read rule files from the first available source:
-  - The target repository's `.agent-guidelines/rules` path
-  - The target repository's `rules/` directory
-  - The `rules/` directory from this guidelines repository
-  - An installed rules source packaged with the skill
-- If no rules source is available, skip rule assembly and report a
-  warning
-- Supported profiles include these rule files when available:
+- Use this guidelines repository's canonical `rules/` directory as the
+  authoritative source for the managed target symlink or licensed copy
+- During dry-run preview, read the canonical source directly when the managed
+  target path has not been created
+- Stop when the canonical source or an existing managed target is invalid;
+  do not search arbitrary target or packaged fallback directories
+- Supported profiles require these rule files:
   - `minimal`:
     - `agent-conduct.md`
     - `git-workflow.md`
@@ -296,7 +273,8 @@ git --git-dir=<recovery-dir>/git --work-tree=<target> \
 - Use the source file's existing title as the heading for each included
   rule
 - Do not rewrite, summarize, or otherwise change the rule text
-- Report which rule files were included, skipped, or unavailable
+- Report included rule files in their applied order, and stop with the
+  unavailable rule name when a selected source file is missing
 
 ## Per-Project Skills
 
@@ -349,16 +327,12 @@ git config --local commit.template .gittemplate
 - Create `.gitignore` if it does not already exist
 - For an empty or unrecognized project, use `assets/gitignore-minimal`
   as the starting content
-
 - If `.gitignore` already exists, leave it unchanged
 
 ## README
 
 - Create `README.md` if it does not already exist
-- If the project purpose can be inferred from existing files, include a
-  short project description
-- If the project purpose is unclear, create a minimal README with the
-  directory name as the title
+- Create a minimal README with the directory name as the title
 - If `README.md` already exists, leave it unchanged
 
 ## Changelog
@@ -367,7 +341,6 @@ Only when changelog maintenance is enabled:
 
 - Create `CHANGELOG.md` if it does not already exist
 - Use `assets/changelog-base.md` as the initial changelog content
-
 - Do not add an empty `[Unreleased]` section or an empty dated section
   during initial setup
 - If `CHANGELOG.md` already exists, leave it unchanged

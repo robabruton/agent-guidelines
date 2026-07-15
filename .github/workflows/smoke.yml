@@ -24,6 +24,7 @@ jobs:
             lib/safe-mutations.sh \
             tests/setup-smoke.sh \
             tests/project-setup-smoke.sh \
+            tests/project-profile-inference-safety.sh \
             tests/hooks-smoke.sh \
             tests/hook-policy-generation-safety.sh \
             tests/managed-block-safety.sh \
@@ -122,6 +123,9 @@ jobs:
 
       - name: Run project-setup-smoke
         run: bash tests/project-setup-smoke.sh
+
+      - name: Run project-profile-inference-safety
+        run: bash tests/project-profile-inference-safety.sh
 
       - name: Run managed-block-safety
         run: bash tests/managed-block-safety.sh

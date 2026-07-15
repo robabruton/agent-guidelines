@@ -6,19 +6,25 @@ instructions rather than restating the project rules.
 
 ## Metadata Policy
 
-Skill frontmatter should use portable Agent Skills fields plus a small
-approved subset of Claude Code fields that improve invocation:
+The [Agent Skills specification](https://agentskills.io/specification)
+defines `name` and `description` as required portable fields. It also defines
+optional `license`, `compatibility`, and `metadata` fields plus experimental
+`allowed-tools`. This repository requires every `description` to state both
+what the skill does and when it applies because consumers load that field
+eagerly for routing. Keep it concise to limit startup context.
 
-- `name`
-- `description`
-- `when_to_use`
-- `argument-hint`
+The skills also retain the Claude Code extensions `when_to_use` and
+`argument-hint`, documented in the
+[Claude Code skill reference](https://code.claude.com/docs/en/slash-commands).
+Claude appends `when_to_use` to its skill listing and displays
+`argument-hint` during invocation; other consumers may ignore both. Put every
+essential cross-harness trigger in `description`, not only in an extension.
 
-Avoid behavior-changing Claude Code fields such as `model`, `effort`,
-`context`, `agent`, `hooks`, and `shell` without a specific current
-requirement. Use `allowed-tools` only for low-risk read/search tools on
-audit and review skills; it pre-approves those tools in Claude Code but
-does not deny other tools.
+Use `allowed-tools` only for low-risk read/search tools on audit and review
+skills. Support is experimental across Agent Skills consumers; in Claude Code
+it pre-approves those tools but does not deny other tools. Avoid
+behavior-changing Claude extensions such as `model`, `effort`, `context`,
+`agent`, `hooks`, and `shell` without a specific current requirement.
 
 ## Current Skills
 
@@ -44,8 +50,8 @@ programming, debugging, device-state preservation, and recovery-aware
 troubleshooting.
 
 Use this skill for ATmega, ATtiny, AVR Dx/Ex, megaAVR, tinyAVR, or XMEGA
-projects that use AVR GCC, AVR-LibC, MPLAB XC8, MPLAB X, Device Family
-Packs, avrdude, UPDI, ISP, PDI, JTAG, or debugWIRE.
+projects that use AVR GCC, AVR-LibC, Make or CMake, avrdude, UPDI, ISP,
+PDI, JTAG, or debugWIRE.
 
 ### `code-review`
 

@@ -102,6 +102,15 @@ target repository:
 ./project-setup.sh --profile codebase --changelog date /path/to/project
 ```
 
+Without explicit profile and changelog options or checksum-owned stored
+selections, inference is deterministic and non-interactive. A versioned
+changelog, package manifest, or `VERSION` file selects `released`; recognized
+source files select `codebase`; other repositories select `minimal`. A
+versioned heading selects `version`, a dated heading selects `date`, and
+`released` otherwise defaults to `version`. Versioned headings win in a mixed
+changelog, and Git tags are not inspected. Explicit options override these
+defaults.
+
 Global installation is sufficient for normal local use. Per-project
 skills remain opt-in via `--include-skill` (repeatable) when a repository
 needs a portable copy or pinned snapshot. Every invocation that selects
@@ -193,10 +202,11 @@ or append at the end because no marker pair was found.
   /path/to/project
 ```
 
-Run the target-repository and hook safety suites with:
+Run the target-repository, hook, and policy safety suites with:
 
 ```bash
-for test in tests/project-*.sh tests/hooks-smoke.sh; do
+for test in tests/project-*.sh tests/hook*.sh \
+  tests/policy-contract-safety.sh; do
   "$test"
 done
 ```

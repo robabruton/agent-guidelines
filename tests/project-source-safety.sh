@@ -35,6 +35,28 @@ for identifier in .. ../README /tmp/foreign x/y x--y Upper; do
   test ! -e "$target"
 done
 
+# A valid catalog key still requires a corresponding rule source. Skills use
+# the documented warning path and preserve a valid missing selection in state.
+MISSING_RULE_REPO="${TMP_ROOT}/missing-rule"
+expect_fail "${ROOT_DIR}/project-setup.sh" \
+  --profile minimal --changelog none \
+  --include-rule missing-rule "$MISSING_RULE_REPO"
+grep -Fq 'selected rule unavailable: missing-rule' \
+  "${TMP_ROOT}/expected.err"
+test -d "$MISSING_RULE_REPO"
+test -z "$(find "$MISSING_RULE_REPO" -mindepth 1 -print -quit)"
+
+MISSING_SKILL_REPO="${TMP_ROOT}/missing-skill"
+"${ROOT_DIR}/project-setup.sh" \
+  --profile minimal --changelog none --harness codex \
+  --include-skill missing-skill "$MISSING_SKILL_REPO" \
+  >"${TMP_ROOT}/missing-skill.out"
+grep -Fq 'skill not found: missing-skill' \
+  "${TMP_ROOT}/missing-skill.out"
+test ! -e "$MISSING_SKILL_REPO/.agents/skills/missing-skill"
+grep -Fxq 'include_skill=missing-skill' \
+  "$MISSING_SKILL_REPO/.agent-guidelines/config"
+
 # An existing rule directory is user-owned unless it exactly matches the
 # requested generated snapshot. Symlink mode does not fall back to copying.
 RULE_CONFLICT="${TMP_ROOT}/rule-conflict"
