@@ -22,6 +22,11 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ### Changed
 
+- Agent conduct requires complete native reads of rules, skills, and other
+  required instruction files before task actions, using smaller ranges,
+  counts, or checksums only when completion or source stability is ambiguous.
+  Decision requests state the full question, options, consequences,
+  recommendation, reasoning, and exact choice.
 - Destructive-write rules distinguish unowned data that requires a verified
   full backup from exact owned generated state eligible for atomic
   replacement. Setup mutations use verified recovery copies plus atomic
