@@ -908,6 +908,7 @@ print_summary() {
 }
 
 main() {
+  agent_guidelines_runtime_begin || die "could not create runtime scratch directory"
   parse_args "$@"
   setup_colors
   build_links

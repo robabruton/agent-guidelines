@@ -1045,6 +1045,10 @@ copy_managed_directory_safely() {
 
   parent="$(dirname "$target")"
   stage_dir="$(mktemp -d "${parent}/.agent-guidelines-copy.XXXXXX")" || return 1
+  agent_guidelines_runtime_register_path "$stage_dir" || {
+    rm -rf "$stage_dir"
+    return 1
+  }
   staged="$stage_dir/object"
   if ! agent_guidelines_backup_object "$source" "$staged"; then
     rm -rf "$stage_dir"
@@ -3552,6 +3556,7 @@ print_summary() {
 }
 
 main() {
+  agent_guidelines_runtime_begin || die "could not create runtime scratch directory"
   parse_args "$@"
   validate_git_environment
 
