@@ -37,6 +37,7 @@ jobs:
             tests/project-initial-commit-safety.sh \
             tests/project-git-recovery-safety.sh \
             tests/project-default-branch-safety.sh \
+            scripts/generate-hook-policy.sh \
             scripts/generate-rules-readme.sh \
             skills/agent-memory/scripts/agent-memory-report.sh
 
@@ -64,6 +65,9 @@ jobs:
 
       - name: Verify rules README matches rule frontmatter
         run: bash scripts/generate-rules-readme.sh --check
+
+      - name: Verify generated hook policy assets
+        run: bash scripts/generate-hook-policy.sh --check
 
       # The always-tier rule bodies load into every conversation's
       # context; growth here must be a deliberate, reviewed decision.
