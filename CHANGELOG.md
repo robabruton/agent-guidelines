@@ -13,6 +13,9 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
   verified rollback copies through each write pass, and restores incomplete
   mutations. CI verifies the assets, transactional failure paths, and
   review-only date, diagnostic, and ownership contracts.
+- A profile-inference safety suite covers empty repositories, recognized
+  source trees, package manifests, version files, dated and versioned
+  changelogs, mixed headings, and tag-only repositories.
 
 ### Changed
 
@@ -24,6 +27,10 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 - Rules and skills use one branch-prefix set and consistent policies for
   deterministic dates, diagnostic suppressions, docstring thresholds,
   current-scope notes, and factual changelog transitions.
+- Project setup documentation matches deterministic profile and changelog
+  inference, canonical rule sources, initial-commit boundaries, and current
+  command output. The skills catalog matches implemented AVR workflows and
+  distinguishes portable metadata from Claude-specific routing extensions.
 
 ## 2026-07-14
 

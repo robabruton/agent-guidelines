@@ -202,7 +202,7 @@ git --git-dir=<recovery-dir>/git --work-tree=<target> \
   target path has not been created
 - Stop when the canonical source or an existing managed target is invalid;
   do not search arbitrary target or packaged fallback directories
-- Supported profiles include these rule files when available:
+- Supported profiles require these rule files:
   - `minimal`:
     - `agent-conduct.md`
     - `git-workflow.md`
@@ -273,7 +273,8 @@ git --git-dir=<recovery-dir>/git --work-tree=<target> \
 - Use the source file's existing title as the heading for each included
   rule
 - Do not rewrite, summarize, or otherwise change the rule text
-- Report which rule files were included, skipped, or unavailable
+- Report included rule files in their applied order, and stop with the
+  unavailable rule name when a selected source file is missing
 
 ## Per-Project Skills
 
