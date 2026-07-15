@@ -24,8 +24,8 @@ document planned behavior as if it already exists.
 - Keep README instructions aligned with the current repository contents
 - Describe limitations, prerequisites, and assumptions when they affect usage
 - Remove stale instructions instead of leaving contradictory guidance in place
-- If documentation is intentionally deferred, say why and identify what
-  still needs to be documented
+- If documentation is deliberately excluded from the current change,
+  record the current scope and reason without promising another change
 
 ## Examples
 

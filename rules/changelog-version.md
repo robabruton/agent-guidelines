@@ -23,7 +23,7 @@ packages, APIs, or other versioned artifacts.
   recorded change
 - When cutting a release, rename `[Unreleased]` to
   `[X.Y.Z] - YYYY-MM-DD` and add a fresh empty `[Unreleased]` section
-  above it for future work
+  above it
 - Link version headings to diffs at the bottom of the file when a remote
   exists
 

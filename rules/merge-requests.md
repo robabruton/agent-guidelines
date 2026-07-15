@@ -52,8 +52,9 @@ State what was run and the outcome, specifically enough to reproduce.
 ### Notes
 
 Anything a reviewer needs that is not obvious from the diff — decisions
-made, deferrals, areas needing attention, known limitations. Omit if
-nothing applies.
+made, current exclusions with reasons, areas needing attention, and known
+limitations. Do not use Notes for unfinished-work lists or promises.
+Omit if nothing applies.
 
 ## Each Commit Must Stand on Its Own
 
