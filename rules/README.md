@@ -136,8 +136,8 @@ conventions when a remote exists.
 
 Conventions that the language's own style tooling does not enforce:
 read a project version from package metadata rather than
-hardcoding, never silence type-checker or linter errors with inline
-ignores, pick one term per concept and use it everywhere, keep
+hardcoding, constrain unavoidable diagnostic suppressions, pick one
+term per concept and use it everywhere, keep
 sample and fixture data internally coherent rather than templated,
 and keep inline-annotation alignment consistent across a block.
 
@@ -247,8 +247,8 @@ Verify every branch before it merges, sized to the risk and scope
 of the change. Test selection (smallest reliable check, prefer
 existing project conventions), what to verify (new behavior,
 existing behavior touched, error paths, documentation examples),
-running the project's full check suite before pushing, no
-hardcoded dates in tests, and reproducing expensive remote
+running the project's full check suite before pushing,
+time-independent date fixtures, and reproducing expensive remote
 pipeline steps locally first.
 
 ### `versioning-semver`

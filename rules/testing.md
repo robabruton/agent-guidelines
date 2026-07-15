@@ -6,8 +6,8 @@ summary: >-
   of the change. Test selection (smallest reliable check, prefer
   existing project conventions), what to verify (new behavior,
   existing behavior touched, error paths, documentation examples),
-  running the project's full check suite before pushing, no
-  hardcoded dates in tests, and reproducing expensive remote
+  running the project's full check suite before pushing,
+  time-independent date fixtures, and reproducing expensive remote
   pipeline steps locally first.
 ---
 # Testing Rules
@@ -48,19 +48,21 @@ subset.
   test evidence; the slow tests exist to catch real breakage. Report the
   full count.
 
-## No Hardcoded Dates in Tests
+## Deterministic Dates
 
-Never hardcode calendar dates in test bodies, fixtures, or test data.
-Compute them relative to the current date with offsets.
+Date fixtures must express stable test semantics rather than assume a
+literal date is still recent when the test runs.
 
 - A test that seeds a "recent" date or asserts against a fixed date
   passes for a while, then silently breaks when the calendar moves past
   the baked-in assumption.
 - Compute "old" and "recent" values as offsets from today. This applies
   to filenames, log entries, timestamps in fixtures, and snapshot data.
-- If a date genuinely must be pinned (parsing a known historical format),
-  make the time-independence explicit by injecting a fixed clock, not by
-  assuming the test runs soon enough.
+- Fixed dates are appropriate for parsing known formats, boundary cases,
+  snapshots, and other semantics tied to that exact value.
+- For age-sensitive behavior, compute offsets from an injected fixed
+  clock or from today. Never make correctness depend on when the suite
+  happens to run.
 
 ## Test Build and Pipeline Steps Locally First
 
