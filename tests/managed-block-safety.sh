@@ -44,12 +44,10 @@ test "$(agent_guidelines_update_managed_block \
   "$ATOMIC_TARGET" "$BLOCK_FILE")" = updated
 grep -Fxq 'user sentinel' "$ATOMIC_TARGET"
 grep -Fxq '## Managed replacement' "$ATOMIC_TARGET"
-test "$(agent_guidelines_stat_signature "$ATOMIC_TARGET" | \
-  cut -d: -f1)" = 640
+test "$(agent_guidelines_file_mode "$ATOMIC_TARGET")" = 640
 test "$(agent_guidelines_remove_managed_block "$ATOMIC_TARGET")" = cleared
 grep -Fxq 'user sentinel' "$ATOMIC_TARGET"
-test "$(agent_guidelines_stat_signature "$ATOMIC_TARGET" | \
-  cut -d: -f1)" = 640
+test "$(agent_guidelines_file_mode "$ATOMIC_TARGET")" = 640
 
 GENERATED_TARGET="${TMP_ROOT}/generated.md"
 cp -a "$BLOCK_FILE" "$GENERATED_TARGET"
@@ -134,7 +132,7 @@ git -C "$HOOK_REPO" commit -q -m "chore: seed fixture"
 
 HOOK_FILE="${HOOK_REPO}/.git/hooks/pre-commit"
 test -x "$HOOK_FILE"
-test "$(agent_guidelines_stat_signature "$HOOK_FILE" | cut -d: -f1)" = 755
+test "$(agent_guidelines_file_mode "$HOOK_FILE")" = 755
 HOOK_END="# END agent-guidelines main-branch guard"
 awk -v marker="$HOOK_END" '$0 != marker' "$HOOK_FILE" > "${HOOK_FILE}.tmp"
 mv "${HOOK_FILE}.tmp" "$HOOK_FILE"

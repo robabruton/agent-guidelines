@@ -158,13 +158,13 @@ agent_guidelines_assert_path_beneath() {
   esac
 }
 
-agent_guidelines_stat_signature() {
+agent_guidelines_file_mode() {
   local path="$1"
 
-  if stat -c '%a:%u:%g' "$path" >/dev/null 2>&1; then
-    stat -c '%a:%u:%g' "$path"
+  if stat -c '%a' "$path" >/dev/null 2>&1; then
+    stat -c '%a' "$path"
   else
-    stat -f '%Lp:%u:%g' "$path"
+    stat -f '%Lp' "$path"
   fi
 }
 
@@ -216,9 +216,12 @@ agent_guidelines_verify_copy() {
       ;;
   esac
 
-  if [ "$(agent_guidelines_stat_signature "$source")" != \
-    "$(agent_guidelines_stat_signature "$copy")" ]; then
-    printf 'error: backup metadata mismatch for %s\n' "$source" >&2
+  # Modes are portable, restorable metadata. Ownership IDs can be assigned by
+  # the destination filesystem, and macOS cp may leave them unchanged when an
+  # unprivileged caller cannot reproduce the source ownership.
+  if [ "$(agent_guidelines_file_mode "$source")" != \
+    "$(agent_guidelines_file_mode "$copy")" ]; then
+    printf 'error: backup mode mismatch for %s\n' "$source" >&2
     return 1
   fi
 }
@@ -686,13 +689,13 @@ agent_guidelines_atomic_replace_file() {
     return 1
   fi
   if [ "$target_type" = "regular" ]; then
-    chmod "$(agent_guidelines_stat_signature "$target" | cut -d: -f1)" \
+    chmod "$(agent_guidelines_file_mode "$target")" \
       "$temp_file" || {
       rm -f "$temp_file"
       return 1
     }
   else
-    chmod "$(agent_guidelines_stat_signature "$prepared" | cut -d: -f1)" \
+    chmod "$(agent_guidelines_file_mode "$prepared")" \
       "$temp_file" || {
       rm -f "$temp_file"
       return 1
