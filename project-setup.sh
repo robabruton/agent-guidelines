@@ -17,6 +17,7 @@ MODE="install"
 PROFILE="auto"
 CHANGELOG_MODE="auto"
 CONTEXT_RULES_MODE="auto"
+PROJECT_POLICY_MAX_BYTES=12288
 PROJECT_CONTEXT_MAX_BYTES=24576
 RULE_SOURCE_MODE="symlink"
 SKILL_SOURCE_MODE=""
@@ -1808,8 +1809,8 @@ assemble_compact_rules_block() {
   } > "$block_file"
 
   bytes="$(wc -c < "$block_file")"
-  [ "$bytes" -le "$PROJECT_CONTEXT_MAX_BYTES" ] ||
-    die "compact project policy exceeds $PROJECT_CONTEXT_MAX_BYTES bytes: $bytes"
+  [ "$bytes" -le "$PROJECT_POLICY_MAX_BYTES" ] ||
+    die "compact project policy exceeds $PROJECT_POLICY_MAX_BYTES bytes: $bytes"
 }
 
 update_managed_block() {
