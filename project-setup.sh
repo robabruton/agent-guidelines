@@ -51,6 +51,7 @@ LOADED_RULE_SOURCE_MODE=""
 LOADED_SKILL_SOURCE_MODE=""
 LOADED_DEFAULT_BRANCH=""
 LOADED_HARNESSES=()
+LOADED_HARNESS_NONE=false
 LEGACY_HARNESS_STATE=false
 CONFIG_LOADED=false
 GIT_USER_NAME=""
@@ -137,7 +138,8 @@ Options:
   --rules-source symlink|copy
   --skills-source symlink|copy   (defaults to --rules-source)
   --harness claude|codex|opencode|pi
-                  select a project skill consumer (repeatable)
+                  select a project skill consumer (repeatable;
+                  required when project skills are selected)
   --default-branch <name>        preserve this branch as repository default
                                  when automatic detection is ambiguous
   --remove        remove exact managed blocks, links, and recorded local
@@ -414,6 +416,20 @@ normalize_context_rules_mode() {
       ;;
   esac
   CONTEXT_RULES_MODE=compact
+}
+
+resolve_project_harnesses() {
+  has_selected_skills || return 0
+  [ "${#HARNESSES[@]}" -gt 0 ] && return
+
+  if [ "$CONFIG_LOADED" = true ] &&
+    [ "$LEGACY_HARNESS_STATE" = true ]; then
+    HARNESSES=(claude codex opencode pi)
+    add_status warning \
+      "legacy project skill layout migrated to explicit harnesses"
+    return
+  fi
+  die "project skills require at least one --harness selection"
 }
 
 resolve_target() {
@@ -1026,10 +1042,20 @@ append_loaded_selection() {
 append_loaded_harness() {
   local harness="$1"
 
+  if [ "$harness" = none ]; then
+    [ "$LOADED_HARNESS_NONE" = false ] ||
+      die "duplicate stored harness: none"
+    [ "${#LOADED_HARNESSES[@]}" -eq 0 ] ||
+      die "stored harness none conflicts with named harnesses"
+    LOADED_HARNESS_NONE=true
+    return
+  fi
   case "$harness" in
     claude|codex|opencode|pi) ;;
     *) die "invalid stored harness: $harness" ;;
   esac
+  [ "$LOADED_HARNESS_NONE" = false ] ||
+    die "stored harness $harness conflicts with none"
   array_contains "$harness" "${LOADED_HARNESSES[@]}" &&
     die "duplicate stored harness: $harness"
   LOADED_HARNESSES+=("$harness")
@@ -1121,7 +1147,10 @@ parse_schema_one_config() {
   [ "$context_seen" = true ] || die "setup state is missing context_rules"
   [ "$rules_source_seen" = true ] || die "setup state is missing rules_source"
   [ "$skills_source_seen" = true ] || die "setup state is missing skills_source"
-  [ "${#LOADED_HARNESSES[@]}" -gt 0 ] || LEGACY_HARNESS_STATE=true
+  if [ "${#LOADED_HARNESSES[@]}" -eq 0 ] &&
+    [ "$LOADED_HARNESS_NONE" = false ]; then
+    LEGACY_HARNESS_STATE=true
+  fi
 }
 
 append_legacy_selections() {
@@ -1259,6 +1288,7 @@ parse_local_config() {
   INCLUDE_SKILLS=()
   EXCLUDE_SKILLS=()
   LOADED_HARNESSES=()
+  LOADED_HARNESS_NONE=false
   LEGACY_HARNESS_STATE=false
   first_line="$(sed -n '1p' "$path")"
   case "$first_line" in
@@ -2417,9 +2447,13 @@ write_local_config_content() {
     printf 'skills_source=%s\n' "$SKILL_SOURCE_MODE"
     [ -z "$DEFAULT_BRANCH" ] ||
       printf 'default_branch=%s\n' "$DEFAULT_BRANCH"
-    for harness in claude codex opencode pi; do
-      harness_selected "$harness" && printf 'harness=%s\n' "$harness"
-    done
+    if [ "${#HARNESSES[@]}" -eq 0 ]; then
+      printf 'harness=none\n'
+    else
+      for harness in claude codex opencode pi; do
+        harness_selected "$harness" && printf 'harness=%s\n' "$harness"
+      done
+    fi
     for identifier in "${INCLUDE_RULES[@]}"; do
       printf 'include_rule=%s\n' "$identifier"
     done
@@ -3258,7 +3292,7 @@ print_summary() {
   printf 'Rule source mode: %s\n' "$RULE_SOURCE_MODE"
   printf 'Skill source mode: %s\n' "$SKILL_SOURCE_MODE"
   if [ "${#HARNESSES[@]}" -eq 0 ]; then
-    printf 'Harnesses: legacy shared layout\n\n'
+    printf 'Harnesses: none (dual context compatibility)\n\n'
   else
     printf 'Harnesses: %s\n\n' "${HARNESSES[*]}"
   fi
@@ -3305,6 +3339,7 @@ main() {
   validate_target_worktree_root
   load_local_config
   normalize_context_rules_mode
+  resolve_project_harnesses
   require_git_identity
   preflight_existing_unborn_index
   resolve_default_branch

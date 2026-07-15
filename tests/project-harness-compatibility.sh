@@ -14,8 +14,21 @@ OPEN_CLAUDE_REPO="$TMP_ROOT/open-claude"
 ALL_REPO="$TMP_ROOT/all"
 COPY_REPO="$TMP_ROOT/copy"
 INVALID_REPO="$TMP_ROOT/invalid"
+MISSING_REPO="$TMP_ROOT/missing"
+NONE_REPO="$TMP_ROOT/none"
+LEGACY_REPO="$TMP_ROOT/legacy"
 UNRELATED_REPO="$TMP_ROOT/unrelated-claude"
 FOREIGN_CLAUDE="$TMP_ROOT/foreign-claude"
+
+sha256_file() {
+  local path="$1"
+
+  if command -v sha256sum >/dev/null 2>&1; then
+    sha256sum "$path" | awk '{ print $1 }'
+  else
+    shasum -a 256 "$path" | awk '{ print $1 }'
+  fi
+}
 
 "$ROOT_DIR/project-setup.sh" \
   --profile minimal --changelog none \
@@ -99,6 +112,48 @@ fi
 grep -Fq 'duplicate --harness value: codex' "$TMP_ROOT/invalid.err"
 test ! -e "$INVALID_REPO"
 
+if "$ROOT_DIR/project-setup.sh" \
+  --profile minimal --changelog none --include-skill explain \
+  "$MISSING_REPO" >"$TMP_ROOT/missing.out" 2>"$TMP_ROOT/missing.err"; then
+  echo "missing harness selection unexpectedly succeeded" >&2
+  exit 1
+fi
+grep -Fq 'project skills require at least one --harness selection' \
+  "$TMP_ROOT/missing.err"
+test ! -e "$MISSING_REPO/.agent-guidelines"
+
+# An explicit empty selection does not become a legacy shared layout.
+"$ROOT_DIR/project-setup.sh" \
+  --profile minimal --changelog none "$NONE_REPO" >/dev/null
+grep -Fxq 'harness=none' "$NONE_REPO/.agent-guidelines/config"
+if "$ROOT_DIR/project-setup.sh" --include-skill explain "$NONE_REPO" \
+  >"$TMP_ROOT/none.out" 2>"$TMP_ROOT/none.err"; then
+  echo "stored empty harness selection unexpectedly gained a skill" >&2
+  exit 1
+fi
+grep -Fq 'project skills require at least one --harness selection' \
+  "$TMP_ROOT/none.err"
+grep -Fxq 'harness=none' "$NONE_REPO/.agent-guidelines/config"
+
+# Configurations that predate harness selection migrate to every consumer.
+"$ROOT_DIR/project-setup.sh" \
+  --profile minimal --changelog none --harness codex \
+  --include-skill explain "$LEGACY_REPO" >/dev/null
+sed -i '/^harness=/d' "$LEGACY_REPO/.agent-guidelines/config"
+printf 'sha256=%s\n' \
+  "$(sha256_file "$LEGACY_REPO/.agent-guidelines/config")" \
+  >"$LEGACY_REPO/.git/agent-guidelines/ownership-v1/config"
+"$ROOT_DIR/project-setup.sh" "$LEGACY_REPO" \
+  >"$TMP_ROOT/legacy.out"
+grep -Fq 'legacy project skill layout migrated to explicit harnesses' \
+  "$TMP_ROOT/legacy.out"
+for harness in claude codex opencode pi; do
+  grep -Fxq "harness=$harness" \
+    "$LEGACY_REPO/.agent-guidelines/config"
+done
+test -L "$LEGACY_REPO/.claude/skills/explain"
+test -L "$LEGACY_REPO/.agents/skills/explain"
+
 # A non-Claude selection does not inspect or traverse unrelated Claude state.
 mkdir -p "$UNRELATED_REPO" "$FOREIGN_CLAUDE"
 ln -s "$FOREIGN_CLAUDE" "$UNRELATED_REPO/.claude"
@@ -108,3 +163,5 @@ ln -s "$FOREIGN_CLAUDE" "$UNRELATED_REPO/.claude"
 "$ROOT_DIR/project-setup.sh" --remove "$UNRELATED_REPO" >/dev/null
 test -L "$UNRELATED_REPO/.claude"
 test "$(readlink "$UNRELATED_REPO/.claude")" = "$FOREIGN_CLAUDE"
+
+printf 'project harness compatibility tests passed\n'
