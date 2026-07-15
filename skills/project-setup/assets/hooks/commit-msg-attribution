@@ -1,11 +1,12 @@
 # BEGIN agent-guidelines commit attribution guard
+# Rejects the same high-confidence development authorship forms used
+# for staged content. Pattern source: scripts/generate-hook-policy.sh.
 commit_msg_file="$1"
+attribution_pattern='((co-)?authored''-by:|generated''-by:|written''-by:|reviewed''-by:|planned''-by:|developed''-by:|^[[:space:]>*-]*(generated|written|reviewed|planned|implemented|authored|co-authored|developed|coded)[[:space:]]+(by|with|using)[[:space:]]+(an?[[:space:]]+)?(ai|llm|assistant|agent|bot|automation|code[[:space:]]+assistant|coding[[:space:]]+(agent|tool))([^[:alnum:]_]|$)|(^|[^[:alnum:]_])(project|code|changes?|commit|implementation|documentation|docs|feature|fix)[[:space:]]+(was[[:space:]]+)?(generated|written|reviewed|planned|implemented|authored|co-authored|developed|coded)[[:space:]]+(by|with|using)[[:space:]]+(an?[[:space:]]+)?(ai|llm|assistant|agent|bot|automation|code[[:space:]]+assistant|coding[[:space:]]+(agent|tool))([^[:alnum:]_]|$)|(^|[^[:alnum:]_])(ai|llm|assistant|agent|bot|automation|code[[:space:]]+assistant|coding[[:space:]]+(agent|tool))[[:space:]-]+(generated|written|reviewed|planned|implemented|authored|co-authored|developed|coded)[[:space:]]+(project|code|changes?|commit|implementation|documentation|docs|feature|fix)([^[:alnum:]_]|$))'
 
-# The trailer keys are assembled from adjacent quoted fragments so this
-# snippet does not match the staged attribution guard when it is itself
-# committed.
-if grep -Ei '((co-)?authored''-by:|generated''-by:|written''-by:|reviewed''-by:|planned''-by:|(generated|written|reviewed|planned|implemented|authored|co-authored) (by|with|using) .*(ai|llm|assistant|agent|bot|automation|code assistant|coding agent|coding tool))' "$commit_msg_file" >/dev/null; then
-  echo "Development-tool attribution is not allowed in commit messages." >&2
+if grep -v '^#' "$commit_msg_file" |
+  grep -Ei "$attribution_pattern" >/dev/null; then
+  echo "Development-tool authorship is not allowed in commit messages." >&2
   exit 1
 fi
 # END agent-guidelines commit attribution guard

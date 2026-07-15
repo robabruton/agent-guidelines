@@ -12,6 +12,10 @@ TEMP_DIR=""
 # Adjacent quotes keep the generated guard from matching its own pattern.
 PLANNED_WORK_PATTERN="(will[[:space:]_-]+be[[:space:]_-]+added|will[[:space:]_-]+land|will[[:space:]_-]+follow|coming[[:space:]_-]+soon|next[[:space:]_-]+session|future[[:space:]_-]+work|we[[:space:]_-]+(plan|intend)[[:space:]_-]+to|planned[[:space:]_-]+for|(^|[^[:alnum:]_])(TO''DO|FIX''ME)([^[:alnum:]_]|$))"
 BRANCH_PREFIX_GLOB='feat/*|fix/*|refactor/*|perf/*|docs/*|style/*|test/*|build/*|ci/*|chore/*|revert/*'
+CONTRIBUTION_VERBS='(generated|written|reviewed|planned|implemented|authored|co-authored|developed|coded)'
+DEVELOPMENT_TOOL_SUBJECTS='(ai|llm|assistant|agent|bot|automation|code[[:space:]]+assistant|coding[[:space:]]+(agent|tool))'
+PROJECT_ARTIFACTS='(project|code|changes?|commit|implementation|documentation|docs|feature|fix)'
+ATTRIBUTION_PATTERN="((co-)?authored''-by:|generated''-by:|written''-by:|reviewed''-by:|planned''-by:|developed''-by:|^[[:space:]>*-]*${CONTRIBUTION_VERBS}[[:space:]]+(by|with|using)[[:space:]]+(an?[[:space:]]+)?${DEVELOPMENT_TOOL_SUBJECTS}([^[:alnum:]_]|$)|(^|[^[:alnum:]_])${PROJECT_ARTIFACTS}[[:space:]]+(was[[:space:]]+)?${CONTRIBUTION_VERBS}[[:space:]]+(by|with|using)[[:space:]]+(an?[[:space:]]+)?${DEVELOPMENT_TOOL_SUBJECTS}([^[:alnum:]_]|$)|(^|[^[:alnum:]_])${DEVELOPMENT_TOOL_SUBJECTS}[[:space:]-]+${CONTRIBUTION_VERBS}[[:space:]]+${PROJECT_ARTIFACTS}([^[:alnum:]_]|$))"
 
 # Prints command usage.
 usage() {
@@ -91,6 +95,51 @@ fi
 EOF
 }
 
+# Emits the staged-content development-attribution guard.
+emit_pre_commit_attribution() {
+  cat <<EOF
+# BEGIN agent-guidelines staged attribution guard
+# Rejects high-confidence development authorship from added staged
+# lines while allowing functional integration language. The canonical
+# Pattern source: scripts/generate-hook-policy.sh. POSIX sh.
+attribution_pattern='${ATTRIBUTION_PATTERN}'
+
+attribution_hits="\$(git diff --cached --name-only --diff-filter=ACMR | while IFS= read -r staged_file; do
+  if git diff --cached --unified=0 -- "\$staged_file" |
+    sed -n '/^+++ /d; s/^+//p' |
+    grep -Ei "\$attribution_pattern" >/dev/null; then
+    printf '  %s\\n' "\$staged_file"
+  fi
+done)"
+
+if [ -n "\$attribution_hits" ]; then
+  echo "Development-tool authorship found in staged content:" >&2
+  printf '%s\\n' "\$attribution_hits" >&2
+  echo "Describe functional integrations without crediting development work to a tool." >&2
+  exit 1
+fi
+# END agent-guidelines staged attribution guard
+EOF
+}
+
+# Emits the commit-message development-attribution guard.
+emit_commit_msg_attribution() {
+  cat <<EOF
+# BEGIN agent-guidelines commit attribution guard
+# Rejects the same high-confidence development authorship forms used
+# for staged content. Pattern source: scripts/generate-hook-policy.sh.
+commit_msg_file="\$1"
+attribution_pattern='${ATTRIBUTION_PATTERN}'
+
+if grep -v '^#' "\$commit_msg_file" |
+  grep -Ei "\$attribution_pattern" >/dev/null; then
+  echo "Development-tool authorship is not allowed in commit messages." >&2
+  exit 1
+fi
+# END agent-guidelines commit attribution guard
+EOF
+}
+
 # Emits the branch-name and default-branch push guard.
 emit_pre_push_branch_name() {
   cat <<EOF
@@ -158,7 +207,9 @@ render_hook() {
   local hook_name="$1"
 
   case "$hook_name" in
+    pre-commit-attribution) emit_pre_commit_attribution ;;
     pre-commit-banned-phrases) emit_pre_commit_banned_phrases ;;
+    commit-msg-attribution) emit_commit_msg_attribution ;;
     commit-msg-banned-phrases) emit_commit_msg_banned_phrases ;;
     pre-push-branch-name) emit_pre_push_branch_name ;;
     *) die "unknown generated hook asset: $hook_name" ;;
@@ -170,7 +221,9 @@ main() {
   local hook_name generated target
   local stale=false
   local hook_names=(
+    pre-commit-attribution
     pre-commit-banned-phrases
+    commit-msg-attribution
     commit-msg-banned-phrases
     pre-push-branch-name
   )

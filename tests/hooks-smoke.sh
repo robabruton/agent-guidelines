@@ -70,21 +70,44 @@ fi
 trailer_key="Co-Authored""-By"
 expect_fail git commit -m "feat: add file b" -m "${trailer_key}: Bot <bot@example.com>"
 
+# Direct development authorship uses the same rejection pattern.
+direct_attribution="Developed by A""I."
+expect_fail git commit -m "feat: add file b" -m "$direct_attribution"
+
 # Commit file-b cleanly so later steps start from a clean tree.
 git commit -q -m "feat: add file b"
 
-# Attribution guard (staged content): trailer and adjective shapes fail.
+# Attribution guard (staged content): trailer, direct, artifact, and
+# adjective authorship shapes fail.
 printf '%s an AI assistant\n' "Written""-by:" > file-c.txt
 git add file-c.txt
 expect_fail git commit -m "feat: add file c"
 git reset -q -- file-c.txt
 rm -f file-c.txt
 
-printf '%s helper code\n' "ai""-generated" > file-d.txt
+printf '%s\n' "$direct_attribution" > file-d.txt
 git add file-d.txt
 expect_fail git commit -m "feat: add file d"
 git reset -q -- file-d.txt
 rm -f file-d.txt
+
+printf 'The code was %s by an assistant.\n' "gene""rated" > file-d2.txt
+git add file-d2.txt
+expect_fail git commit -m "feat: add file d2"
+git reset -q -- file-d2.txt
+rm -f file-d2.txt
+
+printf '%s code.\n' "AI""-authored" > file-d3.txt
+git add file-d3.txt
+expect_fail git commit -m "feat: add file d3"
+git reset -q -- file-d3.txt
+rm -f file-d3.txt
+
+# Functional integration and product-output descriptions are allowed.
+printf 'The app sends prompts to the configured AI provider.\n' > file-d4.txt
+printf 'The product exports %s reports.\n' "AI""-generated" >> file-d4.txt
+git add file-d4.txt
+git commit -q -m "docs: describe functional integration"
 
 # Banned-phrase guard (staged content): forward-looking phrasing
 # fails, both as prose and as an unimplemented-work marker.
