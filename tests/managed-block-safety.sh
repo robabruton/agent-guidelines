@@ -203,4 +203,4 @@ cmp -s "${MISMATCH_TARGET}.before" "${mismatch_entries[0]}/original"
 grep -Fq 'transaction rollback incomplete' "${TMP_ROOT}/mismatch.err"
 rm -rf "$MISMATCH_RECOVERY"
 
-printf 'managed-block safety tests passed\n'
+printf 'managed block safety tests passed\n'
