@@ -28,16 +28,19 @@ CONTEXT_RULES_MODE_SUPPLIED=false
 RULE_SOURCE_MODE_SUPPLIED=false
 SKILL_SOURCE_MODE_SUPPLIED=false
 DEFAULT_BRANCH_SUPPLIED=false
+HARNESSES_SUPPLIED=false
 INCLUDE_RULES=()
 EXCLUDE_RULES=()
 INCLUDE_SKILLS=()
 EXCLUDE_SKILLS=()
+HARNESSES=()
 REQUESTED_INCLUDE_RULES=()
 REQUESTED_EXCLUDE_RULES=()
 REQUESTED_INCLUDE_SKILLS=()
 REQUESTED_EXCLUDE_SKILLS=()
 STORED_INCLUDE_SKILLS=()
 STORED_EXCLUDE_SKILLS=()
+STORED_HARNESSES=()
 STORED_RULE_SOURCE_MODE=""
 STORED_SKILL_SOURCE_MODE=""
 LOADED_PROFILE=""
@@ -46,6 +49,8 @@ LOADED_CONTEXT_RULES_MODE=""
 LOADED_RULE_SOURCE_MODE=""
 LOADED_SKILL_SOURCE_MODE=""
 LOADED_DEFAULT_BRANCH=""
+LOADED_HARNESSES=()
+LEGACY_HARNESS_STATE=false
 CONFIG_LOADED=false
 GIT_USER_NAME=""
 GIT_USER_EMAIL=""
@@ -135,6 +140,8 @@ Options:
                   present, full otherwise
   --rules-source symlink|copy
   --skills-source symlink|copy   (defaults to --rules-source)
+  --harness claude|codex|opencode|pi
+                  select a project skill consumer (repeatable)
   --default-branch <name>        preserve this branch as repository default
                                  when automatic detection is ambiguous
   --remove        remove exact managed blocks, links, and recorded local
@@ -159,7 +166,7 @@ Examples:
   ./project-setup.sh --profile codebase .
   ./project-setup.sh --profile released --changelog version .
   ./project-setup.sh --profile codebase --changelog date --include-rule docstrings .
-  ./project-setup.sh --include-skill test-audit --include-skill firmware-review .
+  ./project-setup.sh --harness codex --include-skill test-audit .
 EOF
 }
 
@@ -268,6 +275,24 @@ validate_selection_requests() {
       die "duplicate --exclude-skill value: $identifier"
     seen+=("$identifier")
   done
+
+  seen=()
+  for identifier in "${HARNESSES[@]}"; do
+    array_contains "$identifier" "${seen[@]}" &&
+      die "duplicate --harness value: $identifier"
+    seen+=("$identifier")
+  done
+}
+
+validate_harnesses() {
+  local harness
+
+  for harness in "${HARNESSES[@]}"; do
+    case "$harness" in
+      claude|codex|opencode|pi) ;;
+      *) die "invalid harness: $harness" ;;
+    esac
+  done
 }
 
 parse_args() {
@@ -301,6 +326,12 @@ parse_args() {
         [ "$#" -ge 2 ] || die "--skills-source requires a value"
         SKILL_SOURCE_MODE="$2"
         SKILL_SOURCE_MODE_SUPPLIED=true
+        shift 2
+        ;;
+      --harness)
+        [ "$#" -ge 2 ] || die "--harness requires a value"
+        HARNESSES+=("$2")
+        HARNESSES_SUPPLIED=true
         shift 2
         ;;
       --default-branch)
@@ -367,6 +398,7 @@ parse_args() {
     SKILL_SOURCE_MODE="$RULE_SOURCE_MODE"
   fi
   case "$SKILL_SOURCE_MODE" in ""|symlink|copy) ;; *) die "invalid skills source mode: $SKILL_SOURCE_MODE" ;; esac
+  validate_harnesses
   validate_catalog_ids
   validate_selection_requests
 }
@@ -978,6 +1010,18 @@ append_loaded_selection() {
   esac
 }
 
+append_loaded_harness() {
+  local harness="$1"
+
+  case "$harness" in
+    claude|codex|opencode|pi) ;;
+    *) die "invalid stored harness: $harness" ;;
+  esac
+  array_contains "$harness" "${LOADED_HARNESSES[@]}" &&
+    die "duplicate stored harness: $harness"
+  LOADED_HARNESSES+=("$harness")
+}
+
 parse_schema_one_config() {
   local path="$1"
   local line key value
@@ -1046,6 +1090,10 @@ parse_schema_one_config() {
         LOADED_DEFAULT_BRANCH="$value"
         default_branch_seen=true
         ;;
+      harness)
+        [ -n "$value" ] || die "empty stored harness"
+        append_loaded_harness "$value"
+        ;;
       include_rule|exclude_rule|include_skill|exclude_skill)
         [ -n "$value" ] || die "empty stored selection: $key"
         append_loaded_selection "$key" "$value"
@@ -1060,6 +1108,7 @@ parse_schema_one_config() {
   [ "$context_seen" = true ] || die "setup state is missing context_rules"
   [ "$rules_source_seen" = true ] || die "setup state is missing rules_source"
   [ "$skills_source_seen" = true ] || die "setup state is missing skills_source"
+  [ "${#LOADED_HARNESSES[@]}" -gt 0 ] || LEGACY_HARNESS_STATE=true
 }
 
 append_legacy_selections() {
@@ -1175,6 +1224,7 @@ parse_legacy_config() {
   [ "$exclude_rules_seen" = true ] || die "legacy setup state is missing exclude_rules"
   [ "$include_skills_seen" = true ] || die "legacy setup state is missing include_skills"
   [ "$exclude_skills_seen" = true ] || die "legacy setup state is missing exclude_skills"
+  LEGACY_HARNESS_STATE=true
 
   local expected_versioning=none
   [ "$LOADED_CHANGELOG_MODE" = version ] && expected_versioning=semver
@@ -1195,6 +1245,8 @@ parse_local_config() {
   EXCLUDE_RULES=()
   INCLUDE_SKILLS=()
   EXCLUDE_SKILLS=()
+  LOADED_HARNESSES=()
+  LEGACY_HARNESS_STATE=false
   first_line="$(sed -n '1p' "$path")"
   case "$first_line" in
     schema=*) parse_schema_one_config "$path" ;;
@@ -1299,6 +1351,7 @@ load_local_config() {
   CONFIG_LOADED=true
   STORED_INCLUDE_SKILLS=("${INCLUDE_SKILLS[@]}")
   STORED_EXCLUDE_SKILLS=("${EXCLUDE_SKILLS[@]}")
+  STORED_HARNESSES=("${LOADED_HARNESSES[@]}")
   STORED_RULE_SOURCE_MODE="$LOADED_RULE_SOURCE_MODE"
   STORED_SKILL_SOURCE_MODE="$LOADED_SKILL_SOURCE_MODE"
 
@@ -1311,6 +1364,9 @@ load_local_config() {
     RULE_SOURCE_MODE="$LOADED_RULE_SOURCE_MODE"
   [ "$SKILL_SOURCE_MODE_SUPPLIED" = true ] ||
     SKILL_SOURCE_MODE="$LOADED_SKILL_SOURCE_MODE"
+  if [ "$HARNESSES_SUPPLIED" = false ]; then
+    HARNESSES=("${LOADED_HARNESSES[@]}")
+  fi
   if [ "$DEFAULT_BRANCH_SUPPLIED" = false ] &&
     [ -n "$LOADED_DEFAULT_BRANCH" ]; then
     DEFAULT_BRANCH="$LOADED_DEFAULT_BRANCH"
@@ -1465,7 +1521,14 @@ configure_local_excludes() {
   append_missing_line "$exclude_file" "CLAUDE.md" "exclude CLAUDE.md" claude
   append_missing_line "$exclude_file" "CLAUDE.local.md" "exclude CLAUDE.local.md" claude-local
   append_missing_line "$exclude_file" "AGENTS.md" "exclude AGENTS.md" agents
-  append_missing_line "$exclude_file" ".claude/" "exclude .claude/" claude-dir
+  if [ "$SKILL_SOURCE_MODE" = copy ] && has_selected_skills &&
+    needs_claude_skill_tree; then
+    remove_owned_exclude_line "$exclude_file" ".claude/" \
+      "exclude .claude/" claude-dir
+  else
+    append_missing_line "$exclude_file" ".claude/" \
+      "exclude .claude/" claude-dir
+  fi
   append_missing_line "$exclude_file" ".codex/" "exclude .codex/" codex-dir
   append_missing_line "$exclude_file" ".agent-guidelines/config" "exclude .agent-guidelines/config" config
   if [ "$RULE_SOURCE_MODE" = "symlink" ]; then
@@ -1476,7 +1539,8 @@ configure_local_excludes() {
       "exclude .agent-guidelines/rules symlink" rules
   fi
 
-  if [ "$SKILL_SOURCE_MODE" = symlink ] && has_selected_skills; then
+  if [ "$SKILL_SOURCE_MODE" = symlink ] && has_selected_skills &&
+    needs_agents_skill_tree; then
     append_missing_line "$exclude_file" ".agents/skills/" \
       "exclude .agents/skills/" skills
   else
@@ -1824,8 +1888,10 @@ assemble_agent_files() {
   preamble_file="$(mktemp)"
   write_agent_file_preamble > "$preamble_file"
 
-  claude_mode="$(context_rules_mode_for claude)"
-  agents_mode="$(context_rules_mode_for agents)"
+  claude_mode="not selected"
+  agents_mode="not selected"
+  needs_claude_context && claude_mode="$(context_rules_mode_for claude)"
+  needs_agents_context && agents_mode="$(context_rules_mode_for agents)"
   CLAUDE_CONTEXT_MODE="$claude_mode"
   AGENTS_CONTEXT_MODE="$agents_mode"
 
@@ -1843,18 +1909,32 @@ assemble_agent_files() {
   agents_block="$full_block"
   [ "$agents_mode" = "trimmed" ] && agents_block="$trimmed_block"
 
-  if should_mutate; then
+  if should_mutate && needs_claude_context; then
     update_managed_block_with_preamble \
       "$TARGET_DIR/CLAUDE.md" "$claude_block" "$preamble_file" \
       "CLAUDE.md project rules ($claude_mode)"
+  elif needs_claude_context; then
+    preview_managed_block "$TARGET_DIR/CLAUDE.md" \
+      "CLAUDE.md project rules ($claude_mode)"
+  elif [ "$CONFIG_LOADED" = true ]; then
+    remove_context_file_block "$TARGET_DIR/CLAUDE.md" "CLAUDE.md"
+  else
+    add_status skipped "CLAUDE.md because Claude Code is not selected"
+  fi
+
+  if should_mutate && needs_agents_context; then
     update_managed_block_with_preamble \
       "$TARGET_DIR/AGENTS.md" "$agents_block" "$preamble_file" \
       "AGENTS.md project rules ($agents_mode)"
-  else
-    preview_managed_block "$TARGET_DIR/CLAUDE.md" \
-      "CLAUDE.md project rules ($claude_mode)"
+  elif needs_agents_context; then
     preview_managed_block "$TARGET_DIR/AGENTS.md" \
       "AGENTS.md project rules ($agents_mode)"
+  else
+    if [ "$CONFIG_LOADED" = true ]; then
+      remove_context_file_block "$TARGET_DIR/AGENTS.md" "AGENTS.md"
+    else
+      add_status skipped "AGENTS.md because shared harnesses are not selected"
+    fi
   fi
 
   rm -f "$preamble_file"
@@ -1885,23 +1965,24 @@ install_project_skill_symlink() {
   local skill="$1"
   local target="$2"
   local source="$3"
+  local label="$4"
 
   if [ -L "$target" ]; then
     local current
     current="$(readlink "$target")"
     if [ "$current" = "$source" ]; then
-      add_status unchanged ".agents/skills/$skill"
+      add_status unchanged "$label"
     else
-      die ".agents/skills/$skill points to an unmanaged target: $current"
+      die "$label points to an unmanaged target: $current"
     fi
   elif [ -e "$target" ]; then
-    die ".agents/skills/$skill exists and is not the managed symlink"
+    die "$label exists and is not the managed symlink"
   else
     if should_mutate; then
       create_managed_symlink_safely "$target" "$source" ||
-        die "could not create .agents/skills/$skill symlink"
+        die "could not create $label symlink"
     fi
-    add_status created ".agents/skills/$skill"
+    add_status created "$label"
   fi
 }
 
@@ -1909,26 +1990,27 @@ install_project_skill_copy() {
   local skill="$1"
   local target="$2"
   local source="$3"
+  local label="$4"
 
   if [ -L "$target" ]; then
-    die ".agents/skills/$skill exists as an unmanaged symlink"
+    die "$label exists as an unmanaged symlink"
   fi
 
   if [ -d "$target" ]; then
     if diff -qr "$source" "$target" >/dev/null; then
-      add_status unchanged ".agents/skills/$skill"
+      add_status unchanged "$label"
     else
-      die ".agents/skills/$skill is not an exact managed copy"
+      die "$label is not an exact managed copy"
     fi
   elif [ -e "$target" ]; then
-    die ".agents/skills/$skill exists and is not a managed copy"
+    die "$label exists and is not a managed copy"
   else
     if should_mutate; then
       copy_managed_directory_safely "$target" "$source" ||
-        die "could not create .agents/skills/$skill copy"
+        die "could not create $label copy"
     fi
-    INITIAL_COMMIT_PATHS+=(".agents/skills/$skill")
-    add_status created ".agents/skills/$skill"
+    INITIAL_COMMIT_PATHS+=("$label")
+    add_status created "$label"
   fi
 }
 
@@ -2017,149 +2099,263 @@ has_selected_skills() {
   return 1
 }
 
-preflight_deselected_skill_targets() {
-  [ "$CONFIG_LOADED" = true ] || return 0
+harness_selected() {
+  local needle="$1"
 
-  local skill source target current
-  for skill in "${STORED_INCLUDE_SKILLS[@]}"; do
-    stored_skill_selected "$skill" || continue
-    desired_skill_selected "$skill" && continue
-    source="$CANONICAL_SKILLS_DIR/$skill"
-    target="$TARGET_DIR/.agents/skills/$skill"
-    agent_guidelines_assert_path_beneath \
-      "$target" "$TARGET_DIR" ".agents/skills/$skill" || exit 1
+  array_contains "$needle" "${HARNESSES[@]}"
+}
 
-    if [ "$STORED_SKILL_SOURCE_MODE" = symlink ]; then
-      if [ -L "$target" ]; then
-        current="$(readlink "$target")"
-        [ "$current" = "$source" ] ||
-          die ".agents/skills/$skill points to an unmanaged target: $current"
-      elif [ -e "$target" ]; then
-        die ".agents/skills/$skill is not the recorded managed symlink"
-      fi
-    else
-      if [ -L "$target" ]; then
-        die ".agents/skills/$skill is a symlink, not the recorded managed copy"
-      elif [ -e "$target" ]; then
-        [ -d "$source" ] || die "recorded skill source is missing: $source"
-        [ -d "$target" ] ||
-          die ".agents/skills/$skill is not the recorded managed copy"
-        diff -qr "$source" "$target" >/dev/null ||
-          die ".agents/skills/$skill changed from its recorded managed copy"
-      fi
+stored_harness_selected() {
+  local needle="$1"
+
+  array_contains "$needle" "${STORED_HARNESSES[@]}"
+}
+
+needs_claude_context() {
+  [ "${#HARNESSES[@]}" -eq 0 ] || harness_selected claude
+}
+
+needs_agents_context() {
+  [ "${#HARNESSES[@]}" -eq 0 ] ||
+    harness_selected codex || harness_selected opencode || harness_selected pi
+}
+
+needs_claude_skill_tree() {
+  harness_selected claude
+}
+
+needs_agents_skill_tree() {
+  if [ "${#HARNESSES[@]}" -eq 0 ]; then
+    return 0
+  fi
+  harness_selected codex || harness_selected pi || {
+    harness_selected opencode && ! harness_selected claude
+  }
+}
+
+stored_needs_claude_skill_tree() {
+  [ "$LEGACY_HARNESS_STATE" = false ] && stored_harness_selected claude
+}
+
+stored_needs_agents_skill_tree() {
+  if [ "$LEGACY_HARNESS_STATE" = true ]; then
+    return 0
+  fi
+  stored_harness_selected codex || stored_harness_selected pi || {
+    stored_harness_selected opencode && ! stored_harness_selected claude
+  }
+}
+
+desired_skill_roots() {
+  needs_claude_skill_tree && printf '.claude/skills\n'
+  needs_agents_skill_tree && printf '.agents/skills\n'
+}
+
+stored_skill_roots() {
+  stored_needs_claude_skill_tree && printf '.claude/skills\n'
+  stored_needs_agents_skill_tree && printf '.agents/skills\n'
+}
+
+desired_skill_root() {
+  local needle="$1"
+  local root
+
+  while IFS= read -r root; do
+    [ "$root" = "$needle" ] && return 0
+  done < <(desired_skill_roots)
+  return 1
+}
+
+stored_skill_root() {
+  local needle="$1"
+  local root
+
+  while IFS= read -r root; do
+    [ "$root" = "$needle" ] && return 0
+  done < <(stored_skill_roots)
+  return 1
+}
+
+preflight_recorded_skill_target() {
+  local root="$1"
+  local skill="$2"
+  local require_present="$3"
+  local source="$CANONICAL_SKILLS_DIR/$skill"
+  local target="$TARGET_DIR/$root/$skill"
+  local label="$root/$skill"
+  local current
+
+  agent_guidelines_assert_path_beneath \
+    "$target" "$TARGET_DIR" "$label" || exit 1
+  if [ "$STORED_SKILL_SOURCE_MODE" = symlink ]; then
+    if [ -L "$target" ]; then
+      current="$(readlink "$target")"
+      [ "$current" = "$source" ] ||
+        die "$label points to an unmanaged target: $current"
+    elif [ -e "$target" ] || [ "$require_present" = true ]; then
+      die "$label is not the recorded managed symlink"
     fi
-  done
+    return
+  fi
+
+  if [ -L "$target" ]; then
+    die "$label is a symlink, not the recorded managed copy"
+  elif [ -e "$target" ]; then
+    [ -d "$source" ] || die "recorded skill source is missing: $source"
+    [ -d "$target" ] || die "$label is not the recorded managed copy"
+    diff -qr "$source" "$target" >/dev/null ||
+      die "$label changed from its recorded managed copy"
+  elif [ "$require_present" = true ]; then
+    die "$label is not the recorded managed copy"
+  fi
+}
+
+preflight_desired_skill_target() {
+  local root="$1"
+  local skill="$2"
+  local source="$CANONICAL_SKILLS_DIR/$skill"
+  local target="$TARGET_DIR/$root/$skill"
+  local label="$root/$skill"
+  local current
+
+  agent_guidelines_assert_path_beneath \
+    "$target" "$TARGET_DIR" "$label" || exit 1
+  if [ "$SKILL_SOURCE_MODE" = symlink ]; then
+    if [ -L "$target" ]; then
+      current="$(readlink "$target")"
+      [ "$current" = "$source" ] ||
+        die "$label points to an unmanaged target: $current"
+    elif [ -e "$target" ]; then
+      die "$label exists and is not the managed symlink"
+    fi
+    return
+  fi
+
+  if [ -L "$target" ]; then
+    die "$label is an unmanaged symlink"
+  elif [ -e "$target" ]; then
+    [ -d "$target" ] || die "$label is not a directory"
+    diff -qr "$source" "$target" >/dev/null ||
+      die "$label is not an exact managed copy"
+  fi
 }
 
 preflight_skill_source_targets() {
   local agents_dir="$TARGET_DIR/.agents"
-  local skills_dir="$agents_dir/skills"
-  local skill source target current
+  local claude_dir="$TARGET_DIR/.claude"
+  local agents_skills_dir="$agents_dir/skills"
+  local claude_skills_dir="$claude_dir/skills"
+  local skill root
 
   agent_guidelines_assert_path_beneath \
     "$agents_dir" "$TARGET_DIR" ".agents" || exit 1
   agent_guidelines_assert_path_beneath \
-    "$skills_dir" "$TARGET_DIR" ".agents/skills" || exit 1
+    "$agents_skills_dir" "$TARGET_DIR" ".agents/skills" || exit 1
   validate_managed_directory "$agents_dir" ".agents"
-  validate_managed_directory "$skills_dir" ".agents/skills"
-  preflight_deselected_skill_targets
-
-  for skill in "${INCLUDE_SKILLS[@]}"; do
-    skill_excluded "$skill" && continue
-    source="$CANONICAL_SKILLS_DIR/$skill"
-    if [ ! -d "$source" ]; then
-      if [ "$CONFIG_LOADED" = true ] && stored_skill_selected "$skill"; then
-        die "recorded skill source is missing: $source"
-      fi
-      continue
-    fi
-    target="$skills_dir/$skill"
+  validate_managed_directory "$agents_skills_dir" ".agents/skills"
+  if needs_claude_skill_tree || stored_needs_claude_skill_tree; then
     agent_guidelines_assert_path_beneath \
-      "$target" "$TARGET_DIR" ".agents/skills/$skill" || exit 1
+      "$claude_dir" "$TARGET_DIR" ".claude" || exit 1
+    agent_guidelines_assert_path_beneath \
+      "$claude_skills_dir" "$TARGET_DIR" ".claude/skills" || exit 1
+    validate_managed_directory "$claude_dir" ".claude"
+    validate_managed_directory "$claude_skills_dir" ".claude/skills"
+  fi
 
-    if [ "$CONFIG_LOADED" = true ] && stored_skill_selected "$skill" &&
-      [ "$STORED_SKILL_SOURCE_MODE" != "$SKILL_SOURCE_MODE" ]; then
-      if [ "$STORED_SKILL_SOURCE_MODE" = symlink ]; then
-        [ -L "$target" ] ||
-          die ".agents/skills/$skill is not the recorded managed symlink"
-        current="$(readlink "$target")"
-        [ "$current" = "$source" ] ||
-          die ".agents/skills/$skill points to an unmanaged target: $current"
-      else
-        [ -d "$target" ] && [ ! -L "$target" ] ||
-          die ".agents/skills/$skill is not the recorded managed copy"
-        diff -qr "$source" "$target" >/dev/null ||
-          die ".agents/skills/$skill changed from its recorded managed copy"
-      fi
-      continue
-    fi
+  if [ "$CONFIG_LOADED" = true ]; then
+    while IFS= read -r root; do
+      [ -n "$root" ] || continue
+      for skill in "${STORED_INCLUDE_SKILLS[@]}"; do
+        stored_skill_selected "$skill" || continue
+        if desired_skill_selected "$skill" && desired_skill_root "$root" &&
+          [ "$STORED_SKILL_SOURCE_MODE" = "$SKILL_SOURCE_MODE" ]; then
+          continue
+        fi
+        if desired_skill_selected "$skill" && desired_skill_root "$root"; then
+          preflight_recorded_skill_target "$root" "$skill" true
+        else
+          preflight_recorded_skill_target "$root" "$skill" false
+        fi
+      done
+    done < <(stored_skill_roots)
+  fi
 
-    if [ "$SKILL_SOURCE_MODE" = "symlink" ]; then
-      if [ -L "$target" ]; then
-        current="$(readlink "$target")"
-        [ "$current" = "$source" ] ||
-          die ".agents/skills/$skill points to an unmanaged target: $current"
-      elif [ -e "$target" ]; then
-        die ".agents/skills/$skill exists and is not the managed symlink"
+  while IFS= read -r root; do
+    [ -n "$root" ] || continue
+    for skill in "${INCLUDE_SKILLS[@]}"; do
+      skill_excluded "$skill" && continue
+      if [ ! -d "$CANONICAL_SKILLS_DIR/$skill" ]; then
+        if [ "$CONFIG_LOADED" = true ] && stored_skill_selected "$skill"; then
+          die "recorded skill source is missing: $CANONICAL_SKILLS_DIR/$skill"
+        fi
+        continue
       fi
-    else
-      if [ -L "$target" ]; then
-        die ".agents/skills/$skill is an unmanaged symlink"
-      elif [ -e "$target" ]; then
-        [ -d "$target" ] ||
-          die ".agents/skills/$skill is not a directory"
-        diff -qr "$source" "$target" >/dev/null ||
-          die ".agents/skills/$skill is not an exact managed copy"
+      if [ "$CONFIG_LOADED" = true ] && stored_skill_selected "$skill" &&
+        stored_skill_root "$root" &&
+        [ "$STORED_SKILL_SOURCE_MODE" != "$SKILL_SOURCE_MODE" ]; then
+        continue
       fi
-    fi
-  done
+      preflight_desired_skill_target "$root" "$skill"
+    done
+  done < <(desired_skill_roots)
 }
 
 remove_deselected_project_skills() {
   [ "$CONFIG_LOADED" = true ] || return 0
 
-  local skill target
-  for skill in "${STORED_INCLUDE_SKILLS[@]}"; do
-    stored_skill_selected "$skill" || continue
-    desired_skill_selected "$skill" && continue
-    target="$TARGET_DIR/.agents/skills/$skill"
-    if [ ! -e "$target" ] && [ ! -L "$target" ]; then
-      add_status unchanged ".agents/skills/$skill (already absent)"
-      continue
-    fi
-    if should_mutate; then
-      if [ "$STORED_SKILL_SOURCE_MODE" = symlink ]; then
-        remove_managed_symlink_safely "$target" ||
-          die "could not remove deselected .agents/skills/$skill symlink"
-      else
-        remove_managed_directory_safely "$target" ||
-          die "could not remove deselected .agents/skills/$skill copy"
+  local skill root target label
+  while IFS= read -r root; do
+    [ -n "$root" ] || continue
+    for skill in "${STORED_INCLUDE_SKILLS[@]}"; do
+      stored_skill_selected "$skill" || continue
+      if desired_skill_selected "$skill" && desired_skill_root "$root"; then
+        continue
       fi
-    fi
-    add_status updated ".agents/skills/$skill removed"
-  done
+      target="$TARGET_DIR/$root/$skill"
+      label="$root/$skill"
+      if [ ! -e "$target" ] && [ ! -L "$target" ]; then
+        add_status unchanged "$label (already absent)"
+        continue
+      fi
+      if should_mutate; then
+        if [ "$STORED_SKILL_SOURCE_MODE" = symlink ]; then
+          remove_managed_symlink_safely "$target" ||
+            die "could not remove deselected $label symlink"
+        else
+          remove_managed_directory_safely "$target" ||
+            die "could not remove deselected $label copy"
+        fi
+      fi
+      add_status updated "$label removed"
+    done
+  done < <(stored_skill_roots)
 }
 
 reconcile_selected_skill_source_modes() {
   [ "$CONFIG_LOADED" = true ] || return 0
   [ "$STORED_SKILL_SOURCE_MODE" != "$SKILL_SOURCE_MODE" ] || return 0
 
-  local skill target
-  for skill in "${STORED_INCLUDE_SKILLS[@]}"; do
-    stored_skill_selected "$skill" || continue
-    desired_skill_selected "$skill" || continue
-    target="$TARGET_DIR/.agents/skills/$skill"
-    if should_mutate; then
-      if [ "$STORED_SKILL_SOURCE_MODE" = symlink ]; then
-        remove_managed_symlink_safely "$target" ||
-          die "could not replace .agents/skills/$skill symlink"
-      else
-        remove_managed_directory_safely "$target" ||
-          die "could not replace .agents/skills/$skill copy"
+  local skill root target label
+  while IFS= read -r root; do
+    [ -n "$root" ] || continue
+    desired_skill_root "$root" || continue
+    for skill in "${STORED_INCLUDE_SKILLS[@]}"; do
+      stored_skill_selected "$skill" || continue
+      desired_skill_selected "$skill" || continue
+      target="$TARGET_DIR/$root/$skill"
+      label="$root/$skill"
+      if should_mutate; then
+        if [ "$STORED_SKILL_SOURCE_MODE" = symlink ]; then
+          remove_managed_symlink_safely "$target" ||
+            die "could not replace $label symlink"
+        else
+          remove_managed_directory_safely "$target" ||
+            die "could not replace $label copy"
+        fi
       fi
-    fi
-    add_status updated ".agents/skills/$skill source mode"
-  done
+      add_status updated "$label source mode"
+    done
+  done < <(stored_skill_roots)
 }
 
 preflight_source_targets() {
@@ -2172,37 +2368,46 @@ install_per_project_skills() {
     return
   fi
 
-  local skills_dir="$TARGET_DIR/.agents/skills"
-  if should_mutate; then
-    agent_guidelines_make_directory_safely "$skills_dir" ||
-      die "could not create .agents/skills directory"
-  fi
-
-  local skill source target
-  for skill in "${INCLUDE_SKILLS[@]}"; do
-    if skill_excluded "$skill"; then
-      add_status skipped ".agents/skills/$skill (excluded)"
-      continue
+  local root skills_dir skill source target label
+  while IFS= read -r root; do
+    [ -n "$root" ] || continue
+    skills_dir="$TARGET_DIR/$root"
+    if should_mutate; then
+      agent_guidelines_make_directory_safely "$skills_dir" ||
+        die "could not create $root directory"
     fi
 
-    source="$CANONICAL_SKILLS_DIR/$skill"
-    target="$skills_dir/$skill"
+    for skill in "${INCLUDE_SKILLS[@]}"; do
+      label="$root/$skill"
+      if skill_excluded "$skill"; then
+        add_status skipped "$label (excluded)"
+        continue
+      fi
 
-    if [ ! -d "$source" ]; then
-      add_status warning "skill not found: $skill"
-      continue
-    fi
+      source="$CANONICAL_SKILLS_DIR/$skill"
+      target="$skills_dir/$skill"
+      if [ ! -d "$source" ]; then
+        add_status warning "skill not found: $skill"
+        continue
+      fi
 
-    if [ "$SKILL_SOURCE_MODE" = "symlink" ]; then
-      install_project_skill_symlink "$skill" "$target" "$source"
-    else
-      install_project_skill_copy "$skill" "$target" "$source"
-    fi
-  done
+      if [ "$SKILL_SOURCE_MODE" = copy ] && target_has_git_repo &&
+        [ -z "$(git -C "$TARGET_DIR" ls-files "$label/")" ] &&
+        git -C "$TARGET_DIR" check-ignore --quiet --no-index "$label"; then
+        die "$label is ignored and cannot be installed as a tracked copy"
+      fi
+
+      if [ "$SKILL_SOURCE_MODE" = "symlink" ]; then
+        install_project_skill_symlink "$skill" "$target" "$source" "$label"
+      else
+        install_project_skill_copy "$skill" "$target" "$source" "$label"
+      fi
+    done
+  done < <(desired_skill_roots)
 }
 
 write_local_config_content() {
-  local identifier
+  local identifier harness
 
   {
     printf 'schema=1\n'
@@ -2213,6 +2418,9 @@ write_local_config_content() {
     printf 'skills_source=%s\n' "$SKILL_SOURCE_MODE"
     [ -z "$DEFAULT_BRANCH" ] ||
       printf 'default_branch=%s\n' "$DEFAULT_BRANCH"
+    for harness in claude codex opencode pi; do
+      harness_selected "$harness" && printf 'harness=%s\n' "$harness"
+    done
     for identifier in "${INCLUDE_RULES[@]}"; do
       printf 'include_rule=%s\n' "$identifier"
     done
@@ -2613,6 +2821,8 @@ preflight_removal_source_targets() {
   local config_path="$state_dir/config"
   local agents_dir="$TARGET_DIR/.agents"
   local skills_dir="$agents_dir/skills"
+  local claude_dir="$TARGET_DIR/.claude"
+  local claude_skills_dir="$claude_dir/skills"
 
   agent_guidelines_assert_path_beneath \
     "$state_dir" "$TARGET_DIR" ".agent-guidelines" || return 1
@@ -2628,6 +2838,16 @@ preflight_removal_source_targets() {
   agent_guidelines_assert_path_beneath \
     "$skills_dir" "$TARGET_DIR" ".agents/skills" || return 1
   validate_managed_directory "$skills_dir" ".agents/skills"
+  if [ ! -L "$claude_dir" ]; then
+    agent_guidelines_assert_path_beneath \
+      "$claude_dir" "$TARGET_DIR" ".claude" || return 1
+    validate_managed_directory "$claude_dir" ".claude"
+    if [ ! -L "$claude_skills_dir" ]; then
+      agent_guidelines_assert_path_beneath \
+        "$claude_skills_dir" "$TARGET_DIR" ".claude/skills" || return 1
+      validate_managed_directory "$claude_skills_dir" ".claude/skills"
+    fi
+  fi
 }
 
 remove_hook_snippet() {
@@ -2856,28 +3076,35 @@ remove_rule_source_state() {
 }
 
 remove_project_skill_links() {
-  local skills_dir="$TARGET_DIR/.agents/skills"
-  local entry link_target expected_target
+  local root skills_dir entry link_target expected_target label
 
-  [ -d "$skills_dir" ] || return 0
-
-  for entry in "$skills_dir"/*; do
-    [ -e "$entry" ] || [ -L "$entry" ] || continue
-    if [ -L "$entry" ]; then
-      link_target="$(readlink "$entry")"
-      expected_target="$CANONICAL_SKILLS_DIR/$(basename "$entry")"
-      if [ "$link_target" = "$expected_target" ]; then
-        if should_mutate; then
-          remove_managed_symlink_safely "$entry" ||
-            die "could not remove .agents/skills/$(basename "$entry") link"
-        fi
-        add_status updated ".agents/skills/$(basename "$entry") link removed"
-      else
-        add_status skipped ".agents/skills/$(basename "$entry") is unowned"
-      fi
-    else
-      add_status skipped ".agents/skills/$(basename "$entry") is a copy"
+  for root in .claude/skills .agents/skills; do
+    skills_dir="$TARGET_DIR/$root"
+    if [ -L "$skills_dir" ] ||
+      { [ "$root" = .claude/skills ] && [ -L "$TARGET_DIR/.claude" ]; }; then
+      add_status skipped "$root is unowned"
+      continue
     fi
+    [ -d "$skills_dir" ] || continue
+    for entry in "$skills_dir"/*; do
+      [ -e "$entry" ] || [ -L "$entry" ] || continue
+      label="$root/$(basename "$entry")"
+      if [ -L "$entry" ]; then
+        link_target="$(readlink "$entry")"
+        expected_target="$CANONICAL_SKILLS_DIR/$(basename "$entry")"
+        if [ "$link_target" = "$expected_target" ]; then
+          if should_mutate; then
+            remove_managed_symlink_safely "$entry" ||
+              die "could not remove $label link"
+          fi
+          add_status updated "$label link removed"
+        else
+          add_status skipped "$label is unowned"
+        fi
+      else
+        add_status skipped "$label is a copy"
+      fi
+    done
   done
 
 }
@@ -2889,6 +3116,7 @@ cleanup_ownership_state() {
     rmdir "$(dirname "$(ownership_dir)")" 2>/dev/null || true
     rmdir "$TARGET_DIR/.agent-guidelines" 2>/dev/null || true
     rmdir "$TARGET_DIR/.agents/skills" "$TARGET_DIR/.agents" 2>/dev/null || true
+    rmdir "$TARGET_DIR/.claude/skills" "$TARGET_DIR/.claude" 2>/dev/null || true
   fi
 }
 
@@ -3029,7 +3257,12 @@ print_summary() {
     "$CONTEXT_RULES_MODE" \
     "${CLAUDE_CONTEXT_MODE:-unresolved}" "${AGENTS_CONTEXT_MODE:-unresolved}"
   printf 'Rule source mode: %s\n' "$RULE_SOURCE_MODE"
-  printf 'Skill source mode: %s\n\n' "$SKILL_SOURCE_MODE"
+  printf 'Skill source mode: %s\n' "$SKILL_SOURCE_MODE"
+  if [ "${#HARNESSES[@]}" -eq 0 ]; then
+    printf 'Harnesses: legacy shared layout\n\n'
+  else
+    printf 'Harnesses: %s\n\n' "${HARNESSES[*]}"
+  fi
 
   local included_rules=()
   local r
