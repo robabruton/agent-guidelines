@@ -130,9 +130,11 @@ uses `CLAUDE.md`, while Codex, OpenCode, and Pi use `AGENTS.md`. With no
 named harness and no project-local skills, setup emits both files for
 compatibility. Each file contains a self-contained compact policy with
 the hard constraints from every selected always-loaded rule and a complete
-router for situational rules. Setup rejects a candidate file above 24,576
-bytes before mutation. `compact` is the canonical `--context-rules` mode;
-the compatibility values `auto`, `full`, and `trimmed` migrate to it.
+router for situational rules. Setup rejects a generated managed policy above
+12,288 bytes or a complete candidate file above 24,576 bytes before mutation.
+The complete-file limit includes preserved project-specific content. `compact`
+is the canonical `--context-rules` mode; the compatibility values `auto`,
+`full`, and `trimmed` migrate to it.
 
 Reruns load the selected profile, changelog and context modes, source
 modes, harnesses, default branch, and rule and skill selections from the

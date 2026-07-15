@@ -43,8 +43,9 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
   or checks out a branch.
 - Project context uses one self-contained compact policy containing every
   always-loaded hard constraint and a complete situational rule router.
-  Candidate files are limited to 24,576 bytes, and compatibility context-mode
-  values normalize to the compact representation.
+  Generated managed policies are limited to 12,288 bytes, complete candidate
+  files are limited to 24,576 bytes, and compatibility context-mode values
+  normalize to the compact representation.
 
 ### Fixed
 

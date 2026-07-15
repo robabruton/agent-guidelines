@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Verifies compact project policy completeness and byte limits.
+# Verifies compact project policy completeness and separate byte limits.
 
 set -euo pipefail
 
@@ -42,10 +42,20 @@ assert_compact_policy() {
   local repo="$1"
   local expected_count="$2"
   local context="$repo/AGENTS.md"
-  local bytes count relative_path
+  local bytes managed_bytes count relative_path
 
   bytes="$(wc -c < "$context")"
   test "$bytes" -le 24576
+  managed_bytes="$(
+    awk \
+      -v begin='<!-- BEGIN agent-guidelines project rules -->' \
+      -v end='<!-- END agent-guidelines project rules -->' '
+      $0 == begin { in_block = 1 }
+      in_block { print }
+      $0 == end { exit }
+    ' "$context" | wc -c
+  )"
+  test "$managed_bytes" -le 12288
   grep -Fq '## Agent Guidelines' "$context"
   grep -Fq '### Core Policy' "$context"
   grep -Fq '### Rule Router' "$context"
@@ -92,6 +102,40 @@ HOME="$PARTIAL_HOME" "$ROOT_DIR/project-setup.sh" \
   "$PARTIAL_REPO" >/dev/null
 assert_compact_policy "$PARTIAL_REPO" 9
 cmp -s "$LEGACY_REPO/AGENTS.md" "$PARTIAL_REPO/AGENTS.md"
+
+# Generated policy growth is rejected independently of preserved notes.
+POLICY_ROOT="$TMP_ROOT/policy-source"
+mkdir -p "$POLICY_ROOT"
+cp -a "$ROOT_DIR/project-setup.sh" "$POLICY_ROOT/"
+cp -a "$ROOT_DIR/lib" "$POLICY_ROOT/"
+cp -a "$ROOT_DIR/rules" "$POLICY_ROOT/"
+cp -a "$ROOT_DIR/skills" "$POLICY_ROOT/"
+{
+  printf '%s\n' '---'
+  printf '%s\n' 'when: selected explicitly for budget testing'
+  printf '%s\n' 'load: always'
+  printf '%s\n' \
+    'summary: Expands generated policy content to exercise its byte ceiling.'
+  printf '%s\n' '---'
+  printf '%s\n\n' '# Budget Padding Rules'
+  printf '%s\n\n' '## Hard Constraints'
+  line=1
+  while [ "$line" -le 120 ]; do
+    printf -- '- Preserve bounded generated context for policy padding entry %03d.\n' \
+      "$line"
+    line=$((line + 1))
+  done
+} > "$POLICY_ROOT/rules/budget-padding.md"
+POLICY_REPO="$TMP_ROOT/policy-oversize"
+if HOME="$TEST_HOME" "$POLICY_ROOT/project-setup.sh" \
+  --profile minimal --changelog none --harness codex \
+  --include-rule budget-padding "$POLICY_REPO" \
+  >"$TMP_ROOT/policy-oversize.out" 2>"$TMP_ROOT/policy-oversize.err"; then
+  echo "oversize generated policy unexpectedly succeeded" >&2
+  exit 1
+fi
+grep -Fq 'compact project policy exceeds 12288 bytes' \
+  "$TMP_ROOT/policy-oversize.err"
 
 # Existing project notes cannot silently push the managed file over its cap.
 OVERSIZE_REPO="$TMP_ROOT/oversize"
