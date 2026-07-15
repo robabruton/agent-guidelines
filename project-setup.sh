@@ -17,6 +17,7 @@ MODE="install"
 PROFILE="auto"
 CHANGELOG_MODE="auto"
 CONTEXT_RULES_MODE="auto"
+PROJECT_CONTEXT_MAX_BYTES=24576
 RULE_SOURCE_MODE="symlink"
 SKILL_SOURCE_MODE=""
 DEFAULT_BRANCH=""
@@ -129,15 +130,10 @@ Options:
   --profile minimal|codebase|released
   --changelog none|date|version
                   aliases: dated, dates, versioned, versions
-  --context-rules full|trimmed|auto
-                  full: inline every selected rule body into the
-                  project CLAUDE.md/AGENTS.md blocks
-                  trimmed: emit the selection header and a router
-                  table pointing at .agent-guidelines/rules instead,
-                  relying on the global context for always-tier rules
-                  auto (default): trimmed per file when the matching
-                  global context file installed by setup.sh is
-                  present, full otherwise
+  --context-rules compact
+                  emit self-contained hard constraints and a complete
+                  router into .agent-guidelines/rules; legacy values
+                  auto, full, and trimmed migrate to compact
   --rules-source symlink|copy
   --skills-source symlink|copy   (defaults to --rules-source)
   --harness claude|codex|opencode|pi
@@ -392,7 +388,7 @@ parse_args() {
       ;;
   esac
   case "$CHANGELOG_MODE" in auto|none|date|version) ;; *) die "invalid changelog mode: $CHANGELOG_MODE" ;; esac
-  case "$CONTEXT_RULES_MODE" in auto|full|trimmed) ;; *) die "invalid context rules mode: $CONTEXT_RULES_MODE" ;; esac
+  case "$CONTEXT_RULES_MODE" in auto|full|trimmed|compact) ;; *) die "invalid context rules mode: $CONTEXT_RULES_MODE" ;; esac
   case "$RULE_SOURCE_MODE" in symlink|copy) ;; *) die "invalid rules source mode: $RULE_SOURCE_MODE" ;; esac
   if [ -z "$SKILL_SOURCE_MODE" ] && [ "$SKILL_SOURCE_MODE_SUPPLIED" = true ]; then
     SKILL_SOURCE_MODE="$RULE_SOURCE_MODE"
@@ -401,6 +397,23 @@ parse_args() {
   validate_harnesses
   validate_catalog_ids
   validate_selection_requests
+}
+
+normalize_context_rules_mode() {
+  case "$CONTEXT_RULES_MODE" in
+    compact) return ;;
+    auto)
+      if [ "$CONTEXT_RULES_MODE_SUPPLIED" = true ] ||
+        [ "$CONFIG_LOADED" = true ]; then
+        add_status warning "context rules mode auto migrated to compact"
+      fi
+      ;;
+    full|trimmed)
+      add_status warning \
+        "context rules mode $CONTEXT_RULES_MODE migrated to compact"
+      ;;
+  esac
+  CONTEXT_RULES_MODE=compact
 }
 
 resolve_target() {
@@ -952,7 +965,7 @@ validate_state_scalar() {
       case "$value" in none|date|version) ;; *) return 1 ;; esac
       ;;
     context_rules)
-      case "$value" in auto|full|trimmed) ;; *) return 1 ;; esac
+      case "$value" in auto|full|trimmed|compact) ;; *) return 1 ;; esac
       ;;
     rules_source|skills_source)
       case "$value" in symlink|copy) ;; *) return 1 ;; esac
@@ -1715,99 +1728,58 @@ selected_rules_ordered() {
     sort
 }
 
-# Reports whether a global context file installed by setup.sh carries
-# the managed rule block, meaning the always-tier rules and the full
-# rule router are already loaded from there.
-global_context_has_marker() {
-  local path="$1"
-
-  [ -f "$path" ] && grep -Fxq "$AGENT_GUIDELINES_MARKER_BEGIN" "$path"
-}
-
-# Resolves the context rules mode for one project file. In auto mode
-# the project CLAUDE.md is trimmed when the Claude global context
-# carries the managed block, and the project AGENTS.md is trimmed when
-# any AGENTS-consuming global context does.
-context_rules_mode_for() {
-  local target="$1"
-
-  if [ "$CONTEXT_RULES_MODE" != "auto" ]; then
-    printf '%s' "$CONTEXT_RULES_MODE"
-    return
-  fi
-
-  case "$target" in
-    claude)
-      if global_context_has_marker "${HOME}/.claude/CLAUDE.md"; then
-        printf 'trimmed'
-      else
-        printf 'full'
-      fi
-      ;;
-    agents)
-      if global_context_has_marker "${HOME}/.config/opencode/AGENTS.md" ||
-        global_context_has_marker "${HOME}/.pi/agent/AGENTS.md" ||
-        global_context_has_marker "${HOME}/.codex/AGENTS.md"; then
-        printf 'trimmed'
-      else
-        printf 'full'
-      fi
-      ;;
-  esac
-}
-
-# Writes a trimmed managed block: the project's rule selection as a
-# router table over .agent-guidelines/rules instead of inlined rule
-# bodies. The always-tier rule text comes from the global context.
-assemble_trimmed_rules_block() {
+# Writes a self-contained compact policy: every always-tier hard
+# constraint plus a complete router into the selected project rules.
+assemble_compact_rules_block() {
   local block_file="$1"
   local rules=()
-  local rule
+  local always_rules=()
+  local rule path load constraint_file bytes
 
   while IFS= read -r rule; do
     [ -n "$rule" ] && rules+=("$rule")
   done < <(selected_rules_ordered)
 
+  for rule in "${rules[@]}"; do
+    path="$RULE_SOURCE_DIR/$rule.md"
+    [ -f "$path" ] || die "selected rule unavailable: $rule"
+    load="$(agent_guidelines_read_frontmatter_field "$path" load)"
+    [ "$load" = always ] && always_rules+=("$rule")
+  done
+
   {
     printf '%s\n\n' "$AGENT_GUIDELINES_MARKER_BEGIN"
-    printf '## Agent Guidelines Rule Selection\n\n'
-    printf 'The always-loaded rules and the full rule router come from the\n'
-    printf 'global context file installed by setup.sh. This project applies\n'
-    printf 'the rules below; read a rule from its path when its trigger\n'
-    printf 'matches the current task.\n\n'
+    printf '## Agent Guidelines\n\n'
+    printf 'The hard constraints below always apply. Before acting, read every\n'
+    printf 'routed rule whose trigger matches the current task. Read each required\n'
+    printf 'rule completely from its project path; global instructions are not a\n'
+    printf 'substitute for this project policy.\n\n'
     printf 'Profile: %s. Changelog mode: %s. Versioning mode: %s.\n\n' \
       "$PROFILE" "$CHANGELOG_MODE" "$(versioning_mode)"
+
+    printf '### Core Policy\n\n'
+    for rule in "${always_rules[@]}"; do
+      constraint_file="$(mktemp)"
+      agent_guidelines_format_hard_constraints \
+        "$RULE_SOURCE_DIR/$rule.md" > "$constraint_file"
+      if ! grep -Fq '#### Hard Constraints' "$constraint_file"; then
+        rm -f "$constraint_file"
+        die "always-loaded rule has no Hard Constraints section: $rule"
+      fi
+      cat "$constraint_file"
+      printf '\n'
+      rm -f "$constraint_file"
+    done
+
+    printf '### Rule Router\n\n'
     agent_guidelines_build_router_table \
       "$RULE_SOURCE_DIR" ".agent-guidelines/rules" "${rules[@]}"
     printf '\n%s\n' "$AGENT_GUIDELINES_MARKER_END"
   } > "$block_file"
-}
 
-assemble_rules_block() {
-  local block_file="$1"
-  local rules=()
-  local rule
-  local missing_log
-  missing_log="$(mktemp)"
-
-  while IFS= read -r rule; do
-    [ -n "$rule" ] && rules+=("$rule")
-  done < <(selected_rules_ordered)
-
-  agent_guidelines_assemble_block \
-    "$block_file" "$RULE_SOURCE_DIR" "${rules[@]}" 2> "$missing_log"
-
-  while IFS= read -r line; do
-    case "$line" in
-      missing-rule:*)
-        add_status warning "selected rule unavailable: ${line#missing-rule: }"
-        ;;
-      *)
-        [ -n "$line" ] && printf '%s\n' "$line" >&2
-        ;;
-    esac
-  done < "$missing_log"
-  rm -f "$missing_log"
+  bytes="$(wc -c < "$block_file")"
+  [ "$bytes" -le "$PROJECT_CONTEXT_MAX_BYTES" ] ||
+    die "compact project policy exceeds $PROJECT_CONTEXT_MAX_BYTES bytes: $bytes"
 }
 
 update_managed_block() {
@@ -1868,6 +1840,42 @@ prepend_preamble_if_created() {
   rm -f "$temp_file"
 }
 
+validate_project_context_size() {
+  local target_file="$1"
+  local block_file="$2"
+  local preamble_file="$3"
+  local candidate_file bytes
+
+  agent_guidelines_validate_managed_block_file "$target_file" || return 1
+  candidate_file="$(mktemp)"
+  if [ ! -e "$target_file" ]; then
+    cat "$preamble_file" "$block_file" > "$candidate_file"
+  elif grep -Fxq "$AGENT_GUIDELINES_MARKER_BEGIN" "$target_file" &&
+    grep -Fxq "$AGENT_GUIDELINES_MARKER_END" "$target_file"; then
+    awk \
+      -v begin="$AGENT_GUIDELINES_MARKER_BEGIN" \
+      -v end="$AGENT_GUIDELINES_MARKER_END" \
+      -v block="$block_file" '
+      $0 == begin {
+        while ((getline line < block) > 0) print line
+        in_block = 1
+        next
+      }
+      $0 == end { in_block = 0; next }
+      !in_block { print }
+    ' "$target_file" > "$candidate_file"
+  else
+    cat "$target_file" > "$candidate_file"
+    printf '\n\n' >> "$candidate_file"
+    cat "$block_file" >> "$candidate_file"
+  fi
+
+  bytes="$(wc -c < "$candidate_file")"
+  rm -f "$candidate_file"
+  [ "$bytes" -le "$PROJECT_CONTEXT_MAX_BYTES" ] ||
+    die "project context exceeds $PROJECT_CONTEXT_MAX_BYTES bytes: $target_file ($bytes)"
+}
+
 update_managed_block_with_preamble() {
   local target_file="$1"
   local block_file="$2"
@@ -1875,45 +1883,35 @@ update_managed_block_with_preamble() {
   local label="$4"
   local status
 
+  validate_project_context_size \
+    "$target_file" "$block_file" "$preamble_file"
   status="$(agent_guidelines_update_managed_block "$target_file" "$block_file")"
   prepend_preamble_if_created "$target_file" "$preamble_file" "$status"
   add_status "$status" "$label"
 }
 
 assemble_agent_files() {
-  local full_block trimmed_block preamble_file
-  local claude_mode agents_mode claude_block agents_block
-  full_block=""
-  trimmed_block=""
+  local compact_block preamble_file
+  local claude_mode agents_mode
+  compact_block="$(mktemp)"
   preamble_file="$(mktemp)"
   write_agent_file_preamble > "$preamble_file"
+  assemble_compact_rules_block "$compact_block"
 
   claude_mode="not selected"
   agents_mode="not selected"
-  needs_claude_context && claude_mode="$(context_rules_mode_for claude)"
-  needs_agents_context && agents_mode="$(context_rules_mode_for agents)"
+  needs_claude_context && claude_mode=compact
+  needs_agents_context && agents_mode=compact
   CLAUDE_CONTEXT_MODE="$claude_mode"
   AGENTS_CONTEXT_MODE="$agents_mode"
 
-  if [ "$claude_mode" = "full" ] || [ "$agents_mode" = "full" ]; then
-    full_block="$(mktemp)"
-    assemble_rules_block "$full_block"
-  fi
-  if [ "$claude_mode" = "trimmed" ] || [ "$agents_mode" = "trimmed" ]; then
-    trimmed_block="$(mktemp)"
-    assemble_trimmed_rules_block "$trimmed_block"
-  fi
-
-  claude_block="$full_block"
-  [ "$claude_mode" = "trimmed" ] && claude_block="$trimmed_block"
-  agents_block="$full_block"
-  [ "$agents_mode" = "trimmed" ] && agents_block="$trimmed_block"
-
   if should_mutate && needs_claude_context; then
     update_managed_block_with_preamble \
-      "$TARGET_DIR/CLAUDE.md" "$claude_block" "$preamble_file" \
+      "$TARGET_DIR/CLAUDE.md" "$compact_block" "$preamble_file" \
       "CLAUDE.md project rules ($claude_mode)"
   elif needs_claude_context; then
+    validate_project_context_size \
+      "$TARGET_DIR/CLAUDE.md" "$compact_block" "$preamble_file"
     preview_managed_block "$TARGET_DIR/CLAUDE.md" \
       "CLAUDE.md project rules ($claude_mode)"
   elif [ "$CONFIG_LOADED" = true ]; then
@@ -1924,9 +1922,11 @@ assemble_agent_files() {
 
   if should_mutate && needs_agents_context; then
     update_managed_block_with_preamble \
-      "$TARGET_DIR/AGENTS.md" "$agents_block" "$preamble_file" \
+      "$TARGET_DIR/AGENTS.md" "$compact_block" "$preamble_file" \
       "AGENTS.md project rules ($agents_mode)"
   elif needs_agents_context; then
+    validate_project_context_size \
+      "$TARGET_DIR/AGENTS.md" "$compact_block" "$preamble_file"
     preview_managed_block "$TARGET_DIR/AGENTS.md" \
       "AGENTS.md project rules ($agents_mode)"
   else
@@ -1938,8 +1938,7 @@ assemble_agent_files() {
   fi
 
   rm -f "$preamble_file"
-  [ -n "$full_block" ] && rm -f "$full_block"
-  [ -n "$trimmed_block" ] && rm -f "$trimmed_block"
+  rm -f "$compact_block"
   return 0
 }
 
@@ -3305,6 +3304,7 @@ main() {
   resolve_target
   validate_target_worktree_root
   load_local_config
+  normalize_context_rules_mode
   require_git_identity
   preflight_existing_unborn_index
   resolve_default_branch

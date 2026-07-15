@@ -27,7 +27,7 @@ assert_agent_rules() {
 
   test -f "$file"
   grep -Fq "<!-- BEGIN agent-guidelines project rules -->" "$file"
-  grep -Eq "^## Git Workflow Rules$" "$file"
+  grep -Eq "^### Git Workflow Rules$" "$file"
   grep -Fq "$expected_heading" "$file"
   grep -Fq "<!-- END agent-guidelines project rules -->" "$file"
   if grep -Eq "^# " "$file"; then
@@ -136,8 +136,7 @@ git -C "$COPY_REPO" ls-files --error-unmatch \
 git -C "$COPY_REPO" ls-files --error-unmatch \
   .agents/skills/esp-idf/references/operations.md >/dev/null
 
-# Trimmed context mode: the managed block is a rule selection router
-# instead of inlined rule bodies.
+# The legacy trimmed value migrates to the compact self-contained policy.
 "${ROOT_DIR}/project-setup.sh" \
   --profile codebase \
   --changelog dated \
@@ -147,22 +146,24 @@ git -C "$COPY_REPO" ls-files --error-unmatch \
 git -C "$TRIMMED_REPO" status --short > "$TRIMMED_STATUS_OUT"
 if [ -s "$TRIMMED_STATUS_OUT" ]; then
   cat "$TRIMMED_STATUS_OUT" >&2
-  echo "trimmed mode left uncommitted project changes" >&2
+  echo "compact mode left uncommitted project changes" >&2
   exit 1
 fi
 
-grep -Fq "Context rules mode: trimmed (CLAUDE.md trimmed, AGENTS.md trimmed)" \
+grep -Fq "Context rules mode: compact (CLAUDE.md compact, AGENTS.md compact)" \
   "$TRIMMED_OUT"
 for agent_file in CLAUDE.md AGENTS.md; do
   file="${TRIMMED_REPO}/${agent_file}"
   grep -Fq "<!-- BEGIN agent-guidelines project rules -->" "$file"
   grep -Fq "<!-- END agent-guidelines project rules -->" "$file"
-  grep -Eq "^## Agent Guidelines Rule Selection$" "$file"
+  grep -Eq "^## Agent Guidelines$" "$file"
+  grep -Eq "^### Core Policy$" "$file"
   grep -Fq "Profile: codebase. Changelog mode: date. Versioning mode: none." "$file"
   grep -Fq "| changelog-date |" "$file"
   grep -Fq '`.agent-guidelines/rules/git-workflow.md`' "$file"
-  if grep -Eq "^## Git Workflow Rules$" "$file"; then
-    echo "trimmed mode inlined a rule body in $agent_file" >&2
+  grep -Eq "^### Git Workflow Rules$" "$file"
+  if grep -Eq "^#### Commit rhythm$" "$file"; then
+    echo "compact mode inlined detailed rule guidance in $agent_file" >&2
     exit 1
   fi
 done

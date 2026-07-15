@@ -16,6 +16,9 @@
 #       title becomes an H2 section in the assembled document. H6
 #       headings are left at H6 (the markdown maximum). Hash
 #       characters inside fenced code blocks are not touched.
+#   agent_guidelines_format_hard_constraints <file>
+#       Print the rule title and its Hard Constraints section as nested
+#       headings suitable for a compact project policy entrypoint.
 #   agent_guidelines_read_frontmatter_field <file> <field>
 #       Print the value of the named field from the file's leading YAML
 #       frontmatter, or empty if the field or frontmatter is absent.
@@ -138,6 +141,31 @@ agent_guidelines_format_rule_body() {
       /^```/ { in_code = !in_code; print; next }
       !in_code && /^#{1,5} / { print "#" $0; next }
       { print }
+    '
+}
+
+agent_guidelines_format_hard_constraints() {
+  local file="$1"
+
+  agent_guidelines_strip_frontmatter "$file" |
+    awk '
+      BEGIN { in_constraints = 0; saw_constraint = 0 }
+      /^# / {
+        title = $0
+        sub(/^# /, "", title)
+        print "### " title
+        next
+      }
+      /^## Hard Constraints[[:space:]]*$/ {
+        print ""
+        print "#### Hard Constraints"
+        in_constraints = 1
+        next
+      }
+      in_constraints && /^## / { exit }
+      in_constraints && /^-/ { saw_constraint = 1 }
+      in_constraints && saw_constraint && /^[[:space:]]*$/ { exit }
+      in_constraints { print }
     '
 }
 

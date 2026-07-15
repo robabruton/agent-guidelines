@@ -76,7 +76,7 @@ CONFIG="$RERUN_REPO/.agent-guidelines/config"
 grep -Fxq 'schema=1' "$CONFIG"
 grep -Fxq 'profile=codebase' "$CONFIG"
 grep -Fxq 'changelog=date' "$CONFIG"
-grep -Fxq 'context_rules=full' "$CONFIG"
+grep -Fxq 'context_rules=compact' "$CONFIG"
 grep -Fxq 'rules_source=symlink' "$CONFIG"
 grep -Fxq 'skills_source=symlink' "$CONFIG"
 grep -Fxq 'include_rule=docstrings' "$CONFIG"
@@ -93,7 +93,7 @@ cp -a "$RERUN_REPO" "${RERUN_REPO}.before-rerun"
 diff -qr "$RERUN_REPO" "${RERUN_REPO}.before-rerun" >/dev/null
 grep -Fq 'Profile: codebase' "${TMP_ROOT}/second.out"
 grep -Fq 'Changelog mode: date' "${TMP_ROOT}/second.out"
-grep -Fq 'Context rules mode: full' "${TMP_ROOT}/second.out"
+grep -Fq 'Context rules mode: compact' "${TMP_ROOT}/second.out"
 
 # A named selection change removes only that owned skill and can re-enable it.
 "${ROOT_DIR}/project-setup.sh" --exclude-skill explain "$RERUN_REPO" \
@@ -195,6 +195,7 @@ refresh_config_ownership "$LEGACY_REPO"
 "${ROOT_DIR}/project-setup.sh" "$LEGACY_REPO" \
   > "${TMP_ROOT}/legacy.out"
 grep -Fxq 'schema=1' "$LEGACY_REPO/.agent-guidelines/config"
+grep -Fxq 'context_rules=compact' "$LEGACY_REPO/.agent-guidelines/config"
 grep -Fxq 'include_skill=explain' "$LEGACY_REPO/.agent-guidelines/config"
 grep -Fxq 'include_skill=test-audit' "$LEGACY_REPO/.agent-guidelines/config"
 grep -Fxq 'exclude_skill=test-audit' "$LEGACY_REPO/.agent-guidelines/config"
