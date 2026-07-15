@@ -19,6 +19,10 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 - Focused regression suites exercise setup and removal safety across managed
   files, repository scope, identity, state, branch policy, and recovery. CI
   lints the shared mutation library and runs every safety suite.
+- Project setup accepts explicit Claude Code, Codex, OpenCode, and Pi harness
+  selections, emits only their required context files, and requires a
+  selection before installing project-local skills in compatible native or
+  shared discovery trees.
 
 ### Changed
 
@@ -37,6 +41,10 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
   both branch-policy hooks from that stored value, and requires
   `--default-branch` when repository evidence is ambiguous. It never renames
   or checks out a branch.
+- Project context uses one self-contained compact policy containing every
+  always-loaded hard constraint and a complete situational rule router.
+  Candidate files are limited to 24,576 bytes, and compatibility context-mode
+  values normalize to the compact representation.
 
 ### Fixed
 
@@ -53,6 +61,9 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
   identity, preserves existing unborn indexes, and commits only artifacts it
   creates. New Git metadata is staged for recoverable installation, and failed
   final verification retains a complete reported recovery state.
+- Project setup scopes context and skill preflight to selected or previously
+  managed harness surfaces. Removal preserves unowned skill-tree parent
+  symlinks without traversing them.
 
 ## 2026-07-13
 

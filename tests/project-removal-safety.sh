@@ -56,6 +56,29 @@ expect_remove_containment_failure() {
   agent_guidelines_verify_copy "$external_before" "$external"
 }
 
+expect_remove_containment_skip() {
+  local repo="$1"
+  local external="$2"
+  local label="$3"
+  local repo_before="${repo}.before-containment"
+  local external_before="${external}.before-containment"
+
+  cp -a "$repo" "$repo_before"
+  cp -a "$external" "$external_before"
+
+  "${ROOT_DIR}/project-setup.sh" --remove --dry-run "$repo" \
+    >"${TMP_ROOT}/skip.out"
+  grep -Fq "$label is unowned" "${TMP_ROOT}/skip.out"
+  agent_guidelines_verify_copy "$repo_before" "$repo"
+  agent_guidelines_verify_copy "$external_before" "$external"
+
+  "${ROOT_DIR}/project-setup.sh" --remove "$repo" \
+    >"${TMP_ROOT}/skip.out"
+  grep -Fq "$label is unowned" "${TMP_ROOT}/skip.out"
+  agent_guidelines_verify_copy "$repo_before" "$repo"
+  agent_guidelines_verify_copy "$external_before" "$external"
+}
+
 # A repository with no installation history retains lookalike local state.
 FOREIGN_REPO="${TMP_ROOT}/foreign-repo"
 FOREIGN_RULES="${TMP_ROOT}/foreign-rules"
@@ -97,6 +120,7 @@ OWNED_REPO="${TMP_ROOT}/owned-repo"
   --profile minimal \
   --changelog none \
   --context-rules full \
+  --harness codex \
   --include-skill explain \
   "$OWNED_REPO" >/dev/null
 OWNERSHIP_DIR="${OWNED_REPO}/.git/agent-guidelines/ownership-v1"
@@ -120,8 +144,8 @@ test ! -e "${OWNED_REPO}/.git/agent-guidelines"
 ! grep -Fxq 'CLAUDE.md' "${OWNED_REPO}/.git/info/exclude"
 ! grep -Fxq '.agents/skills/' "${OWNED_REPO}/.git/info/exclude"
 
-# Removal rejects managed-parent symlinks before starting a transaction. Both
-# real and dry-run removal preserve the repository and external payload.
+# Removal skips unowned skill-tree parents without traversing them. Both real
+# and dry-run removal preserve the repository and external payload.
 AGENTS_PARENT_REPO="${TMP_ROOT}/agents-parent-repo"
 AGENTS_PARENT_EXTERNAL="${TMP_ROOT}/agents-parent-external"
 init_repo "$AGENTS_PARENT_REPO"
@@ -129,8 +153,8 @@ mkdir -p "${AGENTS_PARENT_EXTERNAL}/skills"
 ln -s "$AGENTS_PARENT_EXTERNAL" "${AGENTS_PARENT_REPO}/.agents"
 ln -s "${ROOT_DIR}/skills/explain" \
   "${AGENTS_PARENT_EXTERNAL}/skills/explain"
-expect_remove_containment_failure \
-  "$AGENTS_PARENT_REPO" "$AGENTS_PARENT_EXTERNAL" ".agents"
+expect_remove_containment_skip \
+  "$AGENTS_PARENT_REPO" "$AGENTS_PARENT_EXTERNAL" ".agents/skills"
 
 SKILLS_PARENT_REPO="${TMP_ROOT}/skills-parent-repo"
 SKILLS_PARENT_EXTERNAL="${TMP_ROOT}/skills-parent-external"
@@ -141,7 +165,7 @@ ln -s "${SKILLS_PARENT_EXTERNAL}/skills" \
   "${SKILLS_PARENT_REPO}/.agents/skills"
 ln -s "${ROOT_DIR}/skills/explain" \
   "${SKILLS_PARENT_EXTERNAL}/skills/explain"
-expect_remove_containment_failure \
+expect_remove_containment_skip \
   "$SKILLS_PARENT_REPO" "$SKILLS_PARENT_EXTERNAL" ".agents/skills"
 
 STATE_PARENT_REPO="${TMP_ROOT}/state-parent-repo"

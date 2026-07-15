@@ -23,12 +23,13 @@ DRY_OUT="${TMP_ROOT}/dry.out"
 
 assert_agent_rules() {
   local file="$1"
-  local expected_heading="$2"
+  local expected_rule="$2"
 
   test -f "$file"
   grep -Fq "<!-- BEGIN agent-guidelines project rules -->" "$file"
-  grep -Eq "^## Git Workflow Rules$" "$file"
-  grep -Fq "$expected_heading" "$file"
+  grep -Eq "^### Git Workflow Rules$" "$file"
+  grep -Fq "| $expected_rule |" "$file"
+  grep -Fq ".agent-guidelines/rules/${expected_rule}.md" "$file"
   grep -Fq "<!-- END agent-guidelines project rules -->" "$file"
   if grep -Eq "^# " "$file"; then
     echo "stray H1 in $file" >&2
@@ -56,6 +57,8 @@ assert_agent_preamble() {
   --profile codebase \
   --changelog dated \
   --context-rules full \
+  --harness claude \
+  --harness codex \
   --include-skill explain \
   --include-skill test-audit \
   --exclude-skill test-audit \
@@ -71,8 +74,8 @@ fi
 test -L "${SYMLINK_REPO}/.agent-guidelines/rules"
 test -f "${SYMLINK_REPO}/.git/hooks/pre-commit"
 grep -Fq "Changelog mode: date" "$SYMLINK_FIRST_OUT"
-assert_agent_rules "${SYMLINK_REPO}/CLAUDE.md" "# Date-Based Changelog Rules"
-assert_agent_rules "${SYMLINK_REPO}/AGENTS.md" "# Date-Based Changelog Rules"
+assert_agent_rules "${SYMLINK_REPO}/CLAUDE.md" "changelog-date"
+assert_agent_rules "${SYMLINK_REPO}/AGENTS.md" "changelog-date"
 assert_agent_preamble "${SYMLINK_REPO}/CLAUDE.md"
 assert_agent_preamble "${SYMLINK_REPO}/AGENTS.md"
 
@@ -104,6 +107,8 @@ assert_agent_preamble "${SYMLINK_REPO}/AGENTS.md"
   --changelog versions \
   --context-rules full \
   --rules-source copy \
+  --harness claude \
+  --harness codex \
   --include-skill esp-idf \
   --include-skill firmware-review \
   "${COPY_REPO}" > "$COPY_OUT"
@@ -119,8 +124,8 @@ test -f "${COPY_REPO}/.agent-guidelines/rules/versioning-semver.md"
 git -C "$COPY_REPO" ls-files --error-unmatch \
   .agent-guidelines/rules/versioning-semver.md >/dev/null
 grep -Fq "Versioning mode: semver" "$COPY_OUT"
-assert_agent_rules "${COPY_REPO}/CLAUDE.md" "# Semantic Versioning Rules"
-assert_agent_rules "${COPY_REPO}/AGENTS.md" "# Semantic Versioning Rules"
+assert_agent_rules "${COPY_REPO}/CLAUDE.md" "versioning-semver"
+assert_agent_rules "${COPY_REPO}/AGENTS.md" "versioning-semver"
 
 test -d "${COPY_REPO}/.agents/skills/firmware-review"
 test ! -L "${COPY_REPO}/.agents/skills/firmware-review"
@@ -136,8 +141,7 @@ git -C "$COPY_REPO" ls-files --error-unmatch \
 git -C "$COPY_REPO" ls-files --error-unmatch \
   .agents/skills/esp-idf/references/operations.md >/dev/null
 
-# Trimmed context mode: the managed block is a rule selection router
-# instead of inlined rule bodies.
+# The legacy trimmed value migrates to the compact self-contained policy.
 "${ROOT_DIR}/project-setup.sh" \
   --profile codebase \
   --changelog dated \
@@ -147,22 +151,24 @@ git -C "$COPY_REPO" ls-files --error-unmatch \
 git -C "$TRIMMED_REPO" status --short > "$TRIMMED_STATUS_OUT"
 if [ -s "$TRIMMED_STATUS_OUT" ]; then
   cat "$TRIMMED_STATUS_OUT" >&2
-  echo "trimmed mode left uncommitted project changes" >&2
+  echo "compact mode left uncommitted project changes" >&2
   exit 1
 fi
 
-grep -Fq "Context rules mode: trimmed (CLAUDE.md trimmed, AGENTS.md trimmed)" \
+grep -Fq "Context rules mode: compact (CLAUDE.md compact, AGENTS.md compact)" \
   "$TRIMMED_OUT"
 for agent_file in CLAUDE.md AGENTS.md; do
   file="${TRIMMED_REPO}/${agent_file}"
   grep -Fq "<!-- BEGIN agent-guidelines project rules -->" "$file"
   grep -Fq "<!-- END agent-guidelines project rules -->" "$file"
-  grep -Eq "^## Agent Guidelines Rule Selection$" "$file"
+  grep -Eq "^## Agent Guidelines$" "$file"
+  grep -Eq "^### Core Policy$" "$file"
   grep -Fq "Profile: codebase. Changelog mode: date. Versioning mode: none." "$file"
   grep -Fq "| changelog-date |" "$file"
   grep -Fq '`.agent-guidelines/rules/git-workflow.md`' "$file"
-  if grep -Eq "^## Git Workflow Rules$" "$file"; then
-    echo "trimmed mode inlined a rule body in $agent_file" >&2
+  grep -Eq "^### Git Workflow Rules$" "$file"
+  if grep -Eq "^#### Commit rhythm$" "$file"; then
+    echo "compact mode inlined detailed rule guidance in $agent_file" >&2
     exit 1
   fi
 done
@@ -176,6 +182,8 @@ REMOVE_REPO="${TMP_ROOT}/remove-repo"
   --profile minimal \
   --changelog none \
   --context-rules trimmed \
+  --harness claude \
+  --harness codex \
   --include-skill explain \
   "$REMOVE_REPO" > "${TMP_ROOT}/remove-setup.out"
 "${ROOT_DIR}/project-setup.sh" --remove "$REMOVE_REPO" \
@@ -228,6 +236,8 @@ git -C "$DRY_REPO" init --quiet --initial-branch=main
 "${ROOT_DIR}/project-setup.sh" \
   --profile codebase \
   --changelog dated \
+  --harness claude \
+  --harness codex \
   --include-skill explain \
   --dry-run \
   "${DRY_REPO}" > "$DRY_OUT"
