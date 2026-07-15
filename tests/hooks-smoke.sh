@@ -168,12 +168,28 @@ git push -q origin main
 git branch badname
 expect_fail git push origin badname
 
-# A branch name that passes the type-prefix pattern but carries a
-# banned phrase is rejected; the name is assembled from fragments.
+# Every documented Conventional Commit type prefix is accepted.
+head_sha="$(git rev-parse HEAD)"
+zero_sha="$(printf '0%.0s' {1..40})"
+for prefix in feat fix refactor perf docs style test build ci chore revert; do
+  branch_name="${prefix}/policy-check"
+  printf 'refs/heads/%s %s refs/heads/%s %s\n' \
+    "$branch_name" "$head_sha" "$branch_name" "$zero_sha" |
+    .git/hooks/pre-push
+done
+
+# Broad review language is valid in a branch name.
 phrase_branch="feat/handle-fol""lowup"
 git branch "$phrase_branch"
-expect_fail git push origin "$phrase_branch"
+git push -q origin "$phrase_branch"
+git push -q origin ":$phrase_branch"
 git branch -q -d "$phrase_branch"
+
+# An explicit promise is rejected; the name is assembled from fragments.
+planned_branch="feat/com""ing-soon"
+git branch "$planned_branch"
+expect_fail git push origin "$planned_branch"
+git branch -q -d "$planned_branch"
 
 # The pushed ref is what matters, not the checked-out branch.
 git checkout -q badname
