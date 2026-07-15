@@ -195,11 +195,13 @@ git --git-dir=<recovery-dir>/git --work-tree=<target> \
   project-local rule source path
 - If `.agent-guidelines/rules` does not exist and symlink mode is
   selected, create it as a symlink to the canonical `rules/` directory
-- When copy mode is selected, copy rule files into
-  `.agent-guidelines/rules` as a snapshot
-- Accept an existing rule source only when it is the exact canonical
-  symlink selected by symlink mode or an exact snapshot selected by copy
-  mode; stop without mutation on every other existing path
+- In copy mode, track the rule snapshot in `.agent-guidelines/rules` and add
+  `POLYFORM-NONCOMMERCIAL.txt` from the canonical notice asset
+- Display the canonical PolyForm Noncommercial 1.0.0 notice and terms URL
+  before performing any copy-mode mutation in the target repository
+- Accept only the exact canonical symlink or an exact licensed snapshot;
+  add a missing notice only when every other entry matches the canonical
+  source, and stop without mutation on every other existing path
 - Treat `.agent-guidelines/config` as checksum-owned local setup state in a
   strict, versioned, non-executable data format
 - Record `schema=1`, the selected profile, changelog and context modes, rule
@@ -318,10 +320,11 @@ git --git-dir=<recovery-dir>/git --work-tree=<target> \
   (`--skills-source symlink|copy`)
 - In symlink mode, link each skill directory to its canonical source and
   locally exclude the applicable skill trees so the links stay out of git
-- In copy mode, copy the skill directory as a tracked project asset
-- Accept an existing skill path only when it is the exact canonical
-  symlink selected by symlink mode or an exact copy selected by copy
-  mode; stop without mutation on every other existing path
+- In copy mode, copy the skill directory as a tracked project asset and add
+  `POLYFORM-NONCOMMERCIAL.txt` from the canonical notice asset
+- Accept only the exact canonical symlink or an exact licensed copy; add a
+  missing notice only when every other entry matches the canonical source,
+  and stop without mutation on every other existing path
 - Warn when a selected skill does not exist in the skills source
 
 ## Commit Template
