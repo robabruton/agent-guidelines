@@ -4,6 +4,27 @@ All notable changes to this project will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## 2026-07-15
+
+### Added
+
+- One canonical generator emits planned-work, development-provenance, and
+  branch-name hook policy. It preflights exact tracked targets, retains
+  verified rollback copies through each write pass, and restores incomplete
+  mutations. CI verifies the assets, transactional failure paths, and
+  review-only date, diagnostic, and ownership contracts.
+
+### Changed
+
+- Planned-work hooks apply one high-confidence pattern to staged content,
+  commit messages, and branch names. Development-provenance hooks share one
+  pattern across staged content and commit messages. Functional integrations,
+  current limitations, deprecation contracts, and grounded review notes remain
+  valid.
+- Rules and skills use one branch-prefix set and consistent policies for
+  deterministic dates, diagnostic suppressions, docstring thresholds,
+  current-scope notes, and factual changelog transitions.
+
 ## 2026-07-14
 
 ### Added

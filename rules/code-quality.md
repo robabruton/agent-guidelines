@@ -4,8 +4,8 @@ load: recall
 summary: >-
   Conventions that the language's own style tooling does not enforce:
   read a project version from package metadata rather than
-  hardcoding, never silence type-checker or linter errors with inline
-  ignores, pick one term per concept and use it everywhere, keep
+  hardcoding, constrain unavoidable diagnostic suppressions, pick one
+  term per concept and use it everywhere, keep
   sample and fixture data internally coherent rather than templated,
   and keep inline-annotation alignment consistent across a block.
 ---
@@ -31,17 +31,21 @@ The same principle generalizes: any fact that has an authoritative home
 (a build constant, a config value, a schema) should be read from there,
 not re-typed where it is used.
 
-## Never Suppress Diagnostics — Fix the Cause
+## Fix Diagnostics; Constrain Unavoidable Suppressions
 
-Do not silence type-checker or linter errors with inline ignore comments
-to make a check pass. Fix the underlying issue.
+Fix the underlying issue whenever the source, dependency, types, or
+configuration can be corrected. A suppression is acceptable only when
+the diagnostic originates outside the code's control and no source fix
+exists.
 
 - If a type error is legitimate, correct the code.
 - If an optional import is unresolved during type checking, add the
   package to the dev/type-check dependencies so the checker can see it —
   do not ignore the import.
-- Treat an ignore comment as a last resort that needs an explicit
-  justification, not a routine way to get green.
+- Keep an unavoidable suppression local to the affected expression or
+  declaration, tool-specific, and documented with the reason and
+  external evidence. Blanket, file-wide, and unexplained suppressions
+  are forbidden.
 
 Suppressed diagnostics hide real problems and erode trust in the check.
 

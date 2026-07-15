@@ -55,12 +55,9 @@ recover from and hold regardless of task or model.
 
 ### `development-attribution`
 
-Excludes AI-tool authorship from the project record. No trailer
-lines naming AI tools or code assistants, no references to AI tools
-as authors of committed work, no naming of agent tooling in ignore
-files or build configs, and no hardcoded model or vendor names in
-source. Functional references to AI as a user-facing feature are
-allowed; references to AI as a developer or contributor are not.
+Excludes development-tool authorship from the project record while
+allowing factual product integrations, APIs, configuration, paths,
+compatibility notes, and user-facing behavior.
 
 ### `git-messages`
 
@@ -91,10 +88,8 @@ happened, not work that is intended. Forbids speculative planning
 content — plans for later phases, lists of unfinished work,
 forward-looking promises — in any tracked file, commit message,
 pull request description, merge commit body, or branch name.
-Includes a banned-phrase checklist run before staging, a matching
-pre-commit guard installed by `project-setup.sh`, and a pointer to
-where plans legitimately belong (durable agent memory, untracked
-`local/` files, scratch branches).
+Automatic hooks reject explicit promises and unfinished-work
+markers; contextual wording remains a manual review decision.
 
 ## On-Demand Rules
 
@@ -141,8 +136,8 @@ conventions when a remote exists.
 
 Conventions that the language's own style tooling does not enforce:
 read a project version from package metadata rather than
-hardcoding, never silence type-checker or linter errors with inline
-ignores, pick one term per concept and use it everywhere, keep
+hardcoding, constrain unavoidable diagnostic suppressions, pick one
+term per concept and use it everywhere, keep
 sample and fixture data internally coherent rather than templated,
 and keep inline-annotation alignment consistent across a block.
 
@@ -174,9 +169,9 @@ unused tooling in place.
 
 ### `docstrings`
 
-Mandatory documentation for every function, type, constant, macro,
-and module-scoped variable you write or materially change, with a
-small list of trivial exceptions. Specifies voice (third-person
+Documentation contracts for public symbols, non-trivial logic, and
+behavior-defining types, constants, macros, and state, with trivial
+exceptions. Specifies voice (third-person
 declarative), what to document, what to skip, and the idiomatic
 doc format per language — Doxygen, Google-style, JSDoc, Rustdoc,
 Godoc, Javadoc, LDoc.
@@ -252,8 +247,8 @@ Verify every branch before it merges, sized to the risk and scope
 of the change. Test selection (smallest reliable check, prefer
 existing project conventions), what to verify (new behavior,
 existing behavior touched, error paths, documentation examples),
-running the project's full check suite before pushing, no
-hardcoded dates in tests, and reproducing expensive remote
+running the project's full check suite before pushing,
+time-independent date fixtures, and reproducing expensive remote
 pipeline steps locally first.
 
 ### `versioning-semver`

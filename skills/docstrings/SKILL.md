@@ -14,6 +14,10 @@ This is an editing workflow, not a style-only review. Preserve accurate
 existing docstrings, avoid documenting obvious code, and make each added
 comment reflect the code as it exists.
 
+When the project provides an active docstrings rule, treat its symbol
+threshold and comment conventions as authoritative. The matrix below is
+the default and matches the repository rule shipped with this skill.
+
 ## Target Selection
 
 Determine the target from the user request:

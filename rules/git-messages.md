@@ -23,9 +23,10 @@ summary: >-
   wrapped at 72 characters.
 - Write multiline messages with a message file (`-F`), never repeated
   `-m` flags.
-- Never reference reverted work, iteration history, another
-  repository's needs, or before/after comparisons in bodies or
-  changelog entries.
+- Never reference reverted work, iteration history, or another
+  repository's needs in commit bodies.
+- Changelog entries may describe factual user-observable transitions;
+  they must not narrate the development process.
 - When extending an existing feature, describe it at one consistent
   level of detail — enumerate all the peers or none.
 - Amend only local, unpushed commits.
@@ -92,8 +93,8 @@ Keep them self-contained and free of provenance.
 - A commit describes what changed in its own repository's terms;
   cross-repo justification belongs in the pull/merge request
   description, not in permanent history.
-- State what the change does and why, not how it compares to what the
-  old text said.
+- In commit bodies, state what the change does and why, not how it
+  compares to discarded drafts or prior wording.
 
 Before writing a body, check whether it references anything the
 reader would not know about, and rewrite it to describe the present.

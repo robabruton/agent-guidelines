@@ -1,23 +1,21 @@
 # BEGIN agent-guidelines staged attribution guard
-# Catches three shapes of AI-tool authorship in staged content:
-#   - Footer/trailer (specific colon-suffixed trailer keys)
-#   - Prepositional (a contribution verb followed by by/with/using
-#     and an AI subject)
-#   - Adjective (an AI subject prefixing a contribution verb as a
-#     hyphenated modifier)
-# The trailer keys are assembled from adjacent quoted fragments so the
-# guard's own definition does not match the pattern when this snippet
-# is itself staged. Plain POSIX sh: no arrays, no process substitution.
-attribution_pattern='((co-)?authored''-by:|generated''-by:|written''-by:|reviewed''-by:|planned''-by:|developed''-by:|(generated|written|reviewed|planned|implemented|authored|co-authored|developed) (by|with|using) .*(ai|llm|assistant|agent|bot|automation|code assistant|coding agent|coding tool)|(ai|llm)-(generated|written|authored|reviewed|planned|implemented|coded|assisted|developed))'
+# Rejects high-confidence development authorship from added staged
+# lines while allowing functional integration language. The canonical
+# Policy source: scripts/generate-hook-policy.sh. POSIX sh.
+attribution_pattern='((co-)?authored''-by:|generated''-by:|written''-by:|reviewed''-by:|planned''-by:|developed''-by:|^[[:space:]>*-]*(generated|written|reviewed|planned|implemented|authored|co-authored|developed|coded)[[:space:]]+(by|with|using)[[:space:]]+(an?[[:space:]]+)?(ai|llm|assistant|agent|bot|automation|code[[:space:]]+assistant|coding[[:space:]]+(agent|tool))([^[:alnum:]_]|$)|(^|[^[:alnum:]_])(project|code|changes?|commit|implementation|documentation|docs|feature|fix)[[:space:]]+(was[[:space:]]+)?(generated|written|reviewed|planned|implemented|authored|co-authored|developed|coded)[[:space:]]+(by|with|using)[[:space:]]+(an?[[:space:]]+)?(ai|llm|assistant|agent|bot|automation|code[[:space:]]+assistant|coding[[:space:]]+(agent|tool))([^[:alnum:]_]|$)|(^|[^[:alnum:]_])(ai|llm|assistant|agent|bot|automation|code[[:space:]]+assistant|coding[[:space:]]+(agent|tool))[[:space:]-]+(generated|written|reviewed|planned|implemented|authored|co-authored|developed|coded)[[:space:]]+(project|code|changes?|commit|implementation|documentation|docs|feature|fix)([^[:alnum:]_]|$))'
 
-if git diff --cached --diff-filter=ACMR | grep -Ei "^\+.*${attribution_pattern}" >/dev/null; then
-  echo "Development-tool attribution found in staged content:" >&2
-  git diff --cached --name-only --diff-filter=ACMR | while IFS= read -r staged_file; do
-    if [ -f "$staged_file" ] &&
-      git diff --cached -- "$staged_file" | grep -Ei "^\+.*${attribution_pattern}" >/dev/null; then
-      echo "  $staged_file" >&2
-    fi
-  done
+attribution_hits="$(git diff --cached --name-only --diff-filter=ACMR | while IFS= read -r staged_file; do
+  if git diff --cached --unified=0 -- "$staged_file" |
+    sed -n '/^+++ /d; s/^+//p' |
+    grep -Ei "$attribution_pattern" >/dev/null; then
+    printf '  %s\n' "$staged_file"
+  fi
+done)"
+
+if [ -n "$attribution_hits" ]; then
+  echo "Development-tool authorship found in staged content:" >&2
+  printf '%s\n' "$attribution_hits" >&2
+  echo "Describe functional integrations without crediting development work to a tool." >&2
   exit 1
 fi
 # END agent-guidelines staged attribution guard
