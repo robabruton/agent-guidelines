@@ -181,6 +181,7 @@ git --git-dir=<recovery-dir>/git --work-tree=<target> \
   - include a complete trigger and path router for all selected rules
   - direct the harness to read every triggered rule completely from
     `.agent-guidelines/rules/<rule>.md`
+- Reject a generated managed policy above 12,288 bytes before mutation
 - Reject a candidate context file above 24,576 bytes before mutation,
   including its preserved content, generated preamble, and managed block
 - Use `compact` as the canonical `--context-rules` value
