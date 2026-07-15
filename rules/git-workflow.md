@@ -17,8 +17,9 @@ summary: >-
 
 - Never author work commits directly on `main`; only `--no-ff` merge
   commits originate there, with no bookkeeping exceptions.
-- Create a slash-prefixed branch (`feat/`, `fix/`, `chore/`) for every
-  change, named from the work being done.
+- Create a slash-prefixed branch using `feat/`, `fix/`, `refactor/`,
+  `perf/`, `docs/`, `style/`, `test/`, `build/`, `ci/`, `chore/`, or
+  `revert/` for every change, named from the work being done.
 - Merge only when the branch's work is fully complete, always with
   `--no-ff`.
 - Commit each meaningful change as it lands; never leave more than 3-4
