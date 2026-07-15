@@ -137,10 +137,39 @@ agent_guidelines_format_rule_body() {
 
   agent_guidelines_strip_frontmatter "$file" |
     awk '
-      BEGIN { in_code = 0 }
-      /^```/ { in_code = !in_code; print; next }
-      !in_code && /^#{1,5} / { print "#" $0; next }
-      { print }
+      BEGIN { fence_char = "" }
+      {
+        fence = $0
+        indentation = 0
+        while (indentation < 3 && substr(fence, 1, 1) == " ") {
+          fence = substr(fence, 2)
+          indentation++
+        }
+        candidate = substr(fence, 1, 1)
+        fence_length = 0
+        if (candidate == "`" || candidate == "~") {
+          while (substr(fence, fence_length + 1, 1) == candidate) {
+            fence_length++
+          }
+        }
+        if (fence_length >= 3) {
+          if (fence_char == "") {
+            fence_char = candidate
+            opening_length = fence_length
+          } else if (fence_char == candidate &&
+                     fence_length >= opening_length &&
+                     substr(fence, fence_length + 1) ~ /^[[:space:]]*$/) {
+            fence_char = ""
+          }
+          print
+          next
+        }
+        if (fence_char == "" && /^#{1,5} /) {
+          print "#" $0
+          next
+        }
+        print
+      }
     '
 }
 
