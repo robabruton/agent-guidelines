@@ -71,7 +71,7 @@ printf 'user-owned\n' \
   > "$POPULATED_REPO/.agents/skills/private-skill/note.txt"
 "${ROOT_DIR}/project-setup.sh" \
   --profile minimal --changelog none --context-rules full \
-  --skills-source copy --include-skill explain \
+  --skills-source copy --harness codex --include-skill explain \
   "$POPULATED_REPO" > "${TMP_ROOT}/populated.out"
 test "$(git -C "$POPULATED_REPO" show --format= --name-only HEAD |
   sed '/^$/d')" = \

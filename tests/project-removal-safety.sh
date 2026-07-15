@@ -97,6 +97,7 @@ OWNED_REPO="${TMP_ROOT}/owned-repo"
   --profile minimal \
   --changelog none \
   --context-rules full \
+  --harness codex \
   --include-skill explain \
   "$OWNED_REPO" >/dev/null
 OWNERSHIP_DIR="${OWNED_REPO}/.git/agent-guidelines/ownership-v1"
