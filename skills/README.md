@@ -15,10 +15,10 @@ approved subset of Claude Code fields that improve invocation:
 - `argument-hint`
 
 Avoid behavior-changing Claude Code fields such as `model`, `effort`,
-`context`, `agent`, `hooks`, and `shell` unless a future change has a
-specific need for them. Use `allowed-tools` only for low-risk read/search
-tools on audit and review skills; it pre-approves those tools in Claude
-Code but does not deny other tools.
+`context`, `agent`, `hooks`, and `shell` without a specific current
+requirement. Use `allowed-tools` only for low-risk read/search tools on
+audit and review skills; it pre-approves those tools in Claude Code but
+does not deny other tools.
 
 ## Current Skills
 
