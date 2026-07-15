@@ -75,7 +75,7 @@ printf 'user-owned\n' \
   "$POPULATED_REPO" > "${TMP_ROOT}/populated.out"
 test "$(git -C "$POPULATED_REPO" show --format= --name-only HEAD |
   sed '/^$/d')" = \
-  $'.agents/skills/explain/SKILL.md\n.gitignore\n.gittemplate'
+  $'.agents/skills/explain/POLYFORM-NONCOMMERCIAL.txt\n.agents/skills/explain/SKILL.md\n.gitignore\n.gittemplate'
 test "$(git -C "$POPULATED_REPO" status --short)" = \
   $'?? .agents/skills/private-skill/\n?? README.md'
 grep -Fxq '# Existing project' "$POPULATED_REPO/README.md"

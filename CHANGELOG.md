@@ -46,6 +46,10 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
   Generated managed policies are limited to 12,288 bytes, complete candidate
   files are limited to 24,576 bytes, and compatibility context-mode values
   normalize to the compact representation.
+- Project setup writes a PolyForm Noncommercial terms notice into every
+  tracked rule and skill copy and displays it before copy-mode writes to the
+  target repository. Exact canonical snapshots that lack only the notice
+  receive it automatically, and license compliance checks run in CI.
 
 ### Fixed
 

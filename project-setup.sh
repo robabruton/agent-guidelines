@@ -7,6 +7,8 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd -P)"
 ASSET_DIR="${SCRIPT_DIR}/skills/project-setup/assets"
 CANONICAL_RULES_DIR="${SCRIPT_DIR}/rules"
 CANONICAL_SKILLS_DIR="${SCRIPT_DIR}/skills"
+COPY_LICENSE_FILENAME="POLYFORM-NONCOMMERCIAL.txt"
+COPY_LICENSE_NOTICE="${ASSET_DIR}/polyform-noncommercial-notice.txt"
 
 # shellcheck source=lib/assemble-rules.sh
 . "${SCRIPT_DIR}/lib/assemble-rules.sh"
@@ -184,6 +186,120 @@ add_status() {
 
 should_mutate() {
   [ "$DRY_RUN" != true ]
+}
+
+copy_license_required() {
+  [ "$RULE_SOURCE_MODE" = copy ] ||
+    [ "$SKILL_SOURCE_MODE" = copy ] ||
+    { [ "$CONFIG_LOADED" = true ] &&
+      { [ "$STORED_RULE_SOURCE_MODE" = copy ] ||
+        [ "$STORED_SKILL_SOURCE_MODE" = copy ]; }; }
+}
+
+validate_copy_license_notice() {
+  if [ -L "$COPY_LICENSE_NOTICE" ] || [ ! -f "$COPY_LICENSE_NOTICE" ]; then
+    die "copy-mode license notice is not a regular file: $COPY_LICENSE_NOTICE"
+  fi
+}
+
+validate_licensed_copy_source() {
+  local source="$1"
+  local label="$2"
+  local reserved_path="$source/$COPY_LICENSE_FILENAME"
+
+  if [ -L "$source" ] || [ ! -d "$source" ]; then
+    die "$label is not a canonical directory: $source"
+  fi
+  if [ -e "$reserved_path" ] || [ -L "$reserved_path" ]; then
+    die "$label uses reserved copy-license path: $reserved_path"
+  fi
+}
+
+build_licensed_copy_snapshot() {
+  local source="$1"
+  local destination="$2"
+
+  agent_guidelines_backup_object "$source" "$destination" || return 1
+  agent_guidelines_backup_object \
+    "$COPY_LICENSE_NOTICE" "$destination/$COPY_LICENSE_FILENAME"
+}
+
+licensed_copy_snapshot_matches() {
+  local source="$1"
+  local target="$2"
+  local stage_dir expected
+  local matches=false
+
+  [ -d "$target" ] && [ ! -L "$target" ] || return 1
+  stage_dir="$(mktemp -d)" || return 1
+  expected="$stage_dir/snapshot"
+  if ! build_licensed_copy_snapshot "$source" "$expected"; then
+    rm -rf "$stage_dir"
+    return 1
+  fi
+  if diff -qr "$expected" "$target" >/dev/null; then
+    matches=true
+  fi
+  rm -rf "$stage_dir"
+  [ "$matches" = true ]
+}
+
+legacy_copy_snapshot_matches() {
+  local source="$1"
+  local target="$2"
+
+  [ -d "$target" ] && [ ! -L "$target" ] &&
+    diff -qr "$source" "$target" >/dev/null
+}
+
+copy_licensed_directory_safely() {
+  local target="$1"
+  local source="$2"
+
+  copy_managed_directory_safely "$target" "$source" || return 1
+  agent_guidelines_replace_file_safely \
+    "$target/$COPY_LICENSE_FILENAME" "$COPY_LICENSE_NOTICE"
+}
+
+add_copy_license_notice_safely() {
+  local target="$1"
+
+  agent_guidelines_replace_file_safely \
+    "$target/$COPY_LICENSE_FILENAME" "$COPY_LICENSE_NOTICE"
+}
+
+preflight_copy_license_sources() {
+  local skill
+  local needs_notice=false
+
+  if [ "$RULE_SOURCE_MODE" = copy ] ||
+    { [ "$CONFIG_LOADED" = true ] &&
+      [ "$STORED_RULE_SOURCE_MODE" = copy ]; }; then
+    needs_notice=true
+    validate_licensed_copy_source "$CANONICAL_RULES_DIR" \
+      "canonical rule source"
+  fi
+
+  if [ "$SKILL_SOURCE_MODE" = copy ] ||
+    { [ "$CONFIG_LOADED" = true ] &&
+      [ "$STORED_SKILL_SOURCE_MODE" = copy ]; }; then
+    needs_notice=true
+    for skill in "${INCLUDE_SKILLS[@]}" "${STORED_INCLUDE_SKILLS[@]}"; do
+      [ -d "$CANONICAL_SKILLS_DIR/$skill" ] || continue
+      validate_licensed_copy_source "$CANONICAL_SKILLS_DIR/$skill" \
+        "canonical skill source"
+    done
+  fi
+
+  [ "$needs_notice" = false ] || validate_copy_license_notice
+}
+
+print_copy_license_notice() {
+  copy_license_required || return 0
+
+  printf '\nCopy-mode license notice\n'
+  cat "$COPY_LICENSE_NOTICE"
+  printf '\n'
 }
 
 validate_git_environment() {
@@ -1653,13 +1769,23 @@ configure_rule_source() {
 
   if [ "$RULE_SOURCE_MODE" = "copy" ]; then
     if [ -d "$rules_path" ] &&
-      diff -qr "$CANONICAL_RULES_DIR" "$rules_path" >/dev/null; then
+      licensed_copy_snapshot_matches \
+        "$CANONICAL_RULES_DIR" "$rules_path"; then
       add_status unchanged ".agent-guidelines/rules snapshot"
+    elif [ -d "$rules_path" ] && [ ! -L "$rules_path" ] &&
+      legacy_copy_snapshot_matches \
+        "$CANONICAL_RULES_DIR" "$rules_path"; then
+      if should_mutate; then
+        add_copy_license_notice_safely "$rules_path" ||
+          die "could not add the copy-mode license notice to .agent-guidelines/rules"
+      fi
+      add_status updated ".agent-guidelines/rules copy-mode license notice"
     elif [ -e "$rules_path" ] || [ -L "$rules_path" ]; then
       die ".agent-guidelines/rules is not an exact managed snapshot"
     else
       if should_mutate; then
-        copy_managed_directory_safely "$rules_path" "$CANONICAL_RULES_DIR" ||
+        copy_licensed_directory_safely \
+          "$rules_path" "$CANONICAL_RULES_DIR" ||
           die "could not create .agent-guidelines/rules snapshot"
       fi
       INITIAL_COMMIT_PATHS+=(".agent-guidelines/rules")
@@ -2017,18 +2143,23 @@ install_project_skill_symlink() {
 }
 
 install_project_skill_copy() {
-  local skill="$1"
-  local target="$2"
-  local source="$3"
-  local label="$4"
+  local target="$1"
+  local source="$2"
+  local label="$3"
 
   if [ -L "$target" ]; then
     die "$label exists as an unmanaged symlink"
   fi
 
   if [ -d "$target" ]; then
-    if diff -qr "$source" "$target" >/dev/null; then
+    if licensed_copy_snapshot_matches "$source" "$target"; then
       add_status unchanged "$label"
+    elif legacy_copy_snapshot_matches "$source" "$target"; then
+      if should_mutate; then
+        add_copy_license_notice_safely "$target" ||
+          die "could not add the copy-mode license notice to $label"
+      fi
+      add_status updated "$label copy-mode license notice"
     else
       die "$label is not an exact managed copy"
     fi
@@ -2036,7 +2167,7 @@ install_project_skill_copy() {
     die "$label exists and is not a managed copy"
   else
     if should_mutate; then
-      copy_managed_directory_safely "$target" "$source" ||
+      copy_licensed_directory_safely "$target" "$source" ||
         die "could not create $label copy"
     fi
     INITIAL_COMMIT_PATHS+=("$label")
@@ -2078,8 +2209,12 @@ preflight_rule_source_target() {
     else
       [ -d "$rules_path" ] && [ ! -L "$rules_path" ] ||
         die ".agent-guidelines/rules is not the recorded managed snapshot"
-      diff -qr "$CANONICAL_RULES_DIR" "$rules_path" >/dev/null ||
+      if ! licensed_copy_snapshot_matches \
+        "$CANONICAL_RULES_DIR" "$rules_path" &&
+        ! legacy_copy_snapshot_matches \
+          "$CANONICAL_RULES_DIR" "$rules_path"; then
         die ".agent-guidelines/rules changed from its managed snapshot"
+      fi
     fi
     return
   fi
@@ -2101,8 +2236,15 @@ preflight_rule_source_target() {
   if [ -e "$rules_path" ]; then
     [ -d "$rules_path" ] ||
       die ".agent-guidelines/rules is not a directory"
-    diff -qr "$CANONICAL_RULES_DIR" "$rules_path" >/dev/null ||
-      die ".agent-guidelines/rules is not an exact managed snapshot"
+    if licensed_copy_snapshot_matches \
+      "$CANONICAL_RULES_DIR" "$rules_path"; then
+      return
+    fi
+    if legacy_copy_snapshot_matches \
+      "$CANONICAL_RULES_DIR" "$rules_path"; then
+      return
+    fi
+    die ".agent-guidelines/rules is not an exact managed snapshot"
   fi
 }
 
@@ -2252,8 +2394,10 @@ preflight_recorded_skill_target() {
   elif [ -e "$target" ]; then
     [ -d "$source" ] || die "recorded skill source is missing: $source"
     [ -d "$target" ] || die "$label is not the recorded managed copy"
-    diff -qr "$source" "$target" >/dev/null ||
+    if ! licensed_copy_snapshot_matches "$source" "$target" &&
+      ! legacy_copy_snapshot_matches "$source" "$target"; then
       die "$label changed from its recorded managed copy"
+    fi
   elif [ "$require_present" = true ]; then
     die "$label is not the recorded managed copy"
   fi
@@ -2284,8 +2428,13 @@ preflight_desired_skill_target() {
     die "$label is an unmanaged symlink"
   elif [ -e "$target" ]; then
     [ -d "$target" ] || die "$label is not a directory"
-    diff -qr "$source" "$target" >/dev/null ||
-      die "$label is not an exact managed copy"
+    if licensed_copy_snapshot_matches "$source" "$target"; then
+      return
+    fi
+    if legacy_copy_snapshot_matches "$source" "$target"; then
+      return
+    fi
+    die "$label is not an exact managed copy"
   fi
 }
 
@@ -2453,7 +2602,7 @@ install_per_project_skills() {
       if [ "$SKILL_SOURCE_MODE" = "symlink" ]; then
         install_project_skill_symlink "$skill" "$target" "$source" "$label"
       else
-        install_project_skill_copy "$skill" "$target" "$source" "$label"
+        install_project_skill_copy "$target" "$source" "$label"
       fi
     done
   done < <(desired_skill_roots)
@@ -3386,8 +3535,10 @@ main() {
   infer_profile
   infer_changelog_mode
   preflight_managed_targets
+  preflight_copy_license_sources
   preflight_source_targets
   preflight_project_files
+  print_copy_license_notice
   if should_mutate; then
     agent_guidelines_transaction_begin
   fi

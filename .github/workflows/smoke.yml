@@ -28,6 +28,7 @@ jobs:
             tests/managed-block-safety.sh \
             tests/setup-backup-safety.sh \
             tests/project-source-safety.sh \
+            tests/project-copy-license-safety.sh \
             tests/project-ownership-safety.sh \
             tests/project-removal-safety.sh \
             tests/project-state-safety.sh \
@@ -124,6 +125,9 @@ jobs:
 
       - name: Run project-source-safety
         run: bash tests/project-source-safety.sh
+
+      - name: Run project-copy-license-safety
+        run: bash tests/project-copy-license-safety.sh
 
       - name: Run project-ownership-safety
         run: bash tests/project-ownership-safety.sh

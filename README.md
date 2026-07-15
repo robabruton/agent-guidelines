@@ -124,6 +124,11 @@ By default, project-local skills use the same source mode as rules
 (`--rules-source`); `--skills-source symlink|copy` overrides that
 independently. Symlink mode locally excludes the selected skill trees so
 the links stay out of git; copy mode tracks them as normal project assets.
+Every copied rule or skill root contains `POLYFORM-NONCOMMERCIAL.txt` with
+the PolyForm Noncommercial 1.0.0 terms URL. Setup displays the same notice
+before copy-mode writes to the target repository. When an existing snapshot
+otherwise matches its canonical source exactly, setup adds a missing notice;
+every other mismatch stops the operation before mutation.
 
 Named harness selections also limit project context files: Claude Code
 uses `CLAUDE.md`, while Codex, OpenCode, and Pi use `AGENTS.md`. With no
