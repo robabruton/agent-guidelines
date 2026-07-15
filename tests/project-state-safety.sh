@@ -65,6 +65,7 @@ init_repo "$RERUN_REPO"
   --context-rules full \
   --rules-source symlink \
   --skills-source symlink \
+  --harness codex \
   --include-rule docstrings \
   --exclude-rule performance \
   --include-skill explain \
@@ -79,6 +80,7 @@ grep -Fxq 'changelog=date' "$CONFIG"
 grep -Fxq 'context_rules=compact' "$CONFIG"
 grep -Fxq 'rules_source=symlink' "$CONFIG"
 grep -Fxq 'skills_source=symlink' "$CONFIG"
+grep -Fxq 'harness=codex' "$CONFIG"
 grep -Fxq 'include_rule=docstrings' "$CONFIG"
 grep -Fxq 'exclude_rule=performance' "$CONFIG"
 grep -Fxq 'include_skill=explain' "$CONFIG"

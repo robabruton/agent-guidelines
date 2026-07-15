@@ -56,6 +56,8 @@ assert_agent_preamble() {
   --profile codebase \
   --changelog dated \
   --context-rules full \
+  --harness claude \
+  --harness codex \
   --include-skill explain \
   --include-skill test-audit \
   --exclude-skill test-audit \
@@ -104,6 +106,8 @@ assert_agent_preamble "${SYMLINK_REPO}/AGENTS.md"
   --changelog versions \
   --context-rules full \
   --rules-source copy \
+  --harness claude \
+  --harness codex \
   --include-skill esp-idf \
   --include-skill firmware-review \
   "${COPY_REPO}" > "$COPY_OUT"
@@ -177,6 +181,8 @@ REMOVE_REPO="${TMP_ROOT}/remove-repo"
   --profile minimal \
   --changelog none \
   --context-rules trimmed \
+  --harness claude \
+  --harness codex \
   --include-skill explain \
   "$REMOVE_REPO" > "${TMP_ROOT}/remove-setup.out"
 "${ROOT_DIR}/project-setup.sh" --remove "$REMOVE_REPO" \
@@ -229,6 +235,8 @@ git -C "$DRY_REPO" init --quiet --initial-branch=main
 "${ROOT_DIR}/project-setup.sh" \
   --profile codebase \
   --changelog dated \
+  --harness claude \
+  --harness codex \
   --include-skill explain \
   --dry-run \
   "${DRY_REPO}" > "$DRY_OUT"

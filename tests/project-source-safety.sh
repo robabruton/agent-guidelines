@@ -64,7 +64,8 @@ printf 'user sentinel\n' > \
   "${SKILL_COPY_REPO}/.agents/skills/explain/user-file"
 cp -a "$SKILL_COPY_REPO" "${SKILL_COPY_REPO}.before"
 expect_fail "${ROOT_DIR}/project-setup.sh" \
-  --skills-source copy --include-skill explain "$SKILL_COPY_REPO"
+  --skills-source copy --harness codex \
+  --include-skill explain "$SKILL_COPY_REPO"
 diff -qr "$SKILL_COPY_REPO" "${SKILL_COPY_REPO}.before" >/dev/null
 test ! -e "${SKILL_COPY_REPO}/.git"
 
@@ -76,7 +77,7 @@ ln -s "$FOREIGN_SKILL" \
   "${SKILL_LINK_REPO}/.agents/skills/explain"
 cp -a "$FOREIGN_SKILL" "${FOREIGN_SKILL}.before"
 expect_fail "${ROOT_DIR}/project-setup.sh" \
-  --include-skill explain "$SKILL_LINK_REPO"
+  --harness codex --include-skill explain "$SKILL_LINK_REPO"
 diff -qr "$FOREIGN_SKILL" "${FOREIGN_SKILL}.before" >/dev/null
 test ! -e "${SKILL_LINK_REPO}/.git"
 
@@ -88,6 +89,7 @@ COPY_REPO="${TMP_ROOT}/copy-idempotent"
   --context-rules full \
   --rules-source copy \
   --skills-source copy \
+  --harness codex \
   --include-skill explain \
   "$COPY_REPO" >/dev/null
 "${ROOT_DIR}/project-setup.sh" \
@@ -96,6 +98,7 @@ COPY_REPO="${TMP_ROOT}/copy-idempotent"
   --context-rules full \
   --rules-source copy \
   --skills-source copy \
+  --harness codex \
   --include-skill explain \
   "$COPY_REPO" >/dev/null
 test -z "$(git -C "$COPY_REPO" status --short)"
