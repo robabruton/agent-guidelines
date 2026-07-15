@@ -24,7 +24,8 @@ expect_fail() {
   fi
 }
 
-"${ROOT_DIR}/project-setup.sh" --profile minimal --changelog none "$REPO" > /dev/null
+"${ROOT_DIR}/project-setup.sh" --profile minimal --changelog none \
+  --rules-source copy "$REPO" >/dev/null
 
 cd "$REPO" || exit 1
 
@@ -93,28 +94,43 @@ expect_fail git commit -m "feat: add file e"
 git reset -q -- file-e.txt
 rm -f file-e.txt
 
-printf '%s: implement parser\n' "TO""DO" > file-f.txt
+printf '%s implement parser\n' "TO""DO" > file-f.txt
 git add file-f.txt
 expect_fail git commit -m "feat: add file f"
 git reset -q -- file-f.txt
 rm -f file-f.txt
 
-# The marker word without its colon is prose about markers, and
-# passes.
-printf '%s lists are banned in tracked source\n' "TO""DO" > file-g.txt
+# Factual limitations and review notes do not promise unimplemented work.
+printf 'The parser accepts JSON input only.\n' > file-g.txt
+printf 'Reviewer fol%s: verify the retained size limit.\n' "low-up" \
+  >> file-g.txt
 git add file-g.txt
 git commit -q -m "docs: add file g"
 
-# The rule file that defines the phrase list is exempt, at the
-# repository root and at an installed rules path.
+# A matching basename outside the two managed rule paths is not exempt.
 printf 'banned: %s soon\n' "coming" > no-plans-on-main.md
 git add no-plans-on-main.md
-git commit -q -m "docs: add phrase list file"
+expect_fail git commit -m "docs: add phrase list file"
+git reset -q -- no-plans-on-main.md
+rm -f no-plans-on-main.md
 
+# The repository rule path and installed copy are exact exemptions.
 mkdir -p rules
 printf 'banned: %s work\n' "future" > rules/no-plans-on-main.md
 git add rules/no-plans-on-main.md
-git commit -q -m "docs: add nested phrase list file"
+git commit -q -m "docs: add repository phrase list"
+
+printf '\nbanned: %s soon\n' "coming" \
+  >> .agent-guidelines/rules/no-plans-on-main.md
+git add .agent-guidelines/rules/no-plans-on-main.md
+git commit -q -m "docs: update installed phrase list"
+
+mkdir -p nested
+printf 'banned: %s soon\n' "coming" > nested/no-plans-on-main.md
+git add nested/no-plans-on-main.md
+expect_fail git commit -m "docs: add unrelated phrase list"
+git reset -q -- nested/no-plans-on-main.md
+rm -rf nested
 
 # Banned-phrase guard (commit message): forward-looking message text
 # fails; a clean message for the same staged content passes.
