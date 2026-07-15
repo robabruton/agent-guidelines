@@ -188,8 +188,9 @@ Do not pre-build this for a small store. While the corpus is small, a flat
 directory plus the router index is enough. Escalate to explicit tiers when
 routine recall starts dragging large files, when the index grows past what
 you want loaded every session, or when the largest one or two files
-dominate the corpus. Use `scripts/agent-memory-report.sh` to see sizes and
-which entries lack tiering.
+dominate the corpus. Use `scripts/agent-memory-report.sh` to scan the full
+store tree, see router and archive counts, compare sizes, and identify entries
+that lack tiering.
 
 ### Verify the loader before using subdirectories
 
